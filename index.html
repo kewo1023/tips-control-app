@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<!-- viewport-fit=cover + las variables safe-area de más abajo evitan que la
+     barra de pestañas quede debajo de la barra del iPhone. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tips Control</title>
+
+<style>
+/* ============================================================================
+   SECCIÓN A — Variables de color
+   ----------------------------------------------------------------------------
+   Los colores se definen UNA vez aquí y el resto del archivo los llama por
+   nombre. Cambiar el verde de la app es cambiar una línea, no cuarenta.
+   El bloque `prefers-color-scheme: dark` es el modo oscuro: el teléfono avisa
+   qué prefiere el usuario y el navegador usa ese juego de colores.
+   ========================================================================== */
+:root {
+  --fondo:        #f5f5f4;
+  --tarjeta:      #ffffff;
+  --borde:        #e4e4e3;
+  --texto:        #1a1a19;
+  --texto-suave:  #71716e;
+  --acento:       #15803d;   /* verde: el dinero que entra */
+  --acento-suave: #dcfce7;
+  --alerta:       #b91c1c;   /* rojo: el dinero que sale   */
+  --radio:        14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo:        #131313;
+    --tarjeta:      #1e1e1d;
+    --borde:        #333331;
+    --texto:        #f5f5f4;
+    --texto-suave:  #a1a1a0;
+    --acento:       #4ade80;
+    --acento-suave: #14301f;
+    --alerta:       #f87171;
+  }
+}
+
+/* ============================================================================
+   SECCIÓN B — Base
+   ========================================================================== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0;
+  padding: 0 16px calc(90px + env(safe-area-inset-bottom));
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1 { font-size: 20px; font-weight: 600; margin: 20px 0 4px; letter-spacing: -0.02em; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase;
+     letter-spacing: 0.06em; color: var(--texto-suave); margin: 28px 0 10px; }
+
+.sub { color: var(--texto-suave); font-size: 14px; margin: 0 0 18px; }
+
+/* Los números de dinero en fuente tabular: así las cifras de una lista quedan
+   alineadas en columna aunque tengan distintos dígitos, como en Excel. */
+.cifra { font-variant-numeric: tabular-nums; }
+
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* ============================================================================
+   SECCIÓN C — Formulario
+   ========================================================================== */
+label { display: block; font-size: 13px; font-weight: 500;
+        color: var(--texto-suave); margin-bottom: 6px; }
+
+input[type=text], input[type=number], input[type=date], input[type=time] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo);
+  color: var(--texto);
+  /* 16px exactos: con menos, Safari en iPhone hace zoom al tocar el campo y
+     descoloca toda la pantalla. Es la razón, no una preferencia estética. */
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+input:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+
+.fila { display: flex; gap: 10px; }
+.fila > div { flex: 1; }
+
+.campo { margin-bottom: 14px; }
+
+/* Chips de los ayudantes. Tocar uno lo prende o lo apaga. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 9px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  background: var(--fondo);
+  color: var(--texto-suave);
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.chip.activo {
+  background: var(--acento-suave);
+  border-color: var(--acento);
+  color: var(--acento);
+  font-weight: 600;
+}
+.chip small { opacity: .75; margin-left: 4px; }
+
+/* ============================================================================
+   SECCIÓN D — Botones
+   ========================================================================== */
+button {
+  font-family: inherit;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--tarjeta);
+  color: var(--texto);
+  padding: 13px 16px;
+  cursor: pointer;
+}
+button.principal {
+  width: 100%;
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+  font-weight: 600;
+}
+@media (prefers-color-scheme: dark) { button.principal { color: #08150e; } }
+
+button.peligro { color: var(--alerta); border-color: var(--alerta); }
+button.chico   { padding: 8px 12px; font-size: 14px; }
+
+/* ============================================================================
+   SECCIÓN E — Resumen en vivo
+   ----------------------------------------------------------------------------
+   La tarjeta que dice cuánto te llevas. Es lo más importante de la pantalla,
+   así que es lo más grande y lo único con color.
+   ========================================================================== */
+.resumen { border-color: var(--acento); background: var(--acento-suave); }
+.resumen .grande {
+  font-size: 40px; font-weight: 650; letter-spacing: -0.03em;
+  color: var(--acento); line-height: 1.1; margin: 2px 0 10px;
+}
+.desglose { font-size: 14px; color: var(--texto-suave); }
+.desglose div { display: flex; justify-content: space-between; padding: 3px 0; }
+.desglose .total { border-top: 1px solid var(--borde); margin-top: 6px;
+                   padding-top: 8px; color: var(--texto); font-weight: 600; }
+.resta { color: var(--alerta); }
+
+/* ============================================================================
+   SECCIÓN F — Lista de turnos
+   ========================================================================== */
+.turno {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px; cursor: pointer;
+}
+.turno .dia   { font-weight: 600; font-size: 15px; }
+.turno .datos { font-size: 13px; color: var(--texto-suave); }
+.turno .neto  { font-size: 19px; font-weight: 650; color: var(--acento); }
+.turno .hora  { font-size: 12px; color: var(--texto-suave); text-align: right; }
+
+.semana { display: flex; justify-content: space-between; align-items: baseline;
+          margin: 26px 0 8px; }
+.semana .rango { font-size: 13px; font-weight: 600; color: var(--texto-suave); }
+.semana .suma  { font-size: 13px; color: var(--texto-suave); }
+
+.vacio { text-align: center; color: var(--texto-suave); padding: 50px 20px;
+         font-size: 15px; }
+
+/* Cuadrícula de métricas del resumen semanal/total */
+.metricas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+            background: var(--borde); border-radius: var(--radio);
+            overflow: hidden; border: 1px solid var(--borde); }
+.metrica { background: var(--tarjeta); padding: 14px 16px; }
+.metrica .valor { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+.metrica .clave { font-size: 12px; color: var(--texto-suave); }
+
+/* ============================================================================
+   SECCIÓN G — Barra de pestañas
+   ========================================================================== */
+.pestanas {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex;
+  background: var(--tarjeta);
+  border-top: 1px solid var(--borde);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.pestanas button {
+  flex: 1; border: none; border-radius: 0; background: none;
+  padding: 12px 0 14px;
+  font-size: 12px; color: var(--texto-suave);
+}
+.pestanas button.activa { color: var(--acento); font-weight: 600; }
+.pestanas .icono { display: block; font-size: 19px; margin-bottom: 2px; }
+
+.oculto { display: none !important; }
+
+/* Fila de un rol dentro de Ajustes */
+.rol-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.rol-fila input[type=text]   { flex: 1; }
+.rol-fila input[type=number] { width: 80px; }
+</style>
+</head>
+<body>
+
+<!-- ==========================================================================
+     SECCIÓN H — Pantalla: REGISTRAR
+     ====================================================================== -->
+<section id="pantalla-registrar">
+  <h1 id="titulo-registrar">Nuevo turno</h1>
+  <p class="sub" id="sub-registrar"></p>
+
+  <div class="tarjeta">
+    <div class="campo">
+      <label for="f-fecha">Fecha</label>
+      <input type="date" id="f-fecha">
+    </div>
+
+    <div class="fila campo">
+      <div>
+        <label for="f-entrada">Entrada</label>
+        <input type="time" id="f-entrada">
+      </div>
+      <div>
+        <label for="f-salida">Salida</label>
+        <input type="time" id="f-salida">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="f-ventas">Ventas totales del turno</label>
+      <input type="number" id="f-ventas" inputmode="decimal" step="0.01"
+             min="0" placeholder="0.00">
+    </div>
+
+    <div class="fila campo">
+      <div>
+        <label for="f-efectivo">Propina en efectivo</label>
+        <input type="number" id="f-efectivo" inputmode="decimal" step="0.01"
+               min="0" placeholder="0.00">
+      </div>
+      <div>
+        <label for="f-tarjeta">Propina en tarjeta</label>
+        <input type="number" id="f-tarjeta" inputmode="decimal" step="0.01"
+               min="0" placeholder="0.00">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Ayudantes del turno (tip-out)</label>
+      <div class="chips" id="chips-roles"></div>
+    </div>
+
+    <div class="campo" style="margin-bottom:0">
+      <label for="f-nota">Nota (opcional)</label>
+      <input type="text" id="f-nota" placeholder="Sección 3, evento privado…">
+    </div>
+  </div>
+
+  <div class="tarjeta resumen">
+    <label style="margin:0">Te llevas</label>
+    <div class="grande cifra" id="r-total">$0.00</div>
+    <div class="desglose" id="r-desglose"></div>
+  </div>
+
+  <button class="principal" id="btn-guardar" onclick="guardarTurno()">Guardar turno</button>
+  <button class="peligro" id="btn-cancelar" style="width:100%; margin-top:8px"
+          onclick="cancelarEdicion()">Cancelar edición</button>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN I — Pantalla: TURNOS
+     ====================================================================== -->
+<section id="pantalla-turnos" class="oculto">
+  <h1>Turnos</h1>
+  <p class="sub" id="sub-turnos"></p>
+  <div id="lista-turnos"></div>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN J — Pantalla: AJUSTES
+     ====================================================================== -->
+<section id="pantalla-ajustes" class="oculto">
+  <h1>Ajustes</h1>
+  <p class="sub">Se aplican a los turnos nuevos. Los turnos ya guardados
+    conservan los valores que tenían ese día.</p>
+
+  <h2>Trabajo</h2>
+  <div class="tarjeta">
+    <div class="campo">
+      <label for="a-nombre">Nombre del restaurante</label>
+      <input type="text" id="a-nombre" onchange="guardarAjustes()">
+    </div>
+    <div class="campo" style="margin-bottom:0">
+      <label for="a-tarifa">Sueldo por hora ($)</label>
+      <input type="number" id="a-tarifa" inputmode="decimal" step="0.01"
+             min="0" onchange="guardarAjustes()">
+    </div>
+  </div>
+
+  <h2>Ayudantes y tip-out</h2>
+  <div class="tarjeta">
+    <p class="sub" style="margin-top:0">Porcentaje sobre las ventas totales del
+      turno. Cada rol cobra el suyo.</p>
+    <div id="lista-roles"></div>
+    <button class="chico" onclick="agregarRol()">+ Agregar rol</button>
+    <p class="sub" style="margin:14px 0 0">Total si trabajan todos:
+      <strong id="a-total-pct">0%</strong></p>
+  </div>
+
+  <h2>Respaldo</h2>
+  <div class="tarjeta">
+    <p class="sub" style="margin-top:0">Los datos viven solo en este teléfono.
+      Si borras la app, se van con ella. Exporta de vez en cuando.</p>
+    <div class="fila">
+      <button onclick="exportar()">Exportar</button>
+      <button onclick="document.getElementById('archivo').click()">Importar</button>
+    </div>
+    <input type="file" id="archivo" accept=".json" class="oculto"
+           onchange="importar(event)">
+  </div>
+
+  <h2>Zona de riesgo</h2>
+  <div class="tarjeta">
+    <button class="peligro" style="width:100%" onclick="borrarTodo()">
+      Borrar todos los datos
+    </button>
+  </div>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN K — Barra de pestañas
+     ====================================================================== -->
+<nav class="pestanas">
+  <button id="tab-registrar" onclick="irA('registrar')">
+    <span class="icono">＋</span>Registrar</button>
+  <button id="tab-turnos" onclick="irA('turnos')">
+    <span class="icono">☰</span>Turnos</button>
+  <button id="tab-ajustes" onclick="irA('ajustes')">
+    <span class="icono">⚙</span>Ajustes</button>
+</nav>
+
+
+<script src="logica.js"></script>
+<script>
+/* ============================================================================
+   SECCIÓN L — Los datos
+   ----------------------------------------------------------------------------
+   Una sola variable `datos` guarda TODO. Cualquier cambio la modifica, llama a
+   guardar() y luego a pintar(), que redibuja la pantalla entera desde cero.
+   Nunca se toca el HTML "a mano" en un sitio y los datos en otro: si lo que se
+   ve y lo que está guardado pueden separarse, tarde o temprano se separan.
+
+   La forma de `datos` imita tablas de base de datos a propósito, para que
+   mudarse a Postgres en la Fase 3 sea copiar la estructura, no rediseñarla.
+   (En la nube cada tabla llevará además un `user_id`; aquí no hace falta
+   porque solo hay una persona por teléfono.)
+   ========================================================================== */
+
+const CLAVE = 'tipsControl';
+
+let datos = {
+  trabajo: { nombre: 'Mi restaurante', tarifaHora: 0 },
+  roles:   [                                   // tabla `roles_tipout`
+    { id: 1, nombre: 'Busser', porcentaje: 3 },
+    { id: 2, nombre: 'Barra',  porcentaje: 1.5 },
+    { id: 3, nombre: 'Runner', porcentaje: 1 },
+    { id: 4, nombre: 'Bakery', porcentaje: 1 }
+  ],
+  turnos:  []                                  // tabla `turnos`
+};
+
+/* Estado de la pantalla — esto NO se guarda, se pierde al cerrar y está bien. */
+let pantalla = 'registrar';
+let rolesActivos = [];      // nombres de los roles marcados en el formulario
+let editandoId = null;      // si estás corrigiendo un turno, aquí está su id
+
+
+/* ============================================================================
+   SECCIÓN M — Guardar y cargar
+   ========================================================================== */
+
+function guardar() {
+  localStorage.setItem(CLAVE, JSON.stringify(datos));
+}
+
+function cargar() {
+  const guardado = localStorage.getItem(CLAVE);
+  if (!guardado) return;
+  try {
+    const leido = JSON.parse(guardado);
+    // Mezclamos con los valores por defecto en vez de reemplazar. Así, cuando
+    // en el futuro agreguemos un campo nuevo, los datos viejos no llegan
+    // incompletos y rompen la app al abrirla.
+    datos = { ...datos, ...leido };
+  } catch (e) {
+    // Si el guardado está corrupto, es mejor seguir con datos vacíos que
+    // dejar la app en pantalla blanca sin explicación.
+    console.error('No se pudieron leer los datos guardados:', e);
+    alert('Los datos guardados no se pudieron leer. Se empieza de cero.');
+  }
+}
+
+
+/* ============================================================================
+   SECCIÓN N — Formato
+   ========================================================================== */
+
+const DINERO = new Intl.NumberFormat('en-US',
+  { style: 'currency', currency: 'USD' });
+
+function $(n) { return DINERO.format(Number(n) || 0); }
+
+function fechaLarga(texto) {
+  const [a, m, d] = String(texto).split('-').map(Number);
+  const f = new Date(a, (m || 1) - 1, d || 1);
+  return f.toLocaleDateString('es-US',
+    { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function fechaHoy() {
+  const f = new Date();
+  const mm = String(f.getMonth() + 1).padStart(2, '0');
+  const dd = String(f.getDate()).padStart(2, '0');
+  return `${f.getFullYear()}-${mm}-${dd}`;
+}
+
+
+/* ============================================================================
+   SECCIÓN O — Leer el formulario
+   ----------------------------------------------------------------------------
+   Una sola función construye el turno a partir de lo que hay escrito en
+   pantalla. La usan tanto el resumen en vivo como el botón de guardar, así que
+   lo que ves mientras escribes es exactamente lo que se guarda. Si fueran dos
+   funciones parecidas, algún día una se actualizaría y la otra no.
+   ========================================================================== */
+
+function valor(id) { return document.getElementById(id).value; }
+function numero(id) { return Number(valor(id)) || 0; }
+
+function leerFormulario() {
+  const ventas = numero('f-ventas');
+
+  // Solo los roles marcados entran al cálculo.
+  const rolesDelTurno = datos.roles.filter(r => rolesActivos.includes(r.nombre));
+  const tipout = calcularTipOut(ventas, rolesDelTurno);
+
+  return {
+    id: editandoId || Date.now(),
+    fecha:      valor('f-fecha') || fechaHoy(),
+    entrada:    valor('f-entrada'),
+    salida:     valor('f-salida'),
+    ventas:     ventas,
+    efectivo:   numero('f-efectivo'),
+    tarjeta:    numero('f-tarjeta'),
+    // La tarifa se copia al turno, no se consulta después. Si el restaurante
+    // te sube el sueldo en octubre, tus turnos de agosto no pueden cambiar de
+    // valor solos: lo que ganaste ese día ya está cerrado.
+    tarifaHora: Number(datos.trabajo.tarifaHora) || 0,
+    tipOut:         tipout.total,
+    tipoutDetalle:  tipout.detalle,
+    nota:       valor('f-nota').trim()
+  };
+}
+
+function escribirFormulario(t) {
+  document.getElementById('f-fecha').value    = t.fecha || fechaHoy();
+  document.getElementById('f-entrada').value  = t.entrada || '';
+  document.getElementById('f-salida').value   = t.salida || '';
+  document.getElementById('f-ventas').value   = t.ventas   || '';
+  document.getElementById('f-efectivo').value = t.efectivo || '';
+  document.getElementById('f-tarjeta').value  = t.tarjeta  || '';
+  document.getElementById('f-nota').value     = t.nota || '';
+}
+
+function limpiarFormulario() {
+  editandoId = null;
+  escribirFormulario({ fecha: fechaHoy() });
+  rolesActivos = rolesDelUltimoTurno();
+  pintar();
+}
+
+/**
+ * Los ayudantes del turno anterior, como punto de partida.
+ * Casi siempre el equipo se repite, así que en el caso normal no tienes que
+ * tocar nada. Si es tu primer turno, se marcan todos los roles configurados.
+ */
+function rolesDelUltimoTurno() {
+  if (datos.turnos.length === 0) return datos.roles.map(r => r.nombre);
+  const ultimo = [...datos.turnos].sort((a, b) => b.id - a.id)[0];
+  const detalle = ultimo.tipoutDetalle || [];
+  return detalle.map(d => d.rol).filter(nombre =>
+    datos.roles.some(r => r.nombre === nombre));   // por si un rol ya no existe
+}
+
+
+/* ============================================================================
+   SECCIÓN P — Guardar, editar y borrar un turno
+   ========================================================================== */
+
+function guardarTurno() {
+  const turno = leerFormulario();
+
+  if (!turno.entrada || !turno.salida) {
+    alert('Falta la hora de entrada o de salida.');
+    return;
+  }
+  if (turno.ventas === 0 && turno.efectivo === 0 && turno.tarjeta === 0) {
+    alert('Escribe al menos las ventas o la propina del turno.');
+    return;
+  }
+
+  const i = datos.turnos.findIndex(t => t.id === turno.id);
+  if (i >= 0) datos.turnos[i] = turno;   // estabas editando
+  else        datos.turnos.push(turno);  // turno nuevo
+
+  guardar();
+  limpiarFormulario();
+  irA('turnos');
+}
+
+function editarTurno(id) {
+  const t = datos.turnos.find(t => t.id === id);
+  if (!t) return;
+  editandoId = id;
+  escribirFormulario(t);
+  rolesActivos = (t.tipoutDetalle || []).map(d => d.rol);
+  irA('registrar');
+  window.scrollTo(0, 0);
+}
+
+function cancelarEdicion() { limpiarFormulario(); irA('turnos'); }
+
+function borrarTurno(id) {
+  const t = datos.turnos.find(t => t.id === id);
+  if (!t) return;
+  if (!confirm(`¿Borrar el turno del ${fechaLarga(t.fecha)}?`)) return;
+  datos.turnos = datos.turnos.filter(t => t.id !== id);
+  guardar();
+  limpiarFormulario();
+  irA('turnos');
+}
+
+
+/* ============================================================================
+   SECCIÓN Q — Ajustes
+   ========================================================================== */
+
+function guardarAjustes() {
+  datos.trabajo.nombre     = valor('a-nombre').trim() || 'Mi restaurante';
+  datos.trabajo.tarifaHora = numero('a-tarifa');
+  guardar();
+  pintar();
+}
+
+function agregarRol() {
+  const id = Date.now();
+  datos.roles.push({ id, nombre: 'Nuevo rol', porcentaje: 0 });
+  guardar();
+  pintar();
+}
+
+function cambiarRol(id, campo, valorNuevo) {
+  const rol = datos.roles.find(r => r.id === id);
+  if (!rol) return;
+  const anterior = rol.nombre;
+  rol[campo] = campo === 'porcentaje' ? (Number(valorNuevo) || 0)
+                                      : String(valorNuevo).trim();
+  // Si le cambiaste el nombre a un rol que estaba marcado, que siga marcado.
+  if (campo === 'nombre' && rolesActivos.includes(anterior)) {
+    rolesActivos = rolesActivos.map(n => n === anterior ? rol.nombre : n);
+  }
+  guardar();
+  pintar();
+}
+
+function borrarRol(id) {
+  const rol = datos.roles.find(r => r.id === id);
+  if (!rol) return;
+  if (!confirm(`¿Quitar "${rol.nombre}"? Los turnos ya guardados no cambian.`)) return;
+  datos.roles = datos.roles.filter(r => r.id !== id);
+  rolesActivos = rolesActivos.filter(n => n !== rol.nombre);
+  guardar();
+  pintar();
+}
+
+
+/* ============================================================================
+   SECCIÓN R — Respaldo
+   ========================================================================== */
+
+function exportar() {
+  const texto = JSON.stringify(datos, null, 2);
+  const enlace = document.createElement('a');
+  enlace.href = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
+  enlace.download = `tips-control-${fechaHoy()}.json`;
+  enlace.click();
+  URL.revokeObjectURL(enlace.href);
+}
+
+function importar(evento) {
+  const archivo = evento.target.files[0];
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = e => {
+    try {
+      const leido = JSON.parse(e.target.result);
+      if (!Array.isArray(leido.turnos)) throw new Error('sin turnos');
+      if (!confirm(`Se van a reemplazar tus datos por ${leido.turnos.length} `
+                 + `turnos del respaldo. ¿Seguro?`)) return;
+      datos = { ...datos, ...leido };
+      guardar();
+      limpiarFormulario();
+      irA('turnos');
+    } catch (err) {
+      alert('Ese archivo no parece un respaldo de Tips Control.');
+    }
+  };
+  lector.readAsText(archivo);
+  evento.target.value = '';   // permite volver a elegir el mismo archivo
+}
+
+function borrarTodo() {
+  if (!confirm('Esto borra TODOS tus turnos de este teléfono. ¿Seguro?')) return;
+  if (!confirm('No se puede deshacer. ¿De verdad?')) return;
+  localStorage.removeItem(CLAVE);
+  location.reload();
+}
+
+
+/* ============================================================================
+   SECCIÓN S — Navegación
+   ========================================================================== */
+
+function irA(nombre) {
+  pantalla = nombre;
+  pintar();
+  window.scrollTo(0, 0);
+}
+
+
+/* ============================================================================
+   SECCIÓN T — Dibujar
+   ----------------------------------------------------------------------------
+   `pintar()` redibuja todo lo que depende de los datos. Se llama después de
+   cualquier cambio. Es más trabajo para el teléfono del que haría falta, y a
+   esta escala no se nota: a cambio, es imposible que una parte de la pantalla
+   quede mostrando información vieja.
+   ========================================================================== */
+
+function pintar() {
+  // Qué pantalla se ve
+  ['registrar', 'turnos', 'ajustes'].forEach(p => {
+    document.getElementById('pantalla-' + p).classList.toggle('oculto', p !== pantalla);
+    document.getElementById('tab-' + p).classList.toggle('activa', p === pantalla);
+  });
+
+  pintarFormulario();
+  pintarResumen();
+  pintarTurnos();
+  pintarAjustes();
+}
+
+/* --- Formulario --- */
+function pintarFormulario() {
+  document.getElementById('titulo-registrar').textContent =
+    editandoId ? 'Editar turno' : 'Nuevo turno';
+  document.getElementById('sub-registrar').textContent =
+    datos.trabajo.nombre + (datos.trabajo.tarifaHora > 0
+      ? ` · ${$(datos.trabajo.tarifaHora)}/hora` : ' · sin sueldo base');
+
+  document.getElementById('btn-guardar').textContent =
+    editandoId ? 'Guardar cambios' : 'Guardar turno';
+  document.getElementById('btn-cancelar').classList.toggle('oculto', !editandoId);
+
+  // Chips de ayudantes
+  const chips = document.getElementById('chips-roles');
+  chips.innerHTML = '';
+  if (datos.roles.length === 0) {
+    chips.innerHTML = '<span class="sub" style="margin:0">Agrega tus roles en '
+                    + 'Ajustes para calcular el tip-out.</span>';
+  }
+  datos.roles.forEach(rol => {
+    const activo = rolesActivos.includes(rol.nombre);
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activo ? ' activo' : '');
+    // textContent y no innerHTML: si un rol se llamara con un signo raro,
+    // innerHTML intentaría interpretarlo como HTML en vez de mostrarlo.
+    chip.textContent = rol.nombre;
+    const pct = document.createElement('small');
+    pct.textContent = rol.porcentaje + '%';
+    chip.appendChild(pct);
+    chip.onclick = () => {
+      rolesActivos = activo ? rolesActivos.filter(n => n !== rol.nombre)
+                            : [...rolesActivos, rol.nombre];
+      pintar();
+    };
+    chips.appendChild(chip);
+  });
+}
+
+/* --- Resumen en vivo --- */
+function pintarResumen() {
+  const turno = leerFormulario();
+  const c = calcularTurno(turno);
+
+  document.getElementById('r-total').textContent = $(c.totalNeto);
+
+  const linea = (etiqueta, valor, clase = '') =>
+    `<div><span>${etiqueta}</span><span class="cifra ${clase}">${valor}</span></div>`;
+
+  let html = '';
+  html += linea('Propinas', $(c.propinas));
+  if (c.tipOut > 0) {
+    html += linea(`Tip-out (${turno.tipoutDetalle.length} ayudante`
+                + `${turno.tipoutDetalle.length === 1 ? '' : 's'})`,
+                  '− ' + $(c.tipOut), 'resta');
+  }
+  if (c.sueldoBase > 0) {
+    html += linea(`Sueldo base (${c.horas} h)`, '+ ' + $(c.sueldoBase));
+  }
+  html += `<div class="total"><span>${c.horas} h trabajadas</span>`
+        + `<span class="cifra">${$(c.totalPorHora)}/hora</span></div>`;
+  if (turno.ventas > 0) {
+    html += linea('Propina sobre ventas', c.porcentajeVentas + '%');
+  }
+
+  document.getElementById('r-desglose').innerHTML = html;
+}
+
+/* --- Lista de turnos --- */
+function pintarTurnos() {
+  const contenedor = document.getElementById('lista-turnos');
+  const sub = document.getElementById('sub-turnos');
+  contenedor.innerHTML = '';
+
+  if (datos.turnos.length === 0) {
+    sub.textContent = '';
+    contenedor.innerHTML = '<div class="vacio">Todavía no hay turnos.<br>'
+                         + 'Registra el primero al salir del trabajo.</div>';
+    return;
+  }
+
+  const total = resumir(datos.turnos);
+  sub.textContent = `${total.turnos} turno${total.turnos === 1 ? '' : 's'} · `
+                  + `${$(total.totalNeto)} en total · ${$(total.totalPorHora)}/hora`;
+
+  // Agrupamos por semana. Un objeto donde la llave es el lunes de esa semana:
+  // es el equivalente a una tabla dinámica de Excel agrupando por semana.
+  const semanas = {};
+  [...datos.turnos]
+    .sort((a, b) => (b.fecha + b.id).localeCompare(a.fecha + a.id))
+    .forEach(t => {
+      const lunes = lunesDeLaSemana(t.fecha);
+      (semanas[lunes] = semanas[lunes] || []).push(t);
+    });
+
+  Object.keys(semanas).sort().reverse().forEach(lunes => {
+    const deLaSemana = semanas[lunes];
+    const r = resumir(deLaSemana);
+
+    const cabecera = document.createElement('div');
+    cabecera.className = 'semana';
+    cabecera.innerHTML =
+      `<span class="rango">Semana del ${fechaLarga(lunes)}</span>`
+    + `<span class="suma cifra">${$(r.totalNeto)} · ${$(r.totalPorHora)}/h</span>`;
+    contenedor.appendChild(cabecera);
+
+    const tarjeta = document.createElement('div');
+    tarjeta.className = 'tarjeta';
+    tarjeta.style.padding = '0';
+
+    deLaSemana.forEach((t, i) => {
+      const c = calcularTurno(t);
+      const fila = document.createElement('div');
+      fila.className = 'turno';
+      if (i > 0) fila.style.borderTop = '1px solid var(--borde)';
+      fila.innerHTML =
+        `<div>
+           <div class="dia">${fechaLarga(t.fecha)}</div>
+           <div class="datos">${c.horas} h · ventas ${$(t.ventas)}`
+           + (c.tipOut > 0 ? ` · tip-out ${$(c.tipOut)}` : '')
+           + (t.nota ? ` · ${t.nota}` : '') +
+         `</div>
+         </div>
+         <div>
+           <div class="neto cifra">${$(c.totalNeto)}</div>
+           <div class="hora cifra">${$(c.totalPorHora)}/h</div>
+         </div>`;
+      fila.onclick = () => editarTurno(t.id);
+      tarjeta.appendChild(fila);
+    });
+
+    contenedor.appendChild(tarjeta);
+  });
+
+  // Métricas del total, al final
+  const m = document.createElement('div');
+  m.className = 'metricas';
+  m.style.marginTop = '26px';
+  const metrica = (clave, valor) =>
+    `<div class="metrica"><div class="valor cifra">${valor}</div>`
+  + `<div class="clave">${clave}</div></div>`;
+  m.innerHTML =
+      metrica('Propinas cobradas', $(total.propinas))
+    + metrica('Tip-out pagado',    $(total.tipOut))
+    + metrica('Promedio por turno', $(total.promedioPorTurno))
+    + metrica('Propina / ventas',   total.porcentajeVentas + '%');
+  contenedor.appendChild(m);
+
+  if (editandoId) {
+    const borrar = document.createElement('button');
+    borrar.className = 'peligro';
+    borrar.style.cssText = 'width:100%; margin-top:16px';
+    borrar.textContent = 'Borrar el turno que estás editando';
+    borrar.onclick = () => borrarTurno(editandoId);
+    contenedor.appendChild(borrar);
+  }
+}
+
+/* --- Ajustes --- */
+function pintarAjustes() {
+  document.getElementById('a-nombre').value = datos.trabajo.nombre;
+  document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
+
+  const lista = document.getElementById('lista-roles');
+  lista.innerHTML = '';
+
+  datos.roles.forEach(rol => {
+    const fila = document.createElement('div');
+    fila.className = 'rol-fila';
+
+    const nombre = document.createElement('input');
+    nombre.type = 'text';
+    nombre.value = rol.nombre;
+    nombre.onchange = e => cambiarRol(rol.id, 'nombre', e.target.value);
+
+    const pct = document.createElement('input');
+    pct.type = 'number';
+    pct.inputMode = 'decimal';
+    pct.step = '0.1';
+    pct.min = '0';
+    pct.value = rol.porcentaje;
+    pct.onchange = e => cambiarRol(rol.id, 'porcentaje', e.target.value);
+
+    const quitar = document.createElement('button');
+    quitar.className = 'chico peligro';
+    quitar.textContent = '✕';
+    quitar.onclick = () => borrarRol(rol.id);
+
+    fila.append(nombre, pct, quitar);
+    lista.appendChild(fila);
+  });
+
+  const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
+  document.getElementById('a-total-pct').textContent =
+    redondear(suma) + '% de las ventas';
+}
+
+
+/* ============================================================================
+   SECCIÓN U — Arranque
+   ========================================================================== */
+
+// Cada vez que escribes algo en el formulario, se recalcula el resumen. No se
+// redibuja la pantalla entera aquí a propósito: si lo hiciéramos, el campo
+// perdería el foco a media palabra y el teclado se cerraría solo.
+['f-fecha','f-entrada','f-salida','f-ventas','f-efectivo','f-tarjeta','f-nota']
+  .forEach(id => document.getElementById(id).addEventListener('input', pintarResumen));
+
+cargar();
+limpiarFormulario();   // deja el formulario listo y llama a pintar()
+</script>
+</body>
+</html>
