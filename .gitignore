@@ -1,0 +1,12 @@
+# Archivos que NO se suben al repositorio.
+# Git ignora por completo cualquier cosa que coincida con estas líneas.
+
+# .DS_Store es un archivo invisible que macOS crea en cada carpeta para
+# recordar cómo tenías acomodados los íconos. No es parte del proyecto y
+# cambia solo cada vez que abres la carpeta en Finder, así que ensuciaría el
+# historial con cambios que no significan nada.
+.DS_Store
+
+# Lo mismo, de Windows y de Linux, por si algún día alguien más colabora.
+Thumbs.db
+desktop.ini

@@ -7,6 +7,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tips Control</title>
 
+<!-- Para instalarla en la pantalla de inicio del iPhone.
+     Safari IGNORA los iconos del manifest y lee solo `apple-touch-icon`: por eso
+     el icono aparece dos veces, en el manifest (Android) y aquí (iPhone). -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tips">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#123c26">
+
 <style>
 /* ============================================================================
    SECCIÓN A — Variables de color
@@ -889,6 +899,16 @@ function pintarAjustes() {
 
 cargar();
 limpiarFormulario();   // deja el formulario listo y llama a pintar()
+
+// Registra el service worker (el archivo sw.js). Solo funciona cuando la app
+// está publicada en internet, no al abrir el archivo con doble clic: por
+// seguridad, los navegadores no lo permiten desde `file://`. El `catch` vacío
+// es a propósito — en el Mac va a fallar siempre y no es un problema.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
