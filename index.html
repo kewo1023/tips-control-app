@@ -169,13 +169,23 @@ body {
    rejilla sobre un fondo del color del borde. Un truco viejo que evita tener
    que decidir qué celda lleva borde y cuál no. */
 .metricas {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(2, 1fr);
   gap: 1px; background: var(--linea);
   border: 1px solid var(--linea); border-radius: 12px; overflow: hidden;
 }
-.metrica { background: var(--tarjeta); padding: 12px 10px; }
-.metrica .valor { font-size: 19px; font-weight: 600; margin-top: 3px;
+.metricas.extras { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
+.metrica { background: var(--tarjeta); padding: 12px 12px; }
+.metrica .valor { font-size: 22px; font-weight: 600; margin-top: 3px;
                   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.metricas.extras .metrica { padding: 11px 10px; }
+.metricas.extras .valor { font-size: 17px; }
+
+.mas {
+  width: 100%; margin-top: 10px; padding: 11px;
+  background: none; border: 1px solid var(--linea); border-radius: 10px;
+  color: var(--tinta-2); font-size: 13px; cursor: pointer;
+}
+.dato-suelto { font-size: 13px; color: var(--tinta-2); padding: 12px 2px 0; }
 
 /* ============================================================================
    SECCIÓN F — Formulario del turno
@@ -205,8 +215,22 @@ input[type=text], input[type=number], input[type=time] {
 input:focus { outline: none; border-color: var(--tinta); }
 ::placeholder { color: var(--tinta-3); }
 
+/* `min-width: 0` es obligatorio aquí. Por defecto un elemento flexible se
+   niega a encoger más allá del ancho natural de su contenido, y el control de
+   hora de Safari en iPhone trae un ancho propio bastante generoso: sin esta
+   línea, las dos cajas de hora se desbordan y se montan una sobre la otra. */
 .fila { display: flex; gap: 9px; }
-.fila > div { flex: 1; }
+.fila > div { flex: 1 1 0; min-width: 0; }
+input[type=time] { min-width: 0; }
+
+/* Atajos de hora: las que más usa, sacadas de sus propios turnos. */
+.horas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.horas button {
+  padding: 5px 8px; border: 1px solid var(--linea); border-radius: 7px;
+  background: none; color: var(--tinta-2); font-size: 12px;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.horas button.puesta { border-color: var(--verde); color: var(--verde); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
@@ -305,6 +329,9 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
   </div>
 
   <div class="metricas" id="metricas"></div>
+  <div class="metricas extras oculto" id="metricas-extras"></div>
+  <div class="dato-suelto oculto" id="mejor-dia"></div>
+  <button class="mas" id="btn-mas" onclick="alternarEstadisticas()"></button>
 
   <p class="vacio" id="pista">Toca un día para registrar el turno.</p>
 </section>
@@ -324,10 +351,12 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
       <div>
         <label class="etiqueta" for="f-entrada">Entrada</label>
         <input type="time" id="f-entrada">
+        <div class="horas" id="horas-entrada"></div>
       </div>
       <div>
         <label class="etiqueta" for="f-salida">Salida</label>
         <input type="time" id="f-salida">
+        <div class="horas" id="horas-salida"></div>
       </div>
     </div>
 
@@ -450,7 +479,15 @@ let datos = {
     { id: 3, nombre: 'Runner', porcentaje: 1 },
     { id: 4, nombre: 'Bakery', porcentaje: 1 }
   ],
-  turnos: []
+  turnos: [],
+  prefs: { masEstadisticas: false }
+};
+
+/* Horarios que se ofrecen como atajo mientras no haya turnos de los que
+   aprender. En cuanto haya historial, mandan los suyos. */
+const HORAS_POR_DEFECTO = {
+  entrada: ['10:00', '11:00', '16:00', '17:00'],
+  salida:  ['15:00', '16:00', '22:00', '23:00']
 };
 
 /* Estado de pantalla: no se guarda, se pierde al cerrar y está bien. */
@@ -496,6 +533,10 @@ function cargar() {
     // Mezclar con los valores por defecto, no reemplazar: así los datos
     // guardados con una versión vieja no llegan sin los campos nuevos.
     datos = { ...datos, ...JSON.parse(g) };
+    // Red de seguridad: los datos guardados por una versión anterior no traen
+    // `prefs`, y sin esta línea el primer toque al botón de estadísticas
+    // reventaría contra un `undefined`.
+    datos.prefs = { masEstadisticas: false, ...(datos.prefs || {}) };
   } catch (e) {
     console.error('No se pudieron leer los datos:', e);
     alert('Los datos guardados no se pudieron leer. Se empieza de cero.');
@@ -525,6 +566,15 @@ function diaYMes(texto) {
     { day: 'numeric', month: 'short' });
 }
 
+/** "17:30" → "5:30 pm", "10:00" → "10 am". Corto para que quepa en un botón. */
+function horaCorta(hhmm) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  const sufijo = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12} ${sufijo}`
+                 : `${h12}:${String(m).padStart(2, '0')} ${sufijo}`;
+}
+
 function fechaLarga(texto) {
   const t = partes(texto).toLocaleDateString('es-US',
     { weekday: 'long', day: 'numeric', month: 'long' });
@@ -544,6 +594,12 @@ function cambiarSemana(cuantas) {
 }
 
 function irAHoy() { lunes = lunesDeLaSemana(hoy()); pintar(); }
+
+function alternarEstadisticas() {
+  datos.prefs.masEstadisticas = !datos.prefs.masEstadisticas;
+  guardar();   // la preferencia se recuerda: no hay que abrirlo cada vez
+  pintar();
+}
 
 /** Abre el formulario de un día. Si ya hay turno, lo carga para editarlo. */
 function abrirDia(fecha) {
@@ -842,13 +898,39 @@ function pintarSemana() {
   const metrica = (clave, valor) =>
     `<div class="metrica"><div class="etiqueta">${clave}</div>`
   + `<div class="valor">${valor}</div></div>`;
+
+  // Las cuatro de siempre. Horas porque hay que apuntarlas en la planilla del
+  // restaurante; efectivo y tarjeta separados porque no son el mismo dinero:
+  // la tarjeta llega en el cheque, el efectivo va al bolsillo esa noche.
   document.getElementById('metricas').innerHTML =
-      metrica('Por hora',  $(r.totalPorHora))
-    + metrica('Propinas',  $0(r.propinas))
+      metrica('Horas',    r.horas + ' h')
+    + metrica('Por hora', $(r.totalPorHora))
+    + metrica('Efectivo', $0(r.efectivo))
+    + metrica('Tarjeta',  $0(r.tarjeta));
+
+  // Las demás viven detrás del botón: son útiles de vez en cuando, y una
+  // pantalla con doce números no se lee, se sobrevuela.
+  const abierto = !!datos.prefs.masEstadisticas;
+  document.getElementById('metricas-extras').innerHTML =
+      metrica('Propinas',  $0(r.propinas))
     + metrica('Tip-out',   $0(r.tipOut))
     + metrica('Ventas',    $0(r.ventas))
     + metrica('Prop/vtas', r.porcentajeVentas + '%')
-    + metrica('Sueldo',    $0(r.sueldoBase));
+    + metrica('Sueldo',    $0(r.sueldoBase))
+    + metrica('Por turno', $0(r.promedioPorTurno));
+  document.getElementById('metricas-extras').classList.toggle('oculto', !abierto);
+
+  const mejor = mejorTurno(deLaSemana);
+  const lineaMejor = document.getElementById('mejor-dia');
+  lineaMejor.classList.toggle('oculto', !abierto || !mejor);
+  if (mejor && abierto) {
+    const cm = calcularTurno(mejor);
+    lineaMejor.textContent = `Mejor día: ${fechaLarga(mejor.fecha).split(',')[0]}`
+      + ` con ${$(cm.totalNeto)} en ${cm.horas} h.`;
+  }
+
+  document.getElementById('btn-mas').textContent =
+    abierto ? 'Mostrar menos' : 'Mostrar más estadísticas';
 
   document.getElementById('pista').classList.toggle('oculto', datos.turnos.length > 0);
 }
@@ -858,6 +940,9 @@ function pintarTurno() {
   document.getElementById('turno-fecha').textContent = fechaLarga(fechaAbierta);
   const existe = turnosDelDia(datos.turnos, fechaAbierta).length > 0;
   document.getElementById('btn-borrar').classList.toggle('oculto', !existe);
+
+  pintarAtajosHora('entrada');
+  pintarAtajosHora('salida');
 
   const chips = document.getElementById('chips');
   chips.innerHTML = '';
@@ -884,6 +969,36 @@ function pintarTurno() {
   });
 
   pintarRecibo();
+}
+
+/**
+ * Los botones de hora rápida debajo de cada campo.
+ *
+ * Deliberadamente NO se rellena la hora sola al abrir el día. Con los
+ * ayudantes sí se hace, porque un ayudante de más se ve marcado en pantalla y
+ * salta a la vista. Una hora equivocada, en cambio, no se nota: el turno se
+ * guarda igual, con la duración mal, y arrastra el error a las horas de la
+ * semana y a todos los cálculos por hora. Un toque consciente es más barato
+ * que un dato que miente.
+ */
+function pintarAtajosHora(campo) {
+  const caja = document.getElementById('horas-' + campo);
+  const propias = horasFrecuentes(datos.turnos, campo, 4);
+  const opciones = propias.length > 0 ? propias : HORAS_POR_DEFECTO[campo];
+  const actual = val('f-' + campo);
+
+  caja.innerHTML = '';
+  opciones.forEach(hora => {
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = hora === actual ? 'puesta' : '';
+    boton.textContent = horaCorta(hora);
+    boton.onclick = () => {
+      document.getElementById('f-' + campo).value = hora;
+      pintar();
+    };
+    caja.appendChild(boton);
+  });
 }
 
 function pintarRecibo() {
@@ -956,9 +1071,18 @@ function pintarAjustes() {
 // Al escribir se actualiza solo el recibo, no la pantalla entera: si
 // redibujáramos todo, el campo perdería el foco a media palabra y el teclado
 // se cerraría solo.
-['f-entrada','f-salida','f-ventas','f-efectivo','f-tarjeta','f-nota']
+['f-ventas','f-efectivo','f-tarjeta','f-nota']
   .forEach(id => document.getElementById(id)
     .addEventListener('input', pintarRecibo));
+
+// Los campos de hora sí repintan también sus atajos, para que el botón
+// correspondiente quede marcado si eliges esa hora a mano. No hay riesgo de
+// perder el foco: un selector de hora no es un campo de texto.
+['entrada','salida'].forEach(campo =>
+  document.getElementById('f-' + campo).addEventListener('input', () => {
+    pintarAtajosHora(campo);
+    pintarRecibo();
+  }));
 
 cargar();
 lunes = lunesDeLaSemana(hoy());

@@ -166,6 +166,9 @@ const BRUNCH = { fecha: '2026-08-07', entrada: '11:00', salida: '15:00',
 const r = L.resumir([CENA, BRUNCH]);
 
 probar('cuenta los turnos',        r.turnos, 2);
+probar('separa el efectivo',       r.efectivo, 100);       // 60 + 40
+probar('separa la tarjeta',        r.tarjeta, 260);        // 120 + 140
+probar('efectivo + tarjeta = propinas', r.efectivo + r.tarjeta, r.propinas);
 probar('suma las horas',           r.horas, 10);            // 6 + 4
 probar('suma las ventas',          r.ventas, 2100);
 probar('suma las propinas',        r.propinas, 360);
@@ -220,6 +223,46 @@ probar('los turnos de un día',
   L.turnosDelDia([{fecha:'2026-08-06'}, {fecha:'2026-08-07'}], '2026-08-06').length, 1);
 probar('un día sin turnos devuelve lista vacía',
   L.turnosDelDia([{fecha:'2026-08-06'}], '2026-08-09').length, 0);
+
+
+/* --------------------------------------------------------------------------
+   Atajos de hora
+   -------------------------------------------------------------------------- */
+grupo('Horas frecuentes');
+
+const HISTORIAL = [
+  { entrada: '10:00', salida: '17:30' },
+  { entrada: '10:00', salida: '22:45' },
+  { entrada: '16:00', salida: '23:10' },
+  { entrada: '10:00', salida: '23:10' },
+  { entrada: '07:00', salida: '15:00' }
+];
+
+probar('la hora de entrada más usada va primero',
+  L.horasFrecuentes(HISTORIAL, 'entrada')[0], '10:00');
+
+probar('las devuelve ordenadas por frecuencia',
+  L.horasFrecuentes(HISTORIAL, 'entrada'), ['10:00', '07:00', '16:00']);
+
+probar('empatadas, gana la más temprana (el orden no debe bailar)',
+  L.horasFrecuentes(HISTORIAL, 'salida').slice(0, 2), ['23:10', '15:00']);
+
+probar('respeta el máximo pedido',
+  L.horasFrecuentes(HISTORIAL, 'salida', 2).length, 2);
+
+probar('sin historial no propone nada',
+  L.horasFrecuentes([], 'entrada'), []);
+
+probar('ignora los turnos sin hora',
+  L.horasFrecuentes([{ entrada: '' }, { entrada: '09:00' }], 'entrada'), ['09:00']);
+
+grupo('Mejor turno');
+
+probar('encuentra el turno que más dejó',
+  L.mejorTurno([CENA, BRUNCH]).fecha, CENA.fecha);      // 162 contra 161.5
+
+probar('sin turnos devuelve nada',
+  L.mejorTurno([]), null);
 
 
 /* --------------------------------------------------------------------------

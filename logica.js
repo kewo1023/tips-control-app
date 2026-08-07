@@ -177,17 +177,24 @@ function resumir(turnos) {
     a.horas        += c.horas;
     a.ventas       += Number(turno.ventas) || 0;
     a.propinas     += c.propinas;
+    // Efectivo y tarjeta van separados a propósito: la propina de tarjeta
+    // llega en el cheque (y paga impuestos ahí), la de efectivo va directa al
+    // bolsillo. Sumadas son un número que no sirve para planear nada.
+    a.efectivo     += Number(turno.efectivo) || 0;
+    a.tarjeta      += Number(turno.tarjeta)  || 0;
     a.tipOut       += c.tipOut;
     a.netoPropinas += c.netoPropinas;
     a.sueldoBase   += c.sueldoBase;
     a.totalNeto    += c.totalNeto;
     return a;
-  }, { turnos: 0, horas: 0, ventas: 0, propinas: 0,
+  }, { turnos: 0, horas: 0, ventas: 0, propinas: 0, efectivo: 0, tarjeta: 0,
        tipOut: 0, netoPropinas: 0, sueldoBase: 0, totalNeto: 0 });
 
   acc.horas        = redondear(acc.horas);
   acc.ventas       = redondear(acc.ventas);
   acc.propinas     = redondear(acc.propinas);
+  acc.efectivo     = redondear(acc.efectivo);
+  acc.tarjeta      = redondear(acc.tarjeta);
   acc.tipOut       = redondear(acc.tipOut);
   acc.netoPropinas = redondear(acc.netoPropinas);
   acc.sueldoBase   = redondear(acc.sueldoBase);
@@ -241,6 +248,36 @@ function diasDeLaSemana(lunes) {
   return [0, 1, 2, 3, 4, 5, 6].map(i => sumarDias(lunes, i));
 }
 
+/**
+ * Las horas que más se repiten en un campo (`entrada` o `salida`).
+ *
+ * Sirve para ofrecer atajos: si siempre entras a las 10:00, el botón "10:00"
+ * ahorra abrir el selector de hora. En vez de adivinar los horarios típicos de
+ * un restaurante, se los preguntamos a los turnos ya registrados.
+ *
+ * Empatados en frecuencia, gana la hora más temprana: así el orden de los
+ * botones no baila de un día para otro, que sería peor que no tenerlos (la
+ * memoria muscular vale más que el orden perfecto).
+ */
+function horasFrecuentes(turnos, campo, cuantas = 4) {
+  const cuenta = {};
+  (Array.isArray(turnos) ? turnos : []).forEach(t => {
+    const hora = t[campo];
+    if (hora) cuenta[hora] = (cuenta[hora] || 0) + 1;
+  });
+  return Object.keys(cuenta)
+    .sort((a, b) => cuenta[b] - cuenta[a] || a.localeCompare(b))
+    .slice(0, cuantas);
+}
+
+/** El turno con el mejor total neto. */
+function mejorTurno(turnos) {
+  const lista = Array.isArray(turnos) ? turnos : [];
+  if (lista.length === 0) return null;
+  return lista.reduce((mejor, t) =>
+    calcularTurno(t).totalNeto > calcularTurno(mejor).totalNeto ? t : mejor);
+}
+
 /** Los turnos de una fecha concreta. */
 function turnosDelDia(turnos, fecha) {
   return (Array.isArray(turnos) ? turnos : []).filter(t => t.fecha === fecha);
@@ -254,6 +291,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     redondear, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTurno, resumir, lunesDeLaSemana,
-    sumarDias, diasDeLaSemana, turnosDelDia
+    sumarDias, diasDeLaSemana, turnosDelDia,
+    horasFrecuentes, mejorTurno
   };
 }
