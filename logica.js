@@ -222,6 +222,30 @@ function lunesDeLaSemana(fechaTexto) {
 }
 
 
+/**
+ * Suma (o resta, con números negativos) días a una fecha en texto.
+ * `new Date(a, m, d)` acepta días fuera de rango y se acomoda solo: el día 32
+ * de agosto es el 1 de septiembre. Nos ahorra tener que saber cuántos días
+ * tiene cada mes y acordarnos de los años bisiestos.
+ */
+function sumarDias(fechaTexto, dias) {
+  const [a, m, d] = String(fechaTexto).split('-').map(Number);
+  const fecha = new Date(a, (m || 1) - 1, (d || 1) + dias);
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mm}-${dd}`;
+}
+
+/** Las 7 fechas de la semana que empieza ese lunes. */
+function diasDeLaSemana(lunes) {
+  return [0, 1, 2, 3, 4, 5, 6].map(i => sumarDias(lunes, i));
+}
+
+/** Los turnos de una fecha concreta. */
+function turnosDelDia(turnos, fecha) {
+  return (Array.isArray(turnos) ? turnos : []).filter(t => t.fecha === fecha);
+}
+
 /* --- Para que node pueda probar este archivo ----------------------------- */
 /* En el navegador estas funciones ya quedan disponibles al cargar el script.
    `module` solo existe cuando el archivo lo abre node, así que esta línea es
@@ -229,6 +253,7 @@ function lunesDeLaSemana(fechaTexto) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     redondear, horaAMinutos, calcularHoras, calcularTipOut,
-    calcularTurno, resumir, lunesDeLaSemana
+    calcularTurno, resumir, lunesDeLaSemana,
+    sumarDias, diasDeLaSemana, turnosDelDia
   };
 }

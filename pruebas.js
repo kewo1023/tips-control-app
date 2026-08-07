@@ -200,6 +200,27 @@ probar('el domingo pertenece a la semana que empezó el lunes',
 probar('cruzando el cambio de mes',
   L.lunesDeLaSemana('2026-09-02'), '2026-08-31');
 
+probar('la semana siguiente',
+  L.sumarDias('2026-08-03', 7), '2026-08-10');
+probar('la semana anterior',
+  L.sumarDias('2026-08-03', -7), '2026-07-27');
+probar('sumar días cruzando el fin de mes',
+  L.sumarDias('2026-08-30', 3), '2026-09-02');
+probar('sumar días cruzando el fin de año',
+  L.sumarDias('2026-12-30', 3), '2027-01-02');
+probar('febrero de un año bisiesto',
+  L.sumarDias('2028-02-28', 1), '2028-02-29');
+
+probar('los 7 días de una semana',
+  L.diasDeLaSemana('2026-08-03'),
+  ['2026-08-03','2026-08-04','2026-08-05','2026-08-06',
+   '2026-08-07','2026-08-08','2026-08-09']);
+
+probar('los turnos de un día',
+  L.turnosDelDia([{fecha:'2026-08-06'}, {fecha:'2026-08-07'}], '2026-08-06').length, 1);
+probar('un día sin turnos devuelve lista vacía',
+  L.turnosDelDia([{fecha:'2026-08-06'}], '2026-08-09').length, 0);
+
 
 /* --------------------------------------------------------------------------
    Resultado

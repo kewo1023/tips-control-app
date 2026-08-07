@@ -2,14 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<!-- viewport-fit=cover + las variables safe-area de más abajo evitan que la
-     barra de pestañas quede debajo de la barra del iPhone. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tips Control</title>
 
-<!-- Para instalarla en la pantalla de inicio del iPhone.
-     Safari IGNORA los iconos del manifest y lee solo `apple-touch-icon`: por eso
-     el icono aparece dos veces, en el manifest (Android) y aquí (iPhone). -->
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icono-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,516 +14,623 @@
 
 <style>
 /* ============================================================================
-   SECCIÓN A — Variables de color
+   SECCIÓN A — Colores
    ----------------------------------------------------------------------------
-   Los colores se definen UNA vez aquí y el resto del archivo los llama por
-   nombre. Cambiar el verde de la app es cambiar una línea, no cuarenta.
-   El bloque `prefers-color-scheme: dark` es el modo oscuro: el teléfono avisa
-   qué prefiere el usuario y el navegador usa ese juego de colores.
+   Decisión de diseño (v2): el color ya NO rellena tarjetas. El verde aparece
+   en tres sitios y en ninguno más: la cifra principal, la barra de cada día y
+   la pestaña activa. Todo lo demás es papel y tinta.
+
+   La razón: cuando todo está resaltado, nada está resaltado. Antes el bloque
+   verde competía con el número que de verdad importaba.
    ========================================================================== */
 :root {
-  --fondo:        #f5f5f4;
-  --tarjeta:      #ffffff;
-  --borde:        #e4e4e3;
-  --texto:        #1a1a19;
-  --texto-suave:  #71716e;
-  --acento:       #15803d;   /* verde: el dinero que entra */
-  --acento-suave: #dcfce7;
-  --alerta:       #b91c1c;   /* rojo: el dinero que sale   */
-  --radio:        14px;
+  --papel:      #faf9f7;   /* el fondo */
+  --tarjeta:    #ffffff;
+  --linea:      #e7e5e0;   /* bordes: casi invisibles, solo separan */
+  --linea-alta: #c8c5be;
+  --tinta:      #16150f;   /* el texto principal */
+  --tinta-2:    #6b6963;   /* etiquetas y datos secundarios */
+  --tinta-3:    #9a9891;   /* lo que casi no importa */
+  --verde:      #15803d;
+  --verde-suave:#dcf2e3;   /* solo para las barras de los días */
+  --rojo:       #a52020;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --fondo:        #131313;
-    --tarjeta:      #1e1e1d;
-    --borde:        #333331;
-    --texto:        #f5f5f4;
-    --texto-suave:  #a1a1a0;
-    --acento:       #4ade80;
-    --acento-suave: #14301f;
-    --alerta:       #f87171;
+    --papel:      #0e0e0d;
+    --tarjeta:    #191918;
+    --linea:      #2b2b28;
+    --linea-alta: #45443f;
+    --tinta:      #f7f6f3;
+    --tinta-2:    #9d9b94;
+    --tinta-3:    #6a6862;
+    --verde:      #5bd68b;
+    --verde-suave:#1a3226;
+    --rojo:       #f08c8c;
   }
 }
 
 /* ============================================================================
-   SECCIÓN B — Base
+   SECCIÓN B — Base y tipografía
+   ----------------------------------------------------------------------------
+   El carácter de la app está aquí, no en el color. Dos recursos:
+
+   1. Contraste de tamaño brutal entre la cifra y su etiqueta (40px contra
+      10px). Una jerarquía tímida se lee como desorden.
+   2. Etiquetas en versalitas espaciadas. Es un recurso de tipografía editorial
+      (periódicos, informes financieros) y hace que un dato se lea como un dato
+      y no como una frase.
    ========================================================================== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;
-  padding: 0 16px calc(90px + env(safe-area-inset-bottom));
-  background: var(--fondo);
-  color: var(--texto);
+  padding: 0 14px calc(76px + env(safe-area-inset-bottom));
+  background: var(--papel);
+  color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
 
-h1 { font-size: 20px; font-weight: 600; margin: 20px 0 4px; letter-spacing: -0.02em; }
-h2 { font-size: 13px; font-weight: 600; text-transform: uppercase;
-     letter-spacing: 0.06em; color: var(--texto-suave); margin: 28px 0 10px; }
+/* Versalitas: la etiqueta de todo dato numérico */
+.etiqueta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
 
-.sub { color: var(--texto-suave); font-size: 14px; margin: 0 0 18px; }
-
-/* Los números de dinero en fuente tabular: así las cifras de una lista quedan
-   alineadas en columna aunque tengan distintos dígitos, como en Excel. */
-.cifra { font-variant-numeric: tabular-nums; }
+/* Las cifras van en fuente tabular para que se alineen en columna, y con las
+   letras un poco apretadas: un número grande con espaciado normal se ve
+   desparramado. */
+.cifra { font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
 
 .tarjeta {
   background: var(--tarjeta);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  padding: 16px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+/* ============================================================================
+   SECCIÓN C — Cabecera y navegación entre semanas
+   ========================================================================== */
+.cabecera {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 2px 12px;
+}
+.cabecera .lugar { font-size: 13px; color: var(--tinta-2); }
+.cabecera .hoy {
+  font-size: 12px; color: var(--verde); font-weight: 600;
+  padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
+  background: none; cursor: pointer;
+}
+
+.semana-nav {
+  display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 12px;
 }
+.semana-nav .rango { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.semana-nav button {
+  width: 40px; height: 40px; border: 1px solid var(--linea);
+  background: var(--tarjeta); color: var(--tinta-2); border-radius: 10px;
+  font-size: 17px; line-height: 1; cursor: pointer;
+}
+.semana-nav button:disabled { opacity: .35; }
 
 /* ============================================================================
-   SECCIÓN C — Formulario
+   SECCIÓN D — La semana: siete días tocables
+   ----------------------------------------------------------------------------
+   Cada día es un botón. El relleno verde de abajo es proporcional al día que
+   más ganaste esa semana: la celda ES la barra. Así se compara de un vistazo
+   sin ocupar espacio extra con un gráfico aparte.
    ========================================================================== */
-label { display: block; font-size: 13px; font-weight: 500;
-        color: var(--texto-suave); margin-bottom: 6px; }
+.dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 
-input[type=text], input[type=number], input[type=date], input[type=time] {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--borde);
-  border-radius: 10px;
-  background: var(--fondo);
-  color: var(--texto);
-  /* 16px exactos: con menos, Safari en iPhone hace zoom al tocar el campo y
-     descoloca toda la pantalla. Es la razón, no una preferencia estética. */
-  font-size: 16px;
+.dia {
+  position: relative; overflow: hidden;
+  height: 82px; padding: 7px 2px 6px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 1px solid var(--linea); border-radius: 9px;
+  background: var(--tarjeta); color: var(--tinta);
+  font-family: inherit; cursor: pointer;
+}
+.dia .barra {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--verde-suave);
+}
+.dia .letra, .dia .num, .dia .monto { position: relative; }
+.dia .letra { font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+              color: var(--tinta-3); text-transform: uppercase; }
+.dia .num   { font-size: 15px; font-weight: 500; margin-top: 1px; }
+.dia .monto { font-size: 11px; font-weight: 600; color: var(--verde);
+              margin-top: auto; font-variant-numeric: tabular-nums; }
+.dia.vacio .num { color: var(--tinta-3); font-weight: 400; }
+.dia.hoy { border-color: var(--tinta); }
+.dia.hoy .letra { color: var(--tinta); }
+
+/* ============================================================================
+   SECCIÓN E — El resumen de la semana
+   ========================================================================== */
+.total { padding: 22px 2px 6px; }
+.total .cantidad {
+  font-size: 42px; font-weight: 600; line-height: 1;
+  margin: 6px 0 4px; color: var(--tinta);
+}
+.total .contra { font-size: 13px; color: var(--tinta-2); }
+.total .sube { color: var(--verde); font-weight: 600; }
+.total .baja { color: var(--rojo); font-weight: 600; }
+
+/* Rejilla de métricas: las líneas separadoras son el propio hueco de la
+   rejilla sobre un fondo del color del borde. Un truco viejo que evita tener
+   que decidir qué celda lleva borde y cuál no. */
+.metricas {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--linea);
+  border: 1px solid var(--linea); border-radius: 12px; overflow: hidden;
+}
+.metrica { background: var(--tarjeta); padding: 12px 10px; }
+.metrica .valor { font-size: 19px; font-weight: 600; margin-top: 3px;
+                  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* ============================================================================
+   SECCIÓN F — Formulario del turno
+   ========================================================================== */
+.barra-titulo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 14px; margin-bottom: 4px;
+}
+.barra-titulo .fecha { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.barra-titulo button {
+  border: none; background: none; color: var(--tinta-2);
+  font-size: 15px; cursor: pointer; padding: 6px;
+}
+
+.campo { margin-bottom: 13px; }
+.campo:last-child { margin-bottom: 0; }
+.campo label { display: block; margin-bottom: 5px; }
+
+input[type=text], input[type=number], input[type=time] {
+  width: 100%; padding: 11px 12px;
+  border: 1px solid var(--linea); border-radius: 9px;
+  background: var(--papel); color: var(--tinta);
+  /* 16px exactos: con menos, Safari en iPhone hace zoom al tocar el campo. */
+  font-size: 16px; font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
-input:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+input:focus { outline: none; border-color: var(--tinta); }
+::placeholder { color: var(--tinta-3); }
 
-.fila { display: flex; gap: 10px; }
+.fila { display: flex; gap: 9px; }
 .fila > div { flex: 1; }
 
-.campo { margin-bottom: 14px; }
-
-/* Chips de los ayudantes. Tocar uno lo prende o lo apaga. */
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
-  padding: 9px 14px;
-  border: 1px solid var(--borde);
-  border-radius: 999px;
-  background: var(--fondo);
-  color: var(--texto-suave);
-  font-size: 14px;
-  cursor: pointer;
-  user-select: none;
-  transition: background .12s, color .12s, border-color .12s;
+  padding: 8px 13px; border: 1px solid var(--linea); border-radius: 999px;
+  background: var(--papel); color: var(--tinta-2);
+  font-size: 13px; cursor: pointer; user-select: none;
 }
-.chip.activo {
-  background: var(--acento-suave);
-  border-color: var(--acento);
-  color: var(--acento);
-  font-weight: 600;
+.chip.activo { border-color: var(--verde); color: var(--verde); font-weight: 600; }
+.chip small { opacity: .7; margin-left: 3px; }
+
+/* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
+   guía el ojo desde el concepto hasta la cifra. */
+.recibo { font-size: 14px; }
+.recibo div { display: flex; justify-content: space-between; padding: 5px 0;
+              color: var(--tinta-2); }
+.recibo .final {
+  border-top: 1px solid var(--linea); margin-top: 7px; padding-top: 11px;
+  color: var(--tinta); font-size: 15px;
 }
-.chip small { opacity: .75; margin-left: 4px; }
+.recibo .final span:last-child { font-size: 26px; font-weight: 600;
+                                 letter-spacing: -0.025em; }
+.recibo .resta { color: var(--rojo); }
+.recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
 
 /* ============================================================================
-   SECCIÓN D — Botones
+   SECCIÓN G — Botones
    ========================================================================== */
-button {
-  font-family: inherit;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid var(--borde);
-  background: var(--tarjeta);
-  color: var(--texto);
-  padding: 13px 16px;
-  cursor: pointer;
-}
-button.principal {
-  width: 100%;
-  background: var(--acento);
-  border-color: var(--acento);
-  color: #fff;
-  font-weight: 600;
-}
-@media (prefers-color-scheme: dark) { button.principal { color: #08150e; } }
+button { font-family: inherit; }
 
-button.peligro { color: var(--alerta); border-color: var(--alerta); }
-button.chico   { padding: 8px 12px; font-size: 14px; }
+.principal {
+  width: 100%; padding: 15px; margin-top: 4px;
+  background: var(--tinta); color: var(--papel);
+  border: none; border-radius: 11px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.secundario {
+  width: 100%; padding: 12px; margin-top: 8px;
+  background: none; color: var(--tinta-2);
+  border: 1px solid var(--linea); border-radius: 11px;
+  font-size: 14px; cursor: pointer;
+}
+.secundario.riesgo { color: var(--rojo); }
+.chico { padding: 7px 11px; font-size: 13px; border: 1px solid var(--linea);
+         border-radius: 8px; background: var(--papel); color: var(--tinta);
+         cursor: pointer; }
 
 /* ============================================================================
-   SECCIÓN E — Resumen en vivo
-   ----------------------------------------------------------------------------
-   La tarjeta que dice cuánto te llevas. Es lo más importante de la pantalla,
-   así que es lo más grande y lo único con color.
-   ========================================================================== */
-.resumen { border-color: var(--acento); background: var(--acento-suave); }
-.resumen .grande {
-  font-size: 40px; font-weight: 650; letter-spacing: -0.03em;
-  color: var(--acento); line-height: 1.1; margin: 2px 0 10px;
-}
-.desglose { font-size: 14px; color: var(--texto-suave); }
-.desglose div { display: flex; justify-content: space-between; padding: 3px 0; }
-.desglose .total { border-top: 1px solid var(--borde); margin-top: 6px;
-                   padding-top: 8px; color: var(--texto); font-weight: 600; }
-.resta { color: var(--alerta); }
-
-/* ============================================================================
-   SECCIÓN F — Lista de turnos
-   ========================================================================== */
-.turno {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 14px 16px; cursor: pointer;
-}
-.turno .dia   { font-weight: 600; font-size: 15px; }
-.turno .datos { font-size: 13px; color: var(--texto-suave); }
-.turno .neto  { font-size: 19px; font-weight: 650; color: var(--acento); }
-.turno .hora  { font-size: 12px; color: var(--texto-suave); text-align: right; }
-
-.semana { display: flex; justify-content: space-between; align-items: baseline;
-          margin: 26px 0 8px; }
-.semana .rango { font-size: 13px; font-weight: 600; color: var(--texto-suave); }
-.semana .suma  { font-size: 13px; color: var(--texto-suave); }
-
-.vacio { text-align: center; color: var(--texto-suave); padding: 50px 20px;
-         font-size: 15px; }
-
-/* Cuadrícula de métricas del resumen semanal/total */
-.metricas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
-            background: var(--borde); border-radius: var(--radio);
-            overflow: hidden; border: 1px solid var(--borde); }
-.metrica { background: var(--tarjeta); padding: 14px 16px; }
-.metrica .valor { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
-.metrica .clave { font-size: 12px; color: var(--texto-suave); }
-
-/* ============================================================================
-   SECCIÓN G — Barra de pestañas
+   SECCIÓN H — Pestañas
    ========================================================================== */
 .pestanas {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  display: flex;
-  background: var(--tarjeta);
-  border-top: 1px solid var(--borde);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 10;
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex;
+  background: var(--tarjeta); border-top: 1px solid var(--linea);
+  padding-bottom: env(safe-area-inset-bottom); z-index: 10;
 }
 .pestanas button {
-  flex: 1; border: none; border-radius: 0; background: none;
-  padding: 12px 0 14px;
-  font-size: 12px; color: var(--texto-suave);
+  flex: 1; border: none; background: none; padding: 11px 0 13px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--tinta-3); cursor: pointer;
 }
-.pestanas button.activa { color: var(--acento); font-weight: 600; }
-.pestanas .icono { display: block; font-size: 19px; margin-bottom: 2px; }
+.pestanas button.activa { color: var(--verde); }
 
 .oculto { display: none !important; }
-
-/* Fila de un rol dentro de Ajustes */
-.rol-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.rol-fila input[type=text]   { flex: 1; }
-.rol-fila input[type=number] { width: 80px; }
+.vacio { text-align: center; color: var(--tinta-3); padding: 30px 20px;
+         font-size: 14px; }
+.rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
+.rol-fila input[type=text] { flex: 1; }
+.rol-fila input[type=number] { width: 74px; }
+h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
+             text-transform: uppercase; color: var(--tinta-3);
+             margin: 24px 0 9px 2px; }
 </style>
 </head>
 <body>
 
 <!-- ==========================================================================
-     SECCIÓN H — Pantalla: REGISTRAR
+     SECCIÓN I — Pantalla: SEMANA (la principal)
      ====================================================================== -->
-<section id="pantalla-registrar">
-  <h1 id="titulo-registrar">Nuevo turno</h1>
-  <p class="sub" id="sub-registrar"></p>
+<section id="p-semana">
+  <div class="cabecera">
+    <span class="lugar" id="lugar"></span>
+    <button class="hoy oculto" id="btn-hoy" onclick="irAHoy()">Hoy</button>
+  </div>
+
+  <div class="semana-nav">
+    <button onclick="cambiarSemana(-1)" aria-label="Semana anterior">‹</button>
+    <span class="rango" id="rango"></span>
+    <button id="btn-siguiente" onclick="cambiarSemana(1)" aria-label="Semana siguiente">›</button>
+  </div>
+
+  <div class="dias" id="dias"></div>
+
+  <div class="total">
+    <div class="etiqueta">Neto de la semana</div>
+    <div class="cantidad cifra" id="total-semana">$0</div>
+    <div class="contra" id="contra-semana"></div>
+  </div>
+
+  <div class="metricas" id="metricas"></div>
+
+  <p class="vacio" id="pista">Toca un día para registrar el turno.</p>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN J — Pantalla: TURNO (se abre al tocar un día)
+     ====================================================================== -->
+<section id="p-turno" class="oculto">
+  <div class="barra-titulo">
+    <span class="fecha" id="turno-fecha"></span>
+    <button onclick="cerrarTurno()">Cerrar</button>
+  </div>
 
   <div class="tarjeta">
-    <div class="campo">
-      <label for="f-fecha">Fecha</label>
-      <input type="date" id="f-fecha">
-    </div>
-
     <div class="fila campo">
       <div>
-        <label for="f-entrada">Entrada</label>
+        <label class="etiqueta" for="f-entrada">Entrada</label>
         <input type="time" id="f-entrada">
       </div>
       <div>
-        <label for="f-salida">Salida</label>
+        <label class="etiqueta" for="f-salida">Salida</label>
         <input type="time" id="f-salida">
       </div>
     </div>
 
     <div class="campo">
-      <label for="f-ventas">Ventas totales del turno</label>
-      <input type="number" id="f-ventas" inputmode="decimal" step="0.01"
-             min="0" placeholder="0.00">
+      <label class="etiqueta" for="f-ventas">Ventas del turno</label>
+      <input type="number" id="f-ventas" inputmode="decimal" step="0.01" min="0"
+             placeholder="0.00">
     </div>
 
     <div class="fila campo">
       <div>
-        <label for="f-efectivo">Propina en efectivo</label>
+        <label class="etiqueta" for="f-efectivo">Propina efectivo</label>
         <input type="number" id="f-efectivo" inputmode="decimal" step="0.01"
                min="0" placeholder="0.00">
       </div>
       <div>
-        <label for="f-tarjeta">Propina en tarjeta</label>
+        <label class="etiqueta" for="f-tarjeta">Propina tarjeta</label>
         <input type="number" id="f-tarjeta" inputmode="decimal" step="0.01"
                min="0" placeholder="0.00">
       </div>
     </div>
 
     <div class="campo">
-      <label>Ayudantes del turno (tip-out)</label>
-      <div class="chips" id="chips-roles"></div>
+      <label class="etiqueta">Ayudantes del turno</label>
+      <div class="chips" id="chips"></div>
     </div>
 
-    <div class="campo" style="margin-bottom:0">
-      <label for="f-nota">Nota (opcional)</label>
+    <div class="campo">
+      <label class="etiqueta" for="f-nota">Nota</label>
       <input type="text" id="f-nota" placeholder="Sección 3, evento privado…">
     </div>
   </div>
 
-  <div class="tarjeta resumen">
-    <label style="margin:0">Te llevas</label>
-    <div class="grande cifra" id="r-total">$0.00</div>
-    <div class="desglose" id="r-desglose"></div>
+  <div class="tarjeta">
+    <div class="recibo" id="recibo"></div>
   </div>
 
-  <button class="principal" id="btn-guardar" onclick="guardarTurno()">Guardar turno</button>
-  <button class="peligro" id="btn-cancelar" style="width:100%; margin-top:8px"
-          onclick="cancelarEdicion()">Cancelar edición</button>
+  <button class="principal" onclick="guardarTurno()">Guardar turno</button>
+  <button class="secundario riesgo oculto" id="btn-borrar"
+          onclick="borrarTurno()">Borrar este turno</button>
 </section>
 
 
 <!-- ==========================================================================
-     SECCIÓN I — Pantalla: TURNOS
+     SECCIÓN K — Pantalla: AJUSTES
      ====================================================================== -->
-<section id="pantalla-turnos" class="oculto">
-  <h1>Turnos</h1>
-  <p class="sub" id="sub-turnos"></p>
-  <div id="lista-turnos"></div>
-</section>
+<section id="p-ajustes" class="oculto">
+  <div class="barra-titulo"><span class="fecha">Ajustes</span></div>
 
-
-<!-- ==========================================================================
-     SECCIÓN J — Pantalla: AJUSTES
-     ====================================================================== -->
-<section id="pantalla-ajustes" class="oculto">
-  <h1>Ajustes</h1>
-  <p class="sub">Se aplican a los turnos nuevos. Los turnos ya guardados
-    conservan los valores que tenían ese día.</p>
-
-  <h2>Trabajo</h2>
+  <h2 class="seccion">Trabajo</h2>
   <div class="tarjeta">
     <div class="campo">
-      <label for="a-nombre">Nombre del restaurante</label>
+      <label class="etiqueta" for="a-nombre">Restaurante</label>
       <input type="text" id="a-nombre" onchange="guardarAjustes()">
     </div>
-    <div class="campo" style="margin-bottom:0">
-      <label for="a-tarifa">Sueldo por hora ($)</label>
-      <input type="number" id="a-tarifa" inputmode="decimal" step="0.01"
-             min="0" onchange="guardarAjustes()">
+    <div class="campo">
+      <label class="etiqueta" for="a-tarifa">Sueldo por hora</label>
+      <input type="number" id="a-tarifa" inputmode="decimal" step="0.01" min="0"
+             onchange="guardarAjustes()" placeholder="0.00">
     </div>
   </div>
 
-  <h2>Ayudantes y tip-out</h2>
+  <h2 class="seccion">Ayudantes y tip-out</h2>
   <div class="tarjeta">
-    <p class="sub" style="margin-top:0">Porcentaje sobre las ventas totales del
-      turno. Cada rol cobra el suyo.</p>
-    <div id="lista-roles"></div>
+    <div id="roles"></div>
     <button class="chico" onclick="agregarRol()">+ Agregar rol</button>
-    <p class="sub" style="margin:14px 0 0">Total si trabajan todos:
-      <strong id="a-total-pct">0%</strong></p>
+    <p style="margin:13px 0 0; font-size:13px; color:var(--tinta-2)">
+      Porcentaje sobre las ventas del turno. Con todos:
+      <strong id="a-total">0%</strong></p>
   </div>
 
-  <h2>Respaldo</h2>
+  <h2 class="seccion">Respaldo</h2>
   <div class="tarjeta">
-    <p class="sub" style="margin-top:0">Los datos viven solo en este teléfono.
-      Si borras la app, se van con ella. Exporta de vez en cuando.</p>
+    <p style="margin:0 0 11px; font-size:13px; color:var(--tinta-2)">
+      Los datos viven solo en este teléfono. Exporta de vez en cuando.</p>
     <div class="fila">
-      <button onclick="exportar()">Exportar</button>
-      <button onclick="document.getElementById('archivo').click()">Importar</button>
+      <button class="chico" onclick="exportar()">Exportar</button>
+      <button class="chico" onclick="document.getElementById('archivo').click()">
+        Importar</button>
     </div>
     <input type="file" id="archivo" accept=".json" class="oculto"
            onchange="importar(event)">
   </div>
 
-  <h2>Zona de riesgo</h2>
-  <div class="tarjeta">
-    <button class="peligro" style="width:100%" onclick="borrarTodo()">
-      Borrar todos los datos
-    </button>
-  </div>
+  <button class="secundario riesgo" onclick="borrarTodo()">
+    Borrar todos los datos</button>
 </section>
 
 
 <!-- ==========================================================================
-     SECCIÓN K — Barra de pestañas
+     SECCIÓN L — Pestañas
      ====================================================================== -->
-<nav class="pestanas">
-  <button id="tab-registrar" onclick="irA('registrar')">
-    <span class="icono">＋</span>Registrar</button>
-  <button id="tab-turnos" onclick="irA('turnos')">
-    <span class="icono">☰</span>Turnos</button>
-  <button id="tab-ajustes" onclick="irA('ajustes')">
-    <span class="icono">⚙</span>Ajustes</button>
+<nav class="pestanas" id="pestanas">
+  <button id="tab-semana"  onclick="irA('semana')">Semana</button>
+  <button id="tab-ajustes" onclick="irA('ajustes')">Ajustes</button>
 </nav>
 
 
 <script src="logica.js"></script>
 <script>
 /* ============================================================================
-   SECCIÓN L — Los datos
+   SECCIÓN M — Los datos
    ----------------------------------------------------------------------------
-   Una sola variable `datos` guarda TODO. Cualquier cambio la modifica, llama a
-   guardar() y luego a pintar(), que redibuja la pantalla entera desde cero.
-   Nunca se toca el HTML "a mano" en un sitio y los datos en otro: si lo que se
-   ve y lo que está guardado pueden separarse, tarde o temprano se separan.
+   Una sola variable `datos` guarda todo. Cualquier cambio la modifica, llama a
+   guardar() y luego a pintar(), que redibuja desde cero.
 
-   La forma de `datos` imita tablas de base de datos a propósito, para que
-   mudarse a Postgres en la Fase 3 sea copiar la estructura, no rediseñarla.
-   (En la nube cada tabla llevará además un `user_id`; aquí no hace falta
-   porque solo hay una persona por teléfono.)
+   Decisión (v2): UN TURNO POR DÍA. Al tocar un día, si ya tiene turno se
+   edita; si no, se crea. No hay forma de tener dos turnos el mismo día. Un
+   doble (comida y cena) se registra como un turno con su entrada y su salida.
+   Si algún día trabajas en dos restaurantes el mismo día, hay que revisarlo.
    ========================================================================== */
 
 const CLAVE = 'tipsControl';
 
 let datos = {
   trabajo: { nombre: 'Mi restaurante', tarifaHora: 0 },
-  roles:   [                                   // tabla `roles_tipout`
+  roles: [
     { id: 1, nombre: 'Busser', porcentaje: 3 },
     { id: 2, nombre: 'Barra',  porcentaje: 1.5 },
     { id: 3, nombre: 'Runner', porcentaje: 1 },
     { id: 4, nombre: 'Bakery', porcentaje: 1 }
   ],
-  turnos:  []                                  // tabla `turnos`
+  turnos: []
 };
 
-/* Estado de la pantalla — esto NO se guarda, se pierde al cerrar y está bien. */
-let pantalla = 'registrar';
-let rolesActivos = [];      // nombres de los roles marcados en el formulario
-let editandoId = null;      // si estás corrigiendo un turno, aquí está su id
+/* Estado de pantalla: no se guarda, se pierde al cerrar y está bien. */
+let pantalla = 'semana';
+let lunes = '';           // el lunes de la semana que se está viendo
+let fechaAbierta = '';    // el día que se está editando
+let rolesActivos = [];
+
+const LETRAS = ['L','M','X','J','V','S','D'];
 
 
 /* ============================================================================
-   SECCIÓN M — Guardar y cargar
+   SECCIÓN N — Guardar, cargar y formato
    ========================================================================== */
 
-function guardar() {
-  localStorage.setItem(CLAVE, JSON.stringify(datos));
+function guardar() { localStorage.setItem(CLAVE, JSON.stringify(datos)); }
+
+/**
+ * Identificador único para turnos y roles.
+ *
+ * Antes esto era `Date.now()`, o sea los milisegundos desde 1970. Funciona
+ * mientras haya una sola persona tocando un teléfono: es imposible crear dos
+ * turnos en el mismo milisegundo. Deja de funcionar en cuanto los datos de
+ * varias personas viven en la misma base: dos meseros guardando su turno a la
+ * salida del viernes pueden coincidir en el milisegundo, y entonces un turno
+ * pisaría al otro.
+ *
+ * `randomUUID` devuelve un identificador aleatorio de 128 bits, del tipo que
+ * usa Postgres para las llaves primarias. Cambiar esto ahora cuesta tres
+ * líneas; cambiarlo cuando ya haya datos de diez personas cuesta una
+ * migración.
+ */
+function nuevoId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Respaldo para navegadores viejos: la hora más un pedazo al azar.
+  return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 }
 
 function cargar() {
-  const guardado = localStorage.getItem(CLAVE);
-  if (!guardado) return;
+  const g = localStorage.getItem(CLAVE);
+  if (!g) return;
   try {
-    const leido = JSON.parse(guardado);
-    // Mezclamos con los valores por defecto en vez de reemplazar. Así, cuando
-    // en el futuro agreguemos un campo nuevo, los datos viejos no llegan
-    // incompletos y rompen la app al abrirla.
-    datos = { ...datos, ...leido };
+    // Mezclar con los valores por defecto, no reemplazar: así los datos
+    // guardados con una versión vieja no llegan sin los campos nuevos.
+    datos = { ...datos, ...JSON.parse(g) };
   } catch (e) {
-    // Si el guardado está corrupto, es mejor seguir con datos vacíos que
-    // dejar la app en pantalla blanca sin explicación.
-    console.error('No se pudieron leer los datos guardados:', e);
+    console.error('No se pudieron leer los datos:', e);
     alert('Los datos guardados no se pudieron leer. Se empieza de cero.');
   }
 }
 
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const USD0 = new Intl.NumberFormat('en-US',
+  { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-/* ============================================================================
-   SECCIÓN N — Formato
-   ========================================================================== */
+function $(n)  { return USD.format(Number(n) || 0); }
+function $0(n) { return USD0.format(Number(n) || 0); }
 
-const DINERO = new Intl.NumberFormat('en-US',
-  { style: 'currency', currency: 'USD' });
+function hoy() {
+  const f = new Date();
+  return `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`
+       + `-${String(f.getDate()).padStart(2,'0')}`;
+}
 
-function $(n) { return DINERO.format(Number(n) || 0); }
+function partes(texto) {
+  const [a, m, d] = String(texto).split('-').map(Number);
+  return new Date(a, (m||1)-1, d||1);
+}
+
+function diaYMes(texto) {
+  return partes(texto).toLocaleDateString('es-US',
+    { day: 'numeric', month: 'short' });
+}
 
 function fechaLarga(texto) {
-  const [a, m, d] = String(texto).split('-').map(Number);
-  const f = new Date(a, (m || 1) - 1, d || 1);
-  return f.toLocaleDateString('es-US',
-    { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function fechaHoy() {
-  const f = new Date();
-  const mm = String(f.getMonth() + 1).padStart(2, '0');
-  const dd = String(f.getDate()).padStart(2, '0');
-  return `${f.getFullYear()}-${mm}-${dd}`;
+  const t = partes(texto).toLocaleDateString('es-US',
+    { weekday: 'long', day: 'numeric', month: 'long' });
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 
 /* ============================================================================
-   SECCIÓN O — Leer el formulario
-   ----------------------------------------------------------------------------
-   Una sola función construye el turno a partir de lo que hay escrito en
-   pantalla. La usan tanto el resumen en vivo como el botón de guardar, así que
-   lo que ves mientras escribes es exactamente lo que se guarda. Si fueran dos
-   funciones parecidas, algún día una se actualizaría y la otra no.
+   SECCIÓN O — Navegación
    ========================================================================== */
 
-function valor(id) { return document.getElementById(id).value; }
-function numero(id) { return Number(valor(id)) || 0; }
+function irA(nombre) { pantalla = nombre; pintar(); window.scrollTo(0, 0); }
 
-function leerFormulario() {
-  const ventas = numero('f-ventas');
-
-  // Solo los roles marcados entran al cálculo.
-  const rolesDelTurno = datos.roles.filter(r => rolesActivos.includes(r.nombre));
-  const tipout = calcularTipOut(ventas, rolesDelTurno);
-
-  return {
-    id: editandoId || Date.now(),
-    fecha:      valor('f-fecha') || fechaHoy(),
-    entrada:    valor('f-entrada'),
-    salida:     valor('f-salida'),
-    ventas:     ventas,
-    efectivo:   numero('f-efectivo'),
-    tarjeta:    numero('f-tarjeta'),
-    // La tarifa se copia al turno, no se consulta después. Si el restaurante
-    // te sube el sueldo en octubre, tus turnos de agosto no pueden cambiar de
-    // valor solos: lo que ganaste ese día ya está cerrado.
-    tarifaHora: Number(datos.trabajo.tarifaHora) || 0,
-    tipOut:         tipout.total,
-    tipoutDetalle:  tipout.detalle,
-    nota:       valor('f-nota').trim()
-  };
-}
-
-function escribirFormulario(t) {
-  document.getElementById('f-fecha').value    = t.fecha || fechaHoy();
-  document.getElementById('f-entrada').value  = t.entrada || '';
-  document.getElementById('f-salida').value   = t.salida || '';
-  document.getElementById('f-ventas').value   = t.ventas   || '';
-  document.getElementById('f-efectivo').value = t.efectivo || '';
-  document.getElementById('f-tarjeta').value  = t.tarjeta  || '';
-  document.getElementById('f-nota').value     = t.nota || '';
-}
-
-function limpiarFormulario() {
-  editandoId = null;
-  escribirFormulario({ fecha: fechaHoy() });
-  rolesActivos = rolesDelUltimoTurno();
+function cambiarSemana(cuantas) {
+  lunes = sumarDias(lunes, cuantas * 7);
   pintar();
 }
 
+function irAHoy() { lunes = lunesDeLaSemana(hoy()); pintar(); }
+
+/** Abre el formulario de un día. Si ya hay turno, lo carga para editarlo. */
+function abrirDia(fecha) {
+  fechaAbierta = fecha;
+  const existente = turnosDelDia(datos.turnos, fecha)[0];
+
+  if (existente) {
+    escribir(existente);
+    rolesActivos = (existente.tipoutDetalle || []).map(d => d.rol);
+  } else {
+    escribir({});
+    rolesActivos = rolesDelUltimoTurno();
+  }
+
+  pantalla = 'turno';
+  pintar();
+  window.scrollTo(0, 0);
+}
+
+function cerrarTurno() { irA('semana'); }
+
 /**
- * Los ayudantes del turno anterior, como punto de partida.
- * Casi siempre el equipo se repite, así que en el caso normal no tienes que
- * tocar nada. Si es tu primer turno, se marcan todos los roles configurados.
+ * Los ayudantes del último turno registrado, como punto de partida.
+ * Casi siempre el equipo se repite, así que en el caso normal no hay que tocar
+ * nada. La primera vez se marcan todos los roles configurados.
  */
 function rolesDelUltimoTurno() {
   if (datos.turnos.length === 0) return datos.roles.map(r => r.nombre);
-  const ultimo = [...datos.turnos].sort((a, b) => b.id - a.id)[0];
-  const detalle = ultimo.tipoutDetalle || [];
-  return detalle.map(d => d.rol).filter(nombre =>
-    datos.roles.some(r => r.nombre === nombre));   // por si un rol ya no existe
+  // Ordenamos por fecha y tomamos el último. No hace falta desempatar por id
+  // porque solo puede haber un turno por día.
+  const ultimo = [...datos.turnos]
+    .sort((a, b) => a.fecha.localeCompare(b.fecha)).pop();
+  return (ultimo.tipoutDetalle || []).map(d => d.rol)
+    .filter(n => datos.roles.some(r => r.nombre === n));
 }
 
 
 /* ============================================================================
-   SECCIÓN P — Guardar, editar y borrar un turno
+   SECCIÓN P — Leer y escribir el formulario
+   ----------------------------------------------------------------------------
+   Una sola función arma el turno desde lo que hay en pantalla. La usan tanto
+   el recibo en vivo como el botón de guardar, así que lo que ves mientras
+   escribes es exactamente lo que se guarda.
+   ========================================================================== */
+
+function val(id) { return document.getElementById(id).value; }
+function num(id) { return Number(val(id)) || 0; }
+
+function leer() {
+  const ventas = num('f-ventas');
+  const rolesDelTurno = datos.roles.filter(r => rolesActivos.includes(r.nombre));
+  const tipout = calcularTipOut(ventas, rolesDelTurno);
+  const existente = turnosDelDia(datos.turnos, fechaAbierta)[0];
+
+  return {
+    id: existente ? existente.id : nuevoId(),
+    fecha: fechaAbierta,
+    entrada: val('f-entrada'),
+    salida: val('f-salida'),
+    ventas,
+    efectivo: num('f-efectivo'),
+    tarjeta: num('f-tarjeta'),
+    // La tarifa se copia al turno. Si el restaurante te sube el sueldo en
+    // octubre, tus turnos de agosto no pueden cambiar de valor solos.
+    tarifaHora: Number(datos.trabajo.tarifaHora) || 0,
+    tipOut: tipout.total,
+    tipoutDetalle: tipout.detalle,
+    nota: val('f-nota').trim()
+  };
+}
+
+function escribir(t) {
+  document.getElementById('f-entrada').value  = t.entrada  || '';
+  document.getElementById('f-salida').value   = t.salida   || '';
+  document.getElementById('f-ventas').value   = t.ventas   || '';
+  document.getElementById('f-efectivo').value = t.efectivo || '';
+  document.getElementById('f-tarjeta').value  = t.tarjeta  || '';
+  document.getElementById('f-nota').value     = t.nota     || '';
+}
+
+
+/* ============================================================================
+   SECCIÓN Q — Guardar y borrar turnos
    ========================================================================== */
 
 function guardarTurno() {
-  const turno = leerFormulario();
+  const turno = leer();
 
   if (!turno.entrada || !turno.salida) {
     alert('Falta la hora de entrada o de salida.');
@@ -540,64 +642,50 @@ function guardarTurno() {
   }
 
   const i = datos.turnos.findIndex(t => t.id === turno.id);
-  if (i >= 0) datos.turnos[i] = turno;   // estabas editando
-  else        datos.turnos.push(turno);  // turno nuevo
+  if (i >= 0) datos.turnos[i] = turno; else datos.turnos.push(turno);
 
   guardar();
-  limpiarFormulario();
-  irA('turnos');
+  // Al guardar, saltamos a la semana de ese turno: si corregiste un día de
+  // otra semana, quieres verlo, no volver a donde estabas.
+  lunes = lunesDeLaSemana(turno.fecha);
+  irA('semana');
 }
 
-function editarTurno(id) {
-  const t = datos.turnos.find(t => t.id === id);
-  if (!t) return;
-  editandoId = id;
-  escribirFormulario(t);
-  rolesActivos = (t.tipoutDetalle || []).map(d => d.rol);
-  irA('registrar');
-  window.scrollTo(0, 0);
-}
-
-function cancelarEdicion() { limpiarFormulario(); irA('turnos'); }
-
-function borrarTurno(id) {
-  const t = datos.turnos.find(t => t.id === id);
+function borrarTurno() {
+  const t = turnosDelDia(datos.turnos, fechaAbierta)[0];
   if (!t) return;
   if (!confirm(`¿Borrar el turno del ${fechaLarga(t.fecha)}?`)) return;
-  datos.turnos = datos.turnos.filter(t => t.id !== id);
+  datos.turnos = datos.turnos.filter(x => x.id !== t.id);
   guardar();
-  limpiarFormulario();
-  irA('turnos');
+  irA('semana');
 }
 
 
 /* ============================================================================
-   SECCIÓN Q — Ajustes
+   SECCIÓN R — Ajustes
    ========================================================================== */
 
 function guardarAjustes() {
-  datos.trabajo.nombre     = valor('a-nombre').trim() || 'Mi restaurante';
-  datos.trabajo.tarifaHora = numero('a-tarifa');
+  datos.trabajo.nombre     = val('a-nombre').trim() || 'Mi restaurante';
+  datos.trabajo.tarifaHora = num('a-tarifa');
   guardar();
   pintar();
 }
 
 function agregarRol() {
-  const id = Date.now();
-  datos.roles.push({ id, nombre: 'Nuevo rol', porcentaje: 0 });
+  datos.roles.push({ id: nuevoId(), nombre: 'Nuevo rol', porcentaje: 0 });
   guardar();
   pintar();
 }
 
-function cambiarRol(id, campo, valorNuevo) {
+function cambiarRol(id, campo, valor) {
   const rol = datos.roles.find(r => r.id === id);
   if (!rol) return;
-  const anterior = rol.nombre;
-  rol[campo] = campo === 'porcentaje' ? (Number(valorNuevo) || 0)
-                                      : String(valorNuevo).trim();
+  const antes = rol.nombre;
+  rol[campo] = campo === 'porcentaje' ? (Number(valor) || 0) : String(valor).trim();
   // Si le cambiaste el nombre a un rol que estaba marcado, que siga marcado.
-  if (campo === 'nombre' && rolesActivos.includes(anterior)) {
-    rolesActivos = rolesActivos.map(n => n === anterior ? rol.nombre : n);
+  if (campo === 'nombre' && rolesActivos.includes(antes)) {
+    rolesActivos = rolesActivos.map(n => n === antes ? rol.nombre : n);
   }
   guardar();
   pintar();
@@ -615,14 +703,14 @@ function borrarRol(id) {
 
 
 /* ============================================================================
-   SECCIÓN R — Respaldo
+   SECCIÓN S — Respaldo
    ========================================================================== */
 
 function exportar() {
-  const texto = JSON.stringify(datos, null, 2);
   const enlace = document.createElement('a');
-  enlace.href = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
-  enlace.download = `tips-control-${fechaHoy()}.json`;
+  enlace.href = URL.createObjectURL(
+    new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }));
+  enlace.download = `tips-control-${hoy()}.json`;
   enlace.click();
   URL.revokeObjectURL(enlace.href);
 }
@@ -635,18 +723,17 @@ function importar(evento) {
     try {
       const leido = JSON.parse(e.target.result);
       if (!Array.isArray(leido.turnos)) throw new Error('sin turnos');
-      if (!confirm(`Se van a reemplazar tus datos por ${leido.turnos.length} `
-                 + `turnos del respaldo. ¿Seguro?`)) return;
+      if (!confirm(`Se reemplazan tus datos por ${leido.turnos.length} turnos `
+                 + `del respaldo. ¿Seguro?`)) return;
       datos = { ...datos, ...leido };
       guardar();
-      limpiarFormulario();
-      irA('turnos');
+      irA('semana');
     } catch (err) {
       alert('Ese archivo no parece un respaldo de Tips Control.');
     }
   };
   lector.readAsText(archivo);
-  evento.target.value = '';   // permite volver a elegir el mismo archivo
+  evento.target.value = '';
 }
 
 function borrarTodo() {
@@ -658,63 +745,132 @@ function borrarTodo() {
 
 
 /* ============================================================================
-   SECCIÓN S — Navegación
-   ========================================================================== */
-
-function irA(nombre) {
-  pantalla = nombre;
-  pintar();
-  window.scrollTo(0, 0);
-}
-
-
-/* ============================================================================
    SECCIÓN T — Dibujar
-   ----------------------------------------------------------------------------
-   `pintar()` redibuja todo lo que depende de los datos. Se llama después de
-   cualquier cambio. Es más trabajo para el teléfono del que haría falta, y a
-   esta escala no se nota: a cambio, es imposible que una parte de la pantalla
-   quede mostrando información vieja.
    ========================================================================== */
 
 function pintar() {
-  // Qué pantalla se ve
-  ['registrar', 'turnos', 'ajustes'].forEach(p => {
-    document.getElementById('pantalla-' + p).classList.toggle('oculto', p !== pantalla);
-    document.getElementById('tab-' + p).classList.toggle('activa', p === pantalla);
-  });
+  document.getElementById('p-semana').classList.toggle('oculto', pantalla !== 'semana');
+  document.getElementById('p-turno').classList.toggle('oculto', pantalla !== 'turno');
+  document.getElementById('p-ajustes').classList.toggle('oculto', pantalla !== 'ajustes');
 
-  pintarFormulario();
-  pintarResumen();
-  pintarTurnos();
-  pintarAjustes();
+  // Con el formulario abierto se esconden las pestañas: estás en medio de una
+  // tarea y saltar a otra sección solo sirve para perder lo que escribiste.
+  document.getElementById('pestanas').classList.toggle('oculto', pantalla === 'turno');
+  document.getElementById('tab-semana').classList.toggle('activa', pantalla === 'semana');
+  document.getElementById('tab-ajustes').classList.toggle('activa', pantalla === 'ajustes');
+
+  if (pantalla === 'semana')  pintarSemana();
+  if (pantalla === 'turno')   pintarTurno();
+  if (pantalla === 'ajustes') pintarAjustes();
 }
 
-/* --- Formulario --- */
-function pintarFormulario() {
-  document.getElementById('titulo-registrar').textContent =
-    editandoId ? 'Editar turno' : 'Nuevo turno';
-  document.getElementById('sub-registrar').textContent =
-    datos.trabajo.nombre + (datos.trabajo.tarifaHora > 0
-      ? ` · ${$(datos.trabajo.tarifaHora)}/hora` : ' · sin sueldo base');
+/* --- La semana --- */
+function pintarSemana() {
+  const fechas = diasDeLaSemana(lunes);
+  const deLaSemana = datos.turnos.filter(t => fechas.includes(t.fecha));
+  const r = resumir(deLaSemana);
 
-  document.getElementById('btn-guardar').textContent =
-    editandoId ? 'Guardar cambios' : 'Guardar turno';
-  document.getElementById('btn-cancelar').classList.toggle('oculto', !editandoId);
+  document.getElementById('lugar').textContent = datos.trabajo.nombre;
+  document.getElementById('rango').textContent =
+    `${diaYMes(lunes)} – ${diaYMes(fechas[6])}`;
 
-  // Chips de ayudantes
-  const chips = document.getElementById('chips-roles');
+  const esSemanaActual = lunes === lunesDeLaSemana(hoy());
+  document.getElementById('btn-hoy').classList.toggle('oculto', esSemanaActual);
+  // No dejamos avanzar más allá de la semana en curso: registrar propinas del
+  // futuro no significa nada, y un toque de más en la flecha te dejaría
+  // mirando una semana vacía sin entender por qué.
+  document.getElementById('btn-siguiente').disabled = esSemanaActual;
+
+  // El día que más ganaste marca la altura máxima de las barras.
+  const totales = fechas.map(f => {
+    const t = turnosDelDia(datos.turnos, f)[0];
+    return t ? calcularTurno(t).totalNeto : 0;
+  });
+  const tope = Math.max(...totales, 1);
+
+  const caja = document.getElementById('dias');
+  caja.innerHTML = '';
+  fechas.forEach((fecha, i) => {
+    const total = totales[i];
+    const boton = document.createElement('button');
+    boton.className = 'dia' + (total === 0 ? ' vacio' : '')
+                    + (fecha === hoy() ? ' hoy' : '');
+    boton.onclick = () => abrirDia(fecha);
+
+    if (total > 0) {
+      const barra = document.createElement('div');
+      barra.className = 'barra';
+      // Mínimo 12%: una barra de 2 píxeles no se ve y parece un error.
+      barra.style.height = Math.max(12, total / tope * 68) + '%';
+      boton.appendChild(barra);
+    }
+
+    const letra = document.createElement('span');
+    letra.className = 'letra';
+    letra.textContent = LETRAS[i];
+
+    const numero = document.createElement('span');
+    numero.className = 'num';
+    numero.textContent = partes(fecha).getDate();
+
+    const monto = document.createElement('span');
+    monto.className = 'monto';
+    monto.textContent = total > 0 ? $0(total) : '';
+
+    boton.append(letra, numero, monto);
+    caja.appendChild(boton);
+  });
+
+  document.getElementById('total-semana').textContent = $(r.totalNeto);
+
+  // Comparación con la semana anterior: un número solo no dice si fue buena
+  // semana; comparado con el anterior, sí.
+  const anteriores = diasDeLaSemana(sumarDias(lunes, -7));
+  const rAnterior = resumir(datos.turnos.filter(t => anteriores.includes(t.fecha)));
+  const contra = document.getElementById('contra-semana');
+  if (rAnterior.turnos === 0) {
+    contra.textContent = r.turnos === 0 ? 'Sin turnos esta semana'
+      : `${r.turnos} turno${r.turnos === 1 ? '' : 's'} · ${r.horas} h`;
+  } else {
+    const dif = redondear(r.totalNeto - rAnterior.totalNeto);
+    const clase = dif >= 0 ? 'sube' : 'baja';
+    contra.innerHTML = `${r.turnos} turno${r.turnos === 1 ? '' : 's'} · ${r.horas} h`
+      + ` · <span class="${clase}">${dif >= 0 ? '+' : '−'}${$(Math.abs(dif))}</span>`
+      + ` que la semana pasada`;
+  }
+
+  const metrica = (clave, valor) =>
+    `<div class="metrica"><div class="etiqueta">${clave}</div>`
+  + `<div class="valor">${valor}</div></div>`;
+  document.getElementById('metricas').innerHTML =
+      metrica('Por hora',  $(r.totalPorHora))
+    + metrica('Propinas',  $0(r.propinas))
+    + metrica('Tip-out',   $0(r.tipOut))
+    + metrica('Ventas',    $0(r.ventas))
+    + metrica('Prop/vtas', r.porcentajeVentas + '%')
+    + metrica('Sueldo',    $0(r.sueldoBase));
+
+  document.getElementById('pista').classList.toggle('oculto', datos.turnos.length > 0);
+}
+
+/* --- El formulario --- */
+function pintarTurno() {
+  document.getElementById('turno-fecha').textContent = fechaLarga(fechaAbierta);
+  const existe = turnosDelDia(datos.turnos, fechaAbierta).length > 0;
+  document.getElementById('btn-borrar').classList.toggle('oculto', !existe);
+
+  const chips = document.getElementById('chips');
   chips.innerHTML = '';
   if (datos.roles.length === 0) {
-    chips.innerHTML = '<span class="sub" style="margin:0">Agrega tus roles en '
-                    + 'Ajustes para calcular el tip-out.</span>';
+    chips.innerHTML = '<span style="font-size:13px;color:var(--tinta-3)">'
+                    + 'Agrega tus roles en Ajustes.</span>';
   }
   datos.roles.forEach(rol => {
     const activo = rolesActivos.includes(rol.nombre);
     const chip = document.createElement('div');
     chip.className = 'chip' + (activo ? ' activo' : '');
-    // textContent y no innerHTML: si un rol se llamara con un signo raro,
-    // innerHTML intentaría interpretarlo como HTML en vez de mostrarlo.
+    // textContent y no innerHTML: si un rol tuviera un signo raro en el
+    // nombre, innerHTML intentaría interpretarlo como HTML.
     chip.textContent = rol.nombre;
     const pct = document.createElement('small');
     pct.textContent = rol.porcentaje + '%';
@@ -726,125 +882,32 @@ function pintarFormulario() {
     };
     chips.appendChild(chip);
   });
+
+  pintarRecibo();
 }
 
-/* --- Resumen en vivo --- */
-function pintarResumen() {
-  const turno = leerFormulario();
-  const c = calcularTurno(turno);
+function pintarRecibo() {
+  const t = leer();
+  const c = calcularTurno(t);
+  // `fila` recibe la clase de la fila y la del valor por separado: la última
+  // línea del recibo lleva `final` (la raya y el número grande) y el tip-out
+  // lleva `resta` solo en la cifra.
+  const fila = (etiqueta, valor, claseValor = '', claseFila = '') =>
+    `<div class="${claseFila}"><span>${etiqueta}</span>`
+  + `<span class="${claseValor}">${valor}</span></div>`;
 
-  document.getElementById('r-total').textContent = $(c.totalNeto);
-
-  const linea = (etiqueta, valor, clase = '') =>
-    `<div><span>${etiqueta}</span><span class="cifra ${clase}">${valor}</span></div>`;
-
-  let html = '';
-  html += linea('Propinas', $(c.propinas));
+  const ayudantes = t.tipoutDetalle.length;
+  let html = fila('Propinas', $(c.propinas));
   if (c.tipOut > 0) {
-    html += linea(`Tip-out (${turno.tipoutDetalle.length} ayudante`
-                + `${turno.tipoutDetalle.length === 1 ? '' : 's'})`,
-                  '− ' + $(c.tipOut), 'resta');
+    html += fila(`Tip-out · ${ayudantes} ayudante${ayudantes === 1 ? '' : 's'}`,
+                 '− ' + $(c.tipOut), 'resta');
   }
-  if (c.sueldoBase > 0) {
-    html += linea(`Sueldo base (${c.horas} h)`, '+ ' + $(c.sueldoBase));
-  }
-  html += `<div class="total"><span>${c.horas} h trabajadas</span>`
-        + `<span class="cifra">${$(c.totalPorHora)}/hora</span></div>`;
-  if (turno.ventas > 0) {
-    html += linea('Propina sobre ventas', c.porcentajeVentas + '%');
-  }
+  if (c.sueldoBase > 0) html += fila(`Sueldo · ${c.horas} h`, '+ ' + $(c.sueldoBase));
+  if (t.ventas > 0) html += fila('Propina sobre ventas', c.porcentajeVentas + '%');
+  html += fila(`Te llevas${c.horas > 0 ? ` · ${$(c.totalPorHora)}/h` : ''}`,
+               $(c.totalNeto), '', 'final');
 
-  document.getElementById('r-desglose').innerHTML = html;
-}
-
-/* --- Lista de turnos --- */
-function pintarTurnos() {
-  const contenedor = document.getElementById('lista-turnos');
-  const sub = document.getElementById('sub-turnos');
-  contenedor.innerHTML = '';
-
-  if (datos.turnos.length === 0) {
-    sub.textContent = '';
-    contenedor.innerHTML = '<div class="vacio">Todavía no hay turnos.<br>'
-                         + 'Registra el primero al salir del trabajo.</div>';
-    return;
-  }
-
-  const total = resumir(datos.turnos);
-  sub.textContent = `${total.turnos} turno${total.turnos === 1 ? '' : 's'} · `
-                  + `${$(total.totalNeto)} en total · ${$(total.totalPorHora)}/hora`;
-
-  // Agrupamos por semana. Un objeto donde la llave es el lunes de esa semana:
-  // es el equivalente a una tabla dinámica de Excel agrupando por semana.
-  const semanas = {};
-  [...datos.turnos]
-    .sort((a, b) => (b.fecha + b.id).localeCompare(a.fecha + a.id))
-    .forEach(t => {
-      const lunes = lunesDeLaSemana(t.fecha);
-      (semanas[lunes] = semanas[lunes] || []).push(t);
-    });
-
-  Object.keys(semanas).sort().reverse().forEach(lunes => {
-    const deLaSemana = semanas[lunes];
-    const r = resumir(deLaSemana);
-
-    const cabecera = document.createElement('div');
-    cabecera.className = 'semana';
-    cabecera.innerHTML =
-      `<span class="rango">Semana del ${fechaLarga(lunes)}</span>`
-    + `<span class="suma cifra">${$(r.totalNeto)} · ${$(r.totalPorHora)}/h</span>`;
-    contenedor.appendChild(cabecera);
-
-    const tarjeta = document.createElement('div');
-    tarjeta.className = 'tarjeta';
-    tarjeta.style.padding = '0';
-
-    deLaSemana.forEach((t, i) => {
-      const c = calcularTurno(t);
-      const fila = document.createElement('div');
-      fila.className = 'turno';
-      if (i > 0) fila.style.borderTop = '1px solid var(--borde)';
-      fila.innerHTML =
-        `<div>
-           <div class="dia">${fechaLarga(t.fecha)}</div>
-           <div class="datos">${c.horas} h · ventas ${$(t.ventas)}`
-           + (c.tipOut > 0 ? ` · tip-out ${$(c.tipOut)}` : '')
-           + (t.nota ? ` · ${t.nota}` : '') +
-         `</div>
-         </div>
-         <div>
-           <div class="neto cifra">${$(c.totalNeto)}</div>
-           <div class="hora cifra">${$(c.totalPorHora)}/h</div>
-         </div>`;
-      fila.onclick = () => editarTurno(t.id);
-      tarjeta.appendChild(fila);
-    });
-
-    contenedor.appendChild(tarjeta);
-  });
-
-  // Métricas del total, al final
-  const m = document.createElement('div');
-  m.className = 'metricas';
-  m.style.marginTop = '26px';
-  const metrica = (clave, valor) =>
-    `<div class="metrica"><div class="valor cifra">${valor}</div>`
-  + `<div class="clave">${clave}</div></div>`;
-  m.innerHTML =
-      metrica('Propinas cobradas', $(total.propinas))
-    + metrica('Tip-out pagado',    $(total.tipOut))
-    + metrica('Promedio por turno', $(total.promedioPorTurno))
-    + metrica('Propina / ventas',   total.porcentajeVentas + '%');
-  contenedor.appendChild(m);
-
-  if (editandoId) {
-    const borrar = document.createElement('button');
-    borrar.className = 'peligro';
-    borrar.style.cssText = 'width:100%; margin-top:16px';
-    borrar.textContent = 'Borrar el turno que estás editando';
-    borrar.onclick = () => borrarTurno(editandoId);
-    contenedor.appendChild(borrar);
-  }
+  document.getElementById('recibo').innerHTML = html;
 }
 
 /* --- Ajustes --- */
@@ -852,9 +915,8 @@ function pintarAjustes() {
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
 
-  const lista = document.getElementById('lista-roles');
+  const lista = document.getElementById('roles');
   lista.innerHTML = '';
-
   datos.roles.forEach(rol => {
     const fila = document.createElement('div');
     fila.className = 'rol-fila';
@@ -873,7 +935,8 @@ function pintarAjustes() {
     pct.onchange = e => cambiarRol(rol.id, 'porcentaje', e.target.value);
 
     const quitar = document.createElement('button');
-    quitar.className = 'chico peligro';
+    quitar.className = 'chico';
+    quitar.style.color = 'var(--rojo)';
     quitar.textContent = '✕';
     quitar.onclick = () => borrarRol(rol.id);
 
@@ -882,8 +945,7 @@ function pintarAjustes() {
   });
 
   const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
-  document.getElementById('a-total-pct').textContent =
-    redondear(suma) + '% de las ventas';
+  document.getElementById('a-total').textContent = redondear(suma) + '%';
 }
 
 
@@ -891,19 +953,19 @@ function pintarAjustes() {
    SECCIÓN U — Arranque
    ========================================================================== */
 
-// Cada vez que escribes algo en el formulario, se recalcula el resumen. No se
-// redibuja la pantalla entera aquí a propósito: si lo hiciéramos, el campo
-// perdería el foco a media palabra y el teclado se cerraría solo.
-['f-fecha','f-entrada','f-salida','f-ventas','f-efectivo','f-tarjeta','f-nota']
-  .forEach(id => document.getElementById(id).addEventListener('input', pintarResumen));
+// Al escribir se actualiza solo el recibo, no la pantalla entera: si
+// redibujáramos todo, el campo perdería el foco a media palabra y el teclado
+// se cerraría solo.
+['f-entrada','f-salida','f-ventas','f-efectivo','f-tarjeta','f-nota']
+  .forEach(id => document.getElementById(id)
+    .addEventListener('input', pintarRecibo));
 
 cargar();
-limpiarFormulario();   // deja el formulario listo y llama a pintar()
+lunes = lunesDeLaSemana(hoy());
+pintar();
 
-// Registra el service worker (el archivo sw.js). Solo funciona cuando la app
-// está publicada en internet, no al abrir el archivo con doble clic: por
-// seguridad, los navegadores no lo permiten desde `file://`. El `catch` vacío
-// es a propósito — en el Mac va a fallar siempre y no es un problema.
+// El service worker solo funciona con la app publicada, no al abrir el archivo
+// con doble clic. El `catch` vacío es a propósito: en el Mac falla siempre.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
