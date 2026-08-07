@@ -244,26 +244,100 @@ ok('quitarlo no toca los turnos guardados',
    D().roles.length === 4 && D().turnos[0].tipoutDetalle.length === 4);
 
 
+grupo('Comparación contra la semana anterior');
+run("irA('semana'); lunes = lunesDeLaSemana('2026-08-06'); pintar();");
+ok('en una semana sin anterior no hay flechas de comparación',
+   !d.getElementById('metricas').innerHTML.includes('class="delta'));
+// Registramos un turno flojo en la semana siguiente para comparar contra ella.
+run("abrirDia('2026-08-10')");
+set('f-entrada', '17:00'); set('f-salida', '22:00');
+set('f-ventas', '600'); set('f-efectivo', '20'); set('f-tarjeta', '40');
+run('guardarTurno()');
+const htmlMetricas = () => d.getElementById('metricas').innerHTML;
+ok('ahora sí compara', htmlMetricas().includes('class="delta'));
+ok('ganar menos se pinta de rojo', htmlMetricas().includes('delta baja'));
+ok('y lo muestra con el signo menos', htmlMetricas().includes('−'));
+ok('las horas no se juzgan: van en gris',
+   /mHoras|Horas[\s\S]{0,120}delta plano/.test(htmlMetricas())
+   || htmlMetricas().includes('delta plano'));
+run('alternarEstadisticas()');
+ok('el tip-out tampoco se juzga',
+   d.getElementById('metricas-extras').innerHTML.includes('delta plano'));
+ok('pero las ventas sí', d.getElementById('metricas-extras').innerHTML.includes('delta baja'));
+
+
+grupo('Explicación de cada dato');
+ok('cada métrica esencial trae su nota',
+   (htmlMetricas().match(/class="nota"/g) || []).length === 4);
+ok('la nota explica el cálculo, no repite la etiqueta',
+   htmlMetricas().includes('÷'));
+ok('las extras también',
+   (d.getElementById('metricas-extras').innerHTML.match(/class="nota"/g) || []).length === 6);
+
+
+grupo('Idioma');
+run("irA('ajustes')");
+ok('ofrece dos idiomas', hijos('idiomas').length === 2);
+ok('arranca en español', hijos('idiomas')[0]._classes.has('activo'));
+ok('los idiomas se nombran en su propio idioma',
+   hijos('idiomas')[1].textContent === 'English');
+ok('los títulos están en español', texto('tab-semana') === 'Semana');
+hijos('idiomas')[1].click();
+ok('cambia las pestañas', texto('tab-semana') === 'Week');
+ok('cambia los títulos de sección', texto('tab-ajustes') === 'Settings');
+ok('cambia los botones', d.getElementById('temas').children[0].textContent === 'Automatic');
+ok('lo recuerda', JSON.parse(almacen.tipsControl).prefs.idioma === 'en');
+run("irA('semana')");
+ok('cambia las etiquetas de las métricas', texto('metricas').includes('Per hour'));
+ok('y también las notas', texto('metricas').includes('hours worked'));
+ok('las letras de los días cambian de idioma',
+   dias()[0].textContent.trim().startsWith('M'));
+run("abrirDia('2026-08-07')");
+ok('la fecha del turno sale en inglés', texto('turno-fecha').includes('Friday'));
+const porClave = clave => d.querySelectorAll('[data-t]')
+  .find(el => el.dataset.t === clave);
+ok('las etiquetas del formulario también',
+   porClave('entrada').textContent === 'Clock in'
+   && porClave('ayudantes').textContent === 'Support staff');
+ok('el recibo también', texto('recibo').includes('You take home'));
+ok('el placeholder de la nota también',
+   d.getElementById('f-nota').getAttribute('placeholder').includes('private party'));
+run('cerrarTurno()');
+run("cambiarIdioma('es')");
+ok('volver a español lo deshace', texto('tab-semana') === 'Semana');
+
+// Esta comprueba el diccionario entero de una vez: si mañana se agrega una
+// frase en español y se olvida su traducción, esta prueba lo dice. Sin ella,
+// el error aparecería como una palabra suelta en español en medio de la app
+// en inglés, que es justo lo que nadie mira.
+const claves = k => Object.keys(run('TEXTOS')[k]).sort();
+ok('los dos idiomas tienen exactamente las mismas claves',
+   JSON.stringify(claves('es')) === JSON.stringify(claves('en')));
+ok('ninguna traducción quedó vacía',
+   Object.values(run('TEXTOS').en).every(v =>
+     Array.isArray(v) ? v.length === 7 : String(v).trim().length > 0));
+
+
 grupo('Lo que suele romperse');
 run("irA('semana'); lunes = lunesDeLaSemana('2026-08-06'); pintar();");
 dias()[1].click();
 avisos.length = 0;
 run('guardarTurno()');
 ok('no guarda un turno sin horas',
-   D().turnos.length === 2 && avisos.some(a => a.includes('entrada')));
+   D().turnos.length === 3 && avisos.some(a => a.includes('entrada')));
 set('f-entrada', '17:00'); set('f-salida', '23:00');
 avisos.length = 0;
 run('guardarTurno()');
-ok('no guarda un turno sin plata', D().turnos.length === 2 && avisos.length === 1);
+ok('no guarda un turno sin plata', D().turnos.length === 3 && avisos.length === 1);
 set('f-efectivo', '95');
 run("rolesActivos = []; guardarTurno();");
-ok('sí guarda sin ventas ni ayudantes', D().turnos.length === 3);
+ok('sí guarda sin ventas ni ayudantes', D().turnos.length === 4);
 ok('ese turno no paga tip-out',
    D().turnos.find(t => t.fecha === '2026-08-04').tipOut === 0);
 run("irA('semana')");
 dias()[3].click();
 run('borrarTurno()');
-ok('borrar quita solo ese turno', D().turnos.length === 2);
+ok('borrar quita solo ese turno', D().turnos.length === 3);
 ok('el jueves vuelve a estar vacío', dias()[3]._classes.has('vacio'));
 
 almacen.tipsControl = '{roto';

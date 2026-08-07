@@ -205,6 +205,19 @@ body {
 .metricas.extras .metrica { padding: 11px 10px; }
 .metricas.extras .valor { font-size: 17px; }
 
+/* La diferencia contra la semana pasada, al lado de la cifra. */
+.delta { font-size: 12px; font-weight: 600; margin-left: 5px;
+         letter-spacing: 0; white-space: nowrap; }
+.delta.sube   { color: var(--verde); }
+.delta.baja   { color: var(--rojo); }
+/* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
+.delta.plano  { color: var(--tinta-3); }
+
+/* La explicación de cada dato. Va deliberadamente apagada: tiene que estar
+   disponible para quien la busque y ser invisible para quien ya la sabe. */
+.nota { font-size: 10.5px; line-height: 1.3; color: var(--tinta-3);
+        margin-top: 5px; }
+
 .mas {
   width: 100%; margin-top: 10px; padding: 11px;
   background: none; border: 1px solid var(--linea); border-radius: 10px;
@@ -370,11 +383,12 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
 <section id="p-semana">
   <div class="cabecera">
     <span class="lugar" id="lugar"></span>
-    <button class="hoy oculto" id="btn-hoy" onclick="irAHoy()">Hoy</button>
+    <button class="hoy oculto" id="btn-hoy" data-t="hoy" onclick="irAHoy()">Hoy</button>
   </div>
 
   <div class="semana-nav">
-    <button onclick="cambiarSemana(-1)" aria-label="Semana anterior">‹</button>
+    <button id="btn-anterior" onclick="cambiarSemana(-1)"
+            aria-label="Semana anterior">‹</button>
     <span class="rango" id="rango"></span>
     <button id="btn-siguiente" onclick="cambiarSemana(1)" aria-label="Semana siguiente">›</button>
   </div>
@@ -382,7 +396,7 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
   <div class="dias" id="dias"></div>
 
   <div class="total">
-    <div class="etiqueta">Neto de la semana</div>
+    <div class="etiqueta" data-t="netoSemana">Neto de la semana</div>
     <div class="cantidad cifra" id="total-semana">$0</div>
     <div class="contra" id="contra-semana"></div>
   </div>
@@ -392,7 +406,7 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
   <div class="dato-suelto oculto" id="mejor-dia"></div>
   <button class="mas" id="btn-mas" onclick="alternarEstadisticas()"></button>
 
-  <p class="vacio" id="pista">Toca un día para registrar el turno.</p>
+  <p class="vacio" id="pista" data-t="pista">Toca un día para registrar el turno.</p>
 </section>
 
 
@@ -402,50 +416,51 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
 <section id="p-turno" class="oculto">
   <div class="barra-titulo">
     <span class="fecha" id="turno-fecha"></span>
-    <button onclick="cerrarTurno()">Cerrar</button>
+    <button data-t="cerrar" onclick="cerrarTurno()">Cerrar</button>
   </div>
 
   <div class="tarjeta">
     <div class="fila campo">
       <div>
-        <label class="etiqueta" for="f-entrada">Entrada</label>
+        <label class="etiqueta" data-t="entrada" for="f-entrada">Entrada</label>
         <input type="time" id="f-entrada">
         <div class="horas" id="horas-entrada"></div>
       </div>
       <div>
-        <label class="etiqueta" for="f-salida">Salida</label>
+        <label class="etiqueta" data-t="salida" for="f-salida">Salida</label>
         <input type="time" id="f-salida">
         <div class="horas" id="horas-salida"></div>
       </div>
     </div>
 
     <div class="campo">
-      <label class="etiqueta" for="f-ventas">Ventas del turno</label>
+      <label class="etiqueta" data-t="ventasTurno" for="f-ventas">Ventas del turno</label>
       <input type="number" id="f-ventas" inputmode="decimal" step="0.01" min="0"
              placeholder="0.00">
     </div>
 
     <div class="fila campo">
       <div>
-        <label class="etiqueta" for="f-efectivo">Propina efectivo</label>
+        <label class="etiqueta" data-t="propEfectivo" for="f-efectivo">Propina efectivo</label>
         <input type="number" id="f-efectivo" inputmode="decimal" step="0.01"
                min="0" placeholder="0.00">
       </div>
       <div>
-        <label class="etiqueta" for="f-tarjeta">Propina tarjeta</label>
+        <label class="etiqueta" data-t="propTarjeta" for="f-tarjeta">Propina tarjeta</label>
         <input type="number" id="f-tarjeta" inputmode="decimal" step="0.01"
                min="0" placeholder="0.00">
       </div>
     </div>
 
     <div class="campo">
-      <label class="etiqueta">Ayudantes del turno</label>
+      <label class="etiqueta" data-t="ayudantes">Ayudantes del turno</label>
       <div class="chips" id="chips"></div>
     </div>
 
     <div class="campo">
-      <label class="etiqueta" for="f-nota">Nota</label>
-      <input type="text" id="f-nota" placeholder="Sección 3, evento privado…">
+      <label class="etiqueta" data-t="nota" for="f-nota">Nota</label>
+      <input type="text" id="f-nota" data-ph="notaEjemplo"
+             placeholder="Sección 3, evento privado…">
     </div>
   </div>
 
@@ -453,8 +468,9 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
     <div class="recibo" id="recibo"></div>
   </div>
 
-  <button class="principal" onclick="guardarTurno()">Guardar turno</button>
-  <button class="secundario riesgo oculto" id="btn-borrar"
+  <button class="principal" data-t="guardarTurno"
+          onclick="guardarTurno()">Guardar turno</button>
+  <button class="secundario riesgo oculto" id="btn-borrar" data-t="borrarTurno"
           onclick="borrarTurno()">Borrar este turno</button>
 </section>
 
@@ -463,50 +479,56 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
      SECCIÓN K — Pantalla: AJUSTES
      ====================================================================== -->
 <section id="p-ajustes" class="oculto">
-  <div class="barra-titulo"><span class="fecha">Ajustes</span></div>
+  <div class="barra-titulo"><span class="fecha" data-t="ajustes">Ajustes</span></div>
 
-  <h2 class="seccion">Trabajo</h2>
+  <h2 class="seccion" data-t="trabajo">Trabajo</h2>
   <div class="tarjeta">
     <div class="campo">
-      <label class="etiqueta" for="a-nombre">Restaurante</label>
+      <label class="etiqueta" data-t="restaurante" for="a-nombre">Restaurante</label>
       <input type="text" id="a-nombre" onchange="guardarAjustes()">
     </div>
     <div class="campo">
-      <label class="etiqueta" for="a-tarifa">Sueldo por hora</label>
+      <label class="etiqueta" data-t="sueldoHora" for="a-tarifa">Sueldo por hora</label>
       <input type="number" id="a-tarifa" inputmode="decimal" step="0.01" min="0"
              onchange="guardarAjustes()" placeholder="0.00">
     </div>
   </div>
 
-  <h2 class="seccion">Apariencia</h2>
+  <h2 class="seccion" data-t="idioma">Idioma</h2>
+  <div class="tarjeta">
+    <div class="segmentado" id="idiomas"></div>
+  </div>
+
+  <h2 class="seccion" data-t="apariencia">Apariencia</h2>
   <div class="tarjeta">
     <div class="segmentado" id="temas"></div>
   </div>
 
-  <h2 class="seccion">Ayudantes y tip-out</h2>
+  <h2 class="seccion" data-t="ayudantesTipout">Ayudantes y tip-out</h2>
   <div class="tarjeta">
     <div id="roles"></div>
-    <button class="chico" onclick="agregarRol()">+ Agregar rol</button>
+    <button class="chico" data-t="agregarRol" onclick="agregarRol()">+ Agregar rol</button>
     <p style="margin:13px 0 0; font-size:13px; color:var(--tinta-2)">
-      Porcentaje sobre las ventas del turno. Con todos:
+      <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="a-total">0%</strong></p>
   </div>
 
-  <h2 class="seccion">Respaldo</h2>
+  <h2 class="seccion" data-t="respaldo">Respaldo</h2>
   <div class="tarjeta">
-    <p style="margin:0 0 11px; font-size:13px; color:var(--tinta-2)">
+    <p data-t="soloTelefono"
+       style="margin:0 0 11px; font-size:13px; color:var(--tinta-2)">
       Los datos viven solo en este teléfono. Exporta de vez en cuando.</p>
     <div class="fila">
-      <button class="chico" onclick="exportar()">Exportar</button>
-      <button class="chico" onclick="document.getElementById('archivo').click()">
-        Importar</button>
+      <button class="chico" data-t="exportar" onclick="exportar()">Exportar</button>
+      <button class="chico" data-t="importar"
+              onclick="document.getElementById('archivo').click()">Importar</button>
     </div>
     <input type="file" id="archivo" accept=".json" class="oculto"
            onchange="importar(event)">
   </div>
 
-  <button class="secundario riesgo" onclick="borrarTodo()">
-    Borrar todos los datos</button>
+  <button class="secundario riesgo" data-t="borrarTodo"
+          onclick="borrarTodo()">Borrar todos los datos</button>
 </section>
 
 
@@ -514,8 +536,8 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
      SECCIÓN L — Pestañas
      ====================================================================== -->
 <nav class="pestanas" id="pestanas">
-  <button id="tab-semana"  onclick="irA('semana')">Semana</button>
-  <button id="tab-ajustes" onclick="irA('ajustes')">Ajustes</button>
+  <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
+  <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
 </nav>
 
 
@@ -533,6 +555,157 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
    Si algún día trabajas en dos restaurantes el mismo día, hay que revisarlo.
    ========================================================================== */
 
+/* ============================================================================
+   SECCIÓN M0 — Los textos en los dos idiomas
+   ----------------------------------------------------------------------------
+   Aquí no hay ningún traductor automático. Cada frase está escrita a mano en
+   los dos idiomas, y por eso el vocabulario del oficio queda bien: un
+   traductor automático convertiría "tip-out" en "propina fuera" y "busser" en
+   cualquier cosa.
+
+   Regla para el futuro: **ningún texto que vea el usuario se escribe suelto en
+   el código.** Se le pone una clave aquí y se llama con `t('clave')`. Si un
+   texto se cuela sin traducir, la app se ve mitad en español y mitad en
+   inglés, que es peor que estar entera en el idioma equivocado.
+
+   Los nombres de los roles (Busser, Barra…) NO se traducen: son datos que
+   escribe el usuario, no textos de la app.
+   ========================================================================== */
+
+const TEXTOS = {
+  es: {
+    // Pantalla de la semana
+    semana: 'Semana', ajustes: 'Ajustes', hoy: 'Hoy',
+    netoSemana: 'Neto de la semana',
+    pista: 'Toca un día para registrar el turno.',
+    sinTurnos: 'Sin turnos esta semana',
+    turno: 'turno', turnos: 'turnos',
+    queSemanaPasada: 'que la semana pasada',
+    mostrarMas: 'Mostrar más estadísticas', mostrarMenos: 'Mostrar menos',
+    mejorDia: 'Mejor día', conEn: 'con', enHoras: 'en',
+    semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
+    letrasDias: ['L','M','X','J','V','S','D'],
+
+    // Métricas y su explicación
+    mHoras: 'Horas',        nHoras: 'Suma de la duración de cada turno.',
+    mPorHora: 'Por hora',   nPorHora: 'Todo lo que te llevas ÷ horas trabajadas.',
+    mEfectivo: 'Efectivo',  nEfectivo: 'Propina en billetes. Va a tu bolsillo esa noche.',
+    mTarjeta: 'Tarjeta',    nTarjeta: 'Propina en tarjeta. Llega en el cheque.',
+    mPropinas: 'Propinas',  nPropinas: 'Efectivo + tarjeta, antes del tip-out.',
+    mTipOut: 'Tip-out',     nTipOut: 'Lo que repartiste a los ayudantes.',
+    mVentas: 'Ventas',      nVentas: 'Lo que vendiste en total.',
+    mPropVtas: 'Prop/vtas', nPropVtas: 'Propinas ÷ ventas. Qué tan bien te fue con los clientes.',
+    mSueldo: 'Sueldo',      nSueldo: 'Horas × tu tarifa por hora.',
+    mPorTurno: 'Por turno', nPorTurno: 'Promedio de lo que te llevas cada turno.',
+
+    // Formulario
+    cerrar: 'Cerrar', entrada: 'Entrada', salida: 'Salida',
+    ventasTurno: 'Ventas del turno',
+    propEfectivo: 'Propina efectivo', propTarjeta: 'Propina tarjeta',
+    ayudantes: 'Ayudantes del turno', nota: 'Nota',
+    notaEjemplo: 'Sección 3, evento privado…',
+    guardarTurno: 'Guardar turno', borrarTurno: 'Borrar este turno',
+    ayudante: 'ayudante', ayudantesPl: 'ayudantes',
+    sueldoRecibo: 'Sueldo', propinaSobreVentas: 'Propina sobre ventas',
+    teLlevas: 'Te llevas',
+    rolesEnAjustes: 'Agrega tus roles en Ajustes.',
+
+    // Ajustes
+    trabajo: 'Trabajo', restaurante: 'Restaurante', sueldoHora: 'Sueldo por hora',
+    idioma: 'Idioma', apariencia: 'Apariencia',
+    ayudantesTipout: 'Ayudantes y tip-out', agregarRol: '+ Agregar rol',
+    sobreVentas: 'Porcentaje sobre las ventas del turno. Con todos:',
+    respaldo: 'Respaldo',
+    soloTelefono: 'Los datos viven solo en este teléfono. Exporta de vez en cuando.',
+    exportar: 'Exportar', importar: 'Importar',
+    borrarTodo: 'Borrar todos los datos',
+    temaAuto: 'Automático', temaClaro: 'Claro', temaOscuro: 'Oscuro',
+    miRestaurante: 'Mi restaurante', nuevoRol: 'Nuevo rol',
+
+    // Avisos
+    faltaHora: 'Falta la hora de entrada o de salida.',
+    faltaPlata: 'Escribe al menos las ventas o la propina del turno.',
+    confirmBorrarTurno: '¿Borrar el turno del',
+    confirmQuitarRol: '¿Quitar "%s"? Los turnos ya guardados no cambian.',
+    confirmImportar: 'Se reemplazan tus datos por %s turnos del respaldo. ¿Seguro?',
+    archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
+    datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
+    confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
+    confirmBorrarTodo2: 'No se puede deshacer. ¿De verdad?'
+  },
+
+  en: {
+    semana: 'Week', ajustes: 'Settings', hoy: 'Today',
+    netoSemana: 'Week take-home',
+    pista: 'Tap a day to log your shift.',
+    sinTurnos: 'No shifts this week',
+    turno: 'shift', turnos: 'shifts',
+    queSemanaPasada: 'vs. last week',
+    mostrarMas: 'Show more stats', mostrarMenos: 'Show less',
+    mejorDia: 'Best day', conEn: 'with', enHoras: 'in',
+    semanaAnterior: 'Previous week', semanaSiguiente: 'Next week',
+    letrasDias: ['M','T','W','T','F','S','S'],
+
+    mHoras: 'Hours',       nHoras: 'Total length of every shift.',
+    mPorHora: 'Per hour',  nPorHora: 'Everything you take home ÷ hours worked.',
+    mEfectivo: 'Cash',     nEfectivo: 'Cash tips. Straight to your pocket that night.',
+    mTarjeta: 'Card',      nTarjeta: 'Credit card tips. They come on your paycheck.',
+    mPropinas: 'Tips',     nPropinas: 'Cash + card, before tip-out.',
+    mTipOut: 'Tip-out',    nTipOut: 'What you paid out to support staff.',
+    mVentas: 'Sales',      nVentas: 'Your total sales.',
+    mPropVtas: 'Tip %',    nPropVtas: 'Tips ÷ sales. How well your guests treated you.',
+    mSueldo: 'Wages',      nSueldo: 'Hours × your hourly rate.',
+    mPorTurno: 'Per shift', nPorTurno: 'Average take-home per shift.',
+
+    cerrar: 'Close', entrada: 'Clock in', salida: 'Clock out',
+    ventasTurno: 'Shift sales',
+    propEfectivo: 'Cash tips', propTarjeta: 'Card tips',
+    ayudantes: 'Support staff', nota: 'Note',
+    notaEjemplo: 'Section 3, private party…',
+    guardarTurno: 'Save shift', borrarTurno: 'Delete this shift',
+    ayudante: 'person', ayudantesPl: 'people',
+    sueldoRecibo: 'Wages', propinaSobreVentas: 'Tip % of sales',
+    teLlevas: 'You take home',
+    rolesEnAjustes: 'Add your roles in Settings.',
+
+    trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
+    idioma: 'Language', apariencia: 'Appearance',
+    ayudantesTipout: 'Support staff and tip-out', agregarRol: '+ Add role',
+    sobreVentas: 'Percentage of shift sales. With everyone:',
+    respaldo: 'Backup',
+    soloTelefono: 'Your data lives only on this phone. Export it now and then.',
+    exportar: 'Export', importar: 'Import',
+    borrarTodo: 'Delete all data',
+    temaAuto: 'Automatic', temaClaro: 'Light', temaOscuro: 'Dark',
+    miRestaurante: 'My restaurant', nuevoRol: 'New role',
+
+    faltaHora: 'Clock-in or clock-out time is missing.',
+    faltaPlata: 'Enter at least the sales or the tips for this shift.',
+    confirmBorrarTurno: 'Delete the shift from',
+    confirmQuitarRol: 'Remove "%s"? Saved shifts stay as they are.',
+    confirmImportar: 'This replaces your data with %s shifts from the backup. Sure?',
+    archivoMalo: "That file doesn't look like a Tips Control backup.",
+    datosIlegibles: 'Saved data could not be read. Starting fresh.',
+    confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
+    confirmBorrarTodo2: "This can't be undone. Really?"
+  }
+};
+
+/** Devuelve el texto de una clave en el idioma activo. */
+function t(clave) {
+  const idioma = (datos.prefs && datos.prefs.idioma) || 'es';
+  const tabla = TEXTOS[idioma] || TEXTOS.es;
+  // Si a un idioma le falta una clave, cae al español en vez de mostrar la
+  // clave cruda: es preferible una palabra en el idioma equivocado a ver
+  // "mPorHora" en pantalla.
+  return tabla[clave] !== undefined ? tabla[clave] : TEXTOS.es[clave];
+}
+
+/** Singular o plural, en el idioma activo. */
+function plural(n, claveSingular, clavePlural) {
+  return n === 1 ? t(claveSingular) : t(clavePlural);
+}
+
 const CLAVE = 'tipsControl';
 
 let datos = {
@@ -544,13 +717,21 @@ let datos = {
     { id: 4, nombre: 'Bakery', porcentaje: 1 }
   ],
   turnos: [],
-  prefs: { masEstadisticas: false, tema: 'auto' }
+  prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es' }
 };
 
 const TEMAS = [
-  { id: 'auto',   nombre: 'Automático' },
-  { id: 'claro',  nombre: 'Claro' },
-  { id: 'oscuro', nombre: 'Oscuro' }
+  { id: 'auto', clave: 'temaAuto' },
+  { id: 'claro', clave: 'temaClaro' },
+  { id: 'oscuro', clave: 'temaOscuro' }
+];
+
+/* Los nombres de los idiomas van SIEMPRE en su propio idioma. Si alguien abre
+   la app en español sin entenderlo, "English" lo reconoce igual; "Inglés" no
+   le sirve de nada. */
+const IDIOMAS = [
+  { id: 'es', nombre: 'Español' },
+  { id: 'en', nombre: 'English' }
 ];
 
 /* Horarios que se ofrecen como atajo mientras no haya turnos de los que
@@ -565,8 +746,6 @@ let pantalla = 'semana';
 let lunes = '';           // el lunes de la semana que se está viendo
 let fechaAbierta = '';    // el día que se está editando
 let rolesActivos = [];
-
-const LETRAS = ['L','M','X','J','V','S','D'];
 
 
 /* ============================================================================
@@ -606,16 +785,24 @@ function cargar() {
     // Red de seguridad: los datos guardados por una versión anterior no traen
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
-    datos.prefs = { masEstadisticas: false, tema: 'auto', ...(datos.prefs || {}) };
+    datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
+                    ...(datos.prefs || {}) };
   } catch (e) {
     console.error('No se pudieron leer los datos:', e);
-    alert('Los datos guardados no se pudieron leer. Se empieza de cero.');
+    alert(t('datosIlegibles'));
   }
 }
 
+/* El dinero se formatea siempre a la americana ($1,234.56) porque son dólares
+   de un restaurante de Estados Unidos, se lea la app en el idioma que se lea.
+   Lo que sí cambia con el idioma son las fechas. */
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const USD0 = new Intl.NumberFormat('en-US',
   { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+function locale() {
+  return (datos.prefs && datos.prefs.idioma) === 'en' ? 'en-US' : 'es-US';
+}
 
 function $(n)  { return USD.format(Number(n) || 0); }
 function $0(n) { return USD0.format(Number(n) || 0); }
@@ -632,7 +819,7 @@ function partes(texto) {
 }
 
 function diaYMes(texto) {
-  return partes(texto).toLocaleDateString('es-US',
+  return partes(texto).toLocaleDateString(locale(),
     { day: 'numeric', month: 'short' });
 }
 
@@ -645,10 +832,18 @@ function horaCorta(hhmm) {
                  : `${h12}:${String(m).padStart(2, '0')} ${sufijo}`;
 }
 
+/* Ojo con el nombre de la variable: `t` ya es la función de traducción. Aquí
+   se llama `texto1` justamente para no taparla dentro de esta función. */
 function fechaLarga(texto) {
-  const t = partes(texto).toLocaleDateString('es-US',
+  const texto1 = partes(texto).toLocaleDateString(locale(),
     { weekday: 'long', day: 'numeric', month: 'long' });
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  return texto1.charAt(0).toUpperCase() + texto1.slice(1);
+}
+
+/** Solo el nombre del día: "Viernes" / "Friday". */
+function soloDia(texto) {
+  const dia = partes(texto).toLocaleDateString(locale(), { weekday: 'long' });
+  return dia.charAt(0).toUpperCase() + dia.slice(1);
 }
 
 
@@ -684,6 +879,13 @@ function aplicarTema() {
   // queda una franja verde oscuro arriba que no pega con nada.
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', oscuro ? '#0e0e0d' : '#faf9f7');
+}
+
+function cambiarIdioma(id) {
+  datos.prefs.idioma = id;
+  guardar();
+  document.documentElement.lang = id;   // para lectores de pantalla y corrector
+  pintar();
 }
 
 function cambiarTema(id) {
@@ -787,11 +989,11 @@ function guardarTurno() {
   const turno = leer();
 
   if (!turno.entrada || !turno.salida) {
-    alert('Falta la hora de entrada o de salida.');
+    alert(t('faltaHora'));
     return;
   }
   if (turno.ventas === 0 && turno.efectivo === 0 && turno.tarjeta === 0) {
-    alert('Escribe al menos las ventas o la propina del turno.');
+    alert(t('faltaPlata'));
     return;
   }
 
@@ -806,10 +1008,10 @@ function guardarTurno() {
 }
 
 function borrarTurno() {
-  const t = turnosDelDia(datos.turnos, fechaAbierta)[0];
-  if (!t) return;
-  if (!confirm(`¿Borrar el turno del ${fechaLarga(t.fecha)}?`)) return;
-  datos.turnos = datos.turnos.filter(x => x.id !== t.id);
+  const turno = turnosDelDia(datos.turnos, fechaAbierta)[0];
+  if (!turno) return;
+  if (!confirm(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}?`)) return;
+  datos.turnos = datos.turnos.filter(x => x.id !== turno.id);
   guardar();
   irA('semana');
 }
@@ -820,14 +1022,14 @@ function borrarTurno() {
    ========================================================================== */
 
 function guardarAjustes() {
-  datos.trabajo.nombre     = val('a-nombre').trim() || 'Mi restaurante';
+  datos.trabajo.nombre     = val('a-nombre').trim() || t('miRestaurante');
   datos.trabajo.tarifaHora = num('a-tarifa');
   guardar();
   pintar();
 }
 
 function agregarRol() {
-  datos.roles.push({ id: nuevoId(), nombre: 'Nuevo rol', porcentaje: 0 });
+  datos.roles.push({ id: nuevoId(), nombre: t('nuevoRol'), porcentaje: 0 });
   guardar();
   pintar();
 }
@@ -848,7 +1050,7 @@ function cambiarRol(id, campo, valor) {
 function borrarRol(id) {
   const rol = datos.roles.find(r => r.id === id);
   if (!rol) return;
-  if (!confirm(`¿Quitar "${rol.nombre}"? Los turnos ya guardados no cambian.`)) return;
+  if (!confirm(t('confirmQuitarRol').replace('%s', rol.nombre))) return;
   datos.roles = datos.roles.filter(r => r.id !== id);
   rolesActivos = rolesActivos.filter(n => n !== rol.nombre);
   guardar();
@@ -877,13 +1079,13 @@ function importar(evento) {
     try {
       const leido = JSON.parse(e.target.result);
       if (!Array.isArray(leido.turnos)) throw new Error('sin turnos');
-      if (!confirm(`Se reemplazan tus datos por ${leido.turnos.length} turnos `
-                 + `del respaldo. ¿Seguro?`)) return;
+      if (!confirm(t('confirmImportar')
+            .replace('%s', leido.turnos.length))) return;
       datos = { ...datos, ...leido };
       guardar();
       irA('semana');
     } catch (err) {
-      alert('Ese archivo no parece un respaldo de Tips Control.');
+      alert(t('archivoMalo'));
     }
   };
   lector.readAsText(archivo);
@@ -891,8 +1093,8 @@ function importar(evento) {
 }
 
 function borrarTodo() {
-  if (!confirm('Esto borra TODOS tus turnos de este teléfono. ¿Seguro?')) return;
-  if (!confirm('No se puede deshacer. ¿De verdad?')) return;
+  if (!confirm(t('confirmBorrarTodo'))) return;
+  if (!confirm(t('confirmBorrarTodo2'))) return;
   localStorage.removeItem(CLAVE);
   location.reload();
 }
@@ -902,7 +1104,28 @@ function borrarTodo() {
    SECCIÓN T — Dibujar
    ========================================================================== */
 
+/**
+ * Traduce el texto que está escrito directamente en el HTML.
+ *
+ * Todo elemento con `data-t="clave"` recibe su texto, y todo elemento con
+ * `data-ph="clave"` recibe su placeholder. Así no hay que ir elemento por
+ * elemento desde el código: se marca en el HTML y esta función se encarga.
+ */
+function traducirEstaticos() {
+  document.querySelectorAll('[data-t]').forEach(el => {
+    el.textContent = t(el.dataset.t);
+  });
+  document.querySelectorAll('[data-ph]').forEach(el => {
+    el.setAttribute('placeholder', t(el.dataset.ph));
+  });
+  const anterior = document.getElementById('btn-anterior');
+  const siguiente = document.getElementById('btn-siguiente');
+  if (anterior)  anterior.setAttribute('aria-label', t('semanaAnterior'));
+  if (siguiente) siguiente.setAttribute('aria-label', t('semanaSiguiente'));
+}
+
 function pintar() {
+  traducirEstaticos();
   document.getElementById('p-semana').classList.toggle('oculto', pantalla !== 'semana');
   document.getElementById('p-turno').classList.toggle('oculto', pantalla !== 'turno');
   document.getElementById('p-ajustes').classList.toggle('oculto', pantalla !== 'ajustes');
@@ -937,8 +1160,8 @@ function pintarSemana() {
 
   // El día que más ganaste marca la altura máxima de las barras.
   const totales = fechas.map(f => {
-    const t = turnosDelDia(datos.turnos, f)[0];
-    return t ? calcularTurno(t).totalNeto : 0;
+    const turnoDelDia = turnosDelDia(datos.turnos, f)[0];
+    return turnoDelDia ? calcularTurno(turnoDelDia).totalNeto : 0;
   });
   const tope = Math.max(...totales, 1);
 
@@ -961,7 +1184,7 @@ function pintarSemana() {
 
     const letra = document.createElement('span');
     letra.className = 'letra';
-    letra.textContent = LETRAS[i];
+    letra.textContent = t('letrasDias')[i];
 
     const numero = document.createElement('span');
     numero.className = 'num';
@@ -980,42 +1203,72 @@ function pintarSemana() {
   // Comparación con la semana anterior: un número solo no dice si fue buena
   // semana; comparado con el anterior, sí.
   const anteriores = diasDeLaSemana(sumarDias(lunes, -7));
-  const rAnterior = resumir(datos.turnos.filter(t => anteriores.includes(t.fecha)));
+  const rAnterior = resumir(datos.turnos.filter(x => anteriores.includes(x.fecha)));
+  const hayAnterior = rAnterior.turnos > 0;
+
+  const resumenTurnos = `${r.turnos} ${plural(r.turnos, 'turno', 'turnos')}`
+                      + ` · ${r.horas} h`;
   const contra = document.getElementById('contra-semana');
-  if (rAnterior.turnos === 0) {
-    contra.textContent = r.turnos === 0 ? 'Sin turnos esta semana'
-      : `${r.turnos} turno${r.turnos === 1 ? '' : 's'} · ${r.horas} h`;
+  if (!hayAnterior) {
+    contra.textContent = r.turnos === 0 ? t('sinTurnos') : resumenTurnos;
   } else {
     const dif = redondear(r.totalNeto - rAnterior.totalNeto);
-    const clase = dif >= 0 ? 'sube' : 'baja';
-    contra.innerHTML = `${r.turnos} turno${r.turnos === 1 ? '' : 's'} · ${r.horas} h`
-      + ` · <span class="${clase}">${dif >= 0 ? '+' : '−'}${$(Math.abs(dif))}</span>`
-      + ` que la semana pasada`;
+    contra.innerHTML = resumenTurnos
+      + ` · <span class="${dif >= 0 ? 'sube' : 'baja'}">`
+      + `${dif >= 0 ? '+' : '−'}${$(Math.abs(dif))}</span> ${t('queSemanaPasada')}`;
   }
 
-  const metrica = (clave, valor) =>
-    `<div class="metrica"><div class="etiqueta">${clave}</div>`
-  + `<div class="valor">${valor}</div></div>`;
+  /* --------------------------------------------------------------------------
+     Cada tarjeta: etiqueta, cifra, diferencia contra la semana pasada y una
+     explicación tenue de cómo se calcula.
+
+     `sentido` decide de qué color va la diferencia:
+       'mas'   → subir es bueno (verde) y bajar es malo (rojo)
+       'plano' → gris, sin juicio
+
+     Horas y tip-out van en 'plano' a propósito. Trabajar más horas no es
+     mejor ni peor: depende de si querías el turno. Y el tip-out sube cuando
+     vendes más, así que pintarlo de rojo sería regañarte por una buena noche.
+     Un color que significa lo que no es hace más daño que no poner color.
+     -------------------------------------------------------------------------- */
+  const metrica = (claveEtiqueta, valor, actual, previo, formato,
+                   sentido, claveNota) => {
+    let delta = '';
+    if (hayAnterior) {
+      const dif = redondear(actual - previo);
+      if (dif !== 0) {
+        const clase = sentido === 'plano' ? 'plano' : (dif > 0 ? 'sube' : 'baja');
+        delta = ` <span class="delta ${clase}">${dif > 0 ? '+' : '−'}`
+              + `${formato(Math.abs(dif))}</span>`;
+      }
+    }
+    return `<div class="metrica"><div class="etiqueta">${t(claveEtiqueta)}</div>`
+         + `<div class="valor">${valor}${delta}</div>`
+         + `<div class="nota">${t(claveNota)}</div></div>`;
+  };
+
+  const horas = n => n + ' h';
+  const pct   = n => n + '%';
 
   // Las cuatro de siempre. Horas porque hay que apuntarlas en la planilla del
   // restaurante; efectivo y tarjeta separados porque no son el mismo dinero:
   // la tarjeta llega en el cheque, el efectivo va al bolsillo esa noche.
   document.getElementById('metricas').innerHTML =
-      metrica('Horas',    r.horas + ' h')
-    + metrica('Por hora', $(r.totalPorHora))
-    + metrica('Efectivo', $0(r.efectivo))
-    + metrica('Tarjeta',  $0(r.tarjeta));
+      metrica('mHoras',    r.horas + ' h',      r.horas,        rAnterior.horas,        horas, 'plano', 'nHoras')
+    + metrica('mPorHora',  $(r.totalPorHora),   r.totalPorHora, rAnterior.totalPorHora, $,     'mas',   'nPorHora')
+    + metrica('mEfectivo', $0(r.efectivo),      r.efectivo,     rAnterior.efectivo,     $0,    'mas',   'nEfectivo')
+    + metrica('mTarjeta',  $0(r.tarjeta),       r.tarjeta,      rAnterior.tarjeta,      $0,    'mas',   'nTarjeta');
 
   // Las demás viven detrás del botón: son útiles de vez en cuando, y una
   // pantalla con doce números no se lee, se sobrevuela.
   const abierto = !!datos.prefs.masEstadisticas;
   document.getElementById('metricas-extras').innerHTML =
-      metrica('Propinas',  $0(r.propinas))
-    + metrica('Tip-out',   $0(r.tipOut))
-    + metrica('Ventas',    $0(r.ventas))
-    + metrica('Prop/vtas', r.porcentajeVentas + '%')
-    + metrica('Sueldo',    $0(r.sueldoBase))
-    + metrica('Por turno', $0(r.promedioPorTurno));
+      metrica('mPropinas', $0(r.propinas),      r.propinas,        rAnterior.propinas,        $0,  'mas',   'nPropinas')
+    + metrica('mTipOut',   $0(r.tipOut),        r.tipOut,          rAnterior.tipOut,          $0,  'plano', 'nTipOut')
+    + metrica('mVentas',   $0(r.ventas),        r.ventas,          rAnterior.ventas,          $0,  'mas',   'nVentas')
+    + metrica('mPropVtas', r.porcentajeVentas + '%', r.porcentajeVentas, rAnterior.porcentajeVentas, pct, 'mas', 'nPropVtas')
+    + metrica('mSueldo',   $0(r.sueldoBase),    r.sueldoBase,      rAnterior.sueldoBase,      $0,  'plano', 'nSueldo')
+    + metrica('mPorTurno', $0(r.promedioPorTurno), r.promedioPorTurno, rAnterior.promedioPorTurno, $0, 'mas', 'nPorTurno');
   document.getElementById('metricas-extras').classList.toggle('oculto', !abierto);
 
   const mejor = mejorTurno(deLaSemana);
@@ -1023,12 +1276,12 @@ function pintarSemana() {
   lineaMejor.classList.toggle('oculto', !abierto || !mejor);
   if (mejor && abierto) {
     const cm = calcularTurno(mejor);
-    lineaMejor.textContent = `Mejor día: ${fechaLarga(mejor.fecha).split(',')[0]}`
-      + ` con ${$(cm.totalNeto)} en ${cm.horas} h.`;
+    lineaMejor.textContent = `${t('mejorDia')}: ${soloDia(mejor.fecha)} `
+      + `${t('conEn')} ${$(cm.totalNeto)} ${t('enHoras')} ${cm.horas} h.`;
   }
 
   document.getElementById('btn-mas').textContent =
-    abierto ? 'Mostrar menos' : 'Mostrar más estadísticas';
+    abierto ? t('mostrarMenos') : t('mostrarMas');
 
   document.getElementById('pista').classList.toggle('oculto', datos.turnos.length > 0);
 }
@@ -1046,7 +1299,7 @@ function pintarTurno() {
   chips.innerHTML = '';
   if (datos.roles.length === 0) {
     chips.innerHTML = '<span style="font-size:13px;color:var(--tinta-3)">'
-                    + 'Agrega tus roles en Ajustes.</span>';
+                    + t('rolesEnAjustes') + '</span>';
   }
   datos.roles.forEach(rol => {
     const activo = rolesActivos.includes(rol.nombre);
@@ -1100,8 +1353,8 @@ function pintarAtajosHora(campo) {
 }
 
 function pintarRecibo() {
-  const t = leer();
-  const c = calcularTurno(t);
+  const turno = leer();
+  const c = calcularTurno(turno);
   // `fila` recibe la clase de la fila y la del valor por separado: la última
   // línea del recibo lleva `final` (la raya y el número grande) y el tip-out
   // lleva `resta` solo en la cifra.
@@ -1109,15 +1362,20 @@ function pintarRecibo() {
     `<div class="${claseFila}"><span>${etiqueta}</span>`
   + `<span class="${claseValor}">${valor}</span></div>`;
 
-  const ayudantes = t.tipoutDetalle.length;
-  let html = fila('Propinas', $(c.propinas));
+  const cuantos = turno.tipoutDetalle.length;
+  let html = fila(t('mPropinas'), $(c.propinas));
   if (c.tipOut > 0) {
-    html += fila(`Tip-out · ${ayudantes} ayudante${ayudantes === 1 ? '' : 's'}`,
+    html += fila(`${t('mTipOut')} · ${cuantos} `
+               + `${plural(cuantos, 'ayudante', 'ayudantesPl')}`,
                  '− ' + $(c.tipOut), 'resta');
   }
-  if (c.sueldoBase > 0) html += fila(`Sueldo · ${c.horas} h`, '+ ' + $(c.sueldoBase));
-  if (t.ventas > 0) html += fila('Propina sobre ventas', c.porcentajeVentas + '%');
-  html += fila(`Te llevas${c.horas > 0 ? ` · ${$(c.totalPorHora)}/h` : ''}`,
+  if (c.sueldoBase > 0) {
+    html += fila(`${t('sueldoRecibo')} · ${c.horas} h`, '+ ' + $(c.sueldoBase));
+  }
+  if (turno.ventas > 0) {
+    html += fila(t('propinaSobreVentas'), c.porcentajeVentas + '%');
+  }
+  html += fila(`${t('teLlevas')}${c.horas > 0 ? ` · ${$(c.totalPorHora)}/h` : ''}`,
                $(c.totalNeto), '', 'final');
 
   document.getElementById('recibo').innerHTML = html;
@@ -1128,13 +1386,23 @@ function pintarAjustes() {
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
 
+  const idiomas = document.getElementById('idiomas');
+  idiomas.innerHTML = '';
+  IDIOMAS.forEach(idioma => {
+    const boton = document.createElement('button');
+    boton.textContent = idioma.nombre;
+    boton.className = (datos.prefs.idioma || 'es') === idioma.id ? 'activo' : '';
+    boton.onclick = () => cambiarIdioma(idioma.id);
+    idiomas.appendChild(boton);
+  });
+
   const temas = document.getElementById('temas');
   temas.innerHTML = '';
-  TEMAS.forEach(t => {
+  TEMAS.forEach(tema => {
     const boton = document.createElement('button');
-    boton.textContent = t.nombre;
-    boton.className = (datos.prefs.tema || 'auto') === t.id ? 'activo' : '';
-    boton.onclick = () => cambiarTema(t.id);
+    boton.textContent = t(tema.clave);
+    boton.className = (datos.prefs.tema || 'auto') === tema.id ? 'activo' : '';
+    boton.onclick = () => cambiarTema(tema.id);
     temas.appendChild(boton);
   });
 
@@ -1194,6 +1462,7 @@ function pintarAjustes() {
 
 cargar();
 aplicarTema();
+document.documentElement.lang = (datos.prefs.idioma || 'es');
 lunes = lunesDeLaSemana(hoy());
 pintar();
 

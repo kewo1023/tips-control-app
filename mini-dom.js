@@ -75,13 +75,27 @@ class El {
  */
 function crearDocumento(html) {
   const porId = {};
-  const re = /<(\w+)([^>]*\bid="([^"]+)"[^>]*)>/g;
+  const todos = [];
+
+  // Un barrido por cada etiqueta de apertura del HTML. Se fabrica un elemento
+  // para las que tengan `id`, `data-t` o `data-ph`, que son las únicas que la
+  // app busca. Las demás no hacen falta: aquí no se dibuja nada.
+  const re = /<(\w+)([^>]*)>/g;
   let m;
   while ((m = re.exec(html))) {
+    const atributos = m[2];
+    const id  = /\bid="([^"]+)"/.exec(atributos);
+    const dt  = /\bdata-t="([^"]+)"/.exec(atributos);
+    const dph = /\bdata-ph="([^"]+)"/.exec(atributos);
+    if (!id && !dt && !dph) continue;
+
     const el = new El(m[1]);
-    const cls = /class="([^"]*)"/.exec(m[2]);
+    const cls = /class="([^"]*)"/.exec(atributos);
     if (cls) el.className = cls[1];
-    porId[m[3]] = el;
+    if (dt)  el.dataset.t = dt[1];
+    if (dph) el.dataset.ph = dph[1];
+    if (id)  porId[id[1]] = el;
+    todos.push(el);
   }
 
   const raiz = new El('html');
@@ -94,8 +108,18 @@ function crearDocumento(html) {
     createElement: t => new El(t),
     querySelector: sel => (sel.includes('theme-color') ? meta : null),
     querySelectorAll(sel) {
-      const partes = sel.trim().split(/\s+/);
-      let raices = Object.values(porId);
+      sel = sel.trim();
+
+      // Selectores por atributo: [data-t], [data-ph]
+      const atributo = /^\[data-(\w+)\]$/.exec(sel);
+      if (atributo) {
+        const clave = atributo[1];
+        const dentro = todos.flatMap(e => e.descendientes());
+        return [...todos, ...dentro].filter(el => el.dataset[clave] !== undefined);
+      }
+
+      const partes = sel.split(/\s+/);
+      let raices = todos;
       if (partes[0].startsWith('#')) {
         const r = porId[partes[0].slice(1)];
         raices = r ? [r] : [];
