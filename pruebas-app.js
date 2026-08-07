@@ -62,6 +62,7 @@ const ctx = {
 };
 ctx.window = ctx;
 ctx.window.scrollTo = () => {};
+ctx.window.innerWidth = 390;   // el ancho de un iPhone corriente
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(__dirname + '/logica.js', 'utf8'), ctx);
 vm.runInContext(script, ctx);
@@ -266,13 +267,50 @@ ok('el tip-out tampoco se juzga',
 ok('pero las ventas sí', d.getElementById('metricas-extras').innerHTML.includes('delta baja'));
 
 
-grupo('Explicación de cada dato');
-ok('cada métrica esencial trae su nota',
-   (htmlMetricas().match(/class="nota"/g) || []).length === 4);
-ok('la nota explica el cálculo, no repite la etiqueta',
-   htmlMetricas().includes('÷'));
+grupo('La diferencia va debajo de la cifra');
+ok('la delta sale fuera del div del valor, en su propio renglón',
+   /<div class="valor">[^<]*<\/div><span class="delta/.test(htmlMetricas()));
+
+
+grupo('Explicación de cada dato, a petición');
+ok('cada métrica esencial trae su botón de información',
+   (htmlMetricas().match(/class="info"/g) || []).length === 4);
 ok('las extras también',
-   (d.getElementById('metricas-extras').innerHTML.match(/class="nota"/g) || []).length === 6);
+   (d.getElementById('metricas-extras').innerHTML.match(/class="info"/g) || []).length === 6);
+ok('ya no hay descripciones siempre visibles',
+   !htmlMetricas().includes('class="nota"'));
+ok('el botón sabe qué nota abrir',
+   htmlMetricas().includes("mostrarNota('nPorHora'"));
+
+const globo = () => d.getElementById('globo');
+ok('el globo empieza cerrado', globo()._classes.has('oculto'));
+run("mostrarNota('nPorHora', null)");
+ok('el botón lo abre', !globo()._classes.has('oculto'));
+ok('con la explicación correcta', globo().textContent.includes('÷ horas trabajadas'));
+run("cerrarNota()");
+ok('tocar fuera lo cierra', globo()._classes.has('oculto'));
+run("mostrarNota('nTarjeta', null)");
+ok('otro botón muestra otra explicación',
+   globo().textContent.includes('cheque'));
+run("cambiarIdioma('en'); mostrarNota('nTarjeta', null);");
+ok('la explicación también está traducida',
+   globo().textContent.includes('paycheck'));
+run("cambiarIdioma('es'); cerrarNota();");
+
+// El globo se coloca a mano con las medidas del botón. Comprobamos que no se
+// salga por el borde derecho, que es lo que pasaría con las tarjetas de esa
+// columna si no se le pusiera tope.
+const botonFalso = izq => ({
+  getBoundingClientRect: () => ({ left: izq, width: 16, bottom: 300 })
+});
+run("irA('semana')");
+vm.runInContext('mostrarNota', ctx)('nHoras', botonFalso(370));
+ok('no se sale por la derecha',
+   parseFloat(globo().style.left) + 235 <= 390);
+vm.runInContext('mostrarNota', ctx)('nHoras', botonFalso(2));
+ok('ni por la izquierda', parseFloat(globo().style.left) >= 14);
+ok('y se coloca debajo del botón', parseFloat(globo().style.top) > 300);
+run('cerrarNota()');
 
 
 grupo('Idioma');
@@ -289,7 +327,8 @@ ok('cambia los botones', d.getElementById('temas').children[0].textContent === '
 ok('lo recuerda', JSON.parse(almacen.tipsControl).prefs.idioma === 'en');
 run("irA('semana')");
 ok('cambia las etiquetas de las métricas', texto('metricas').includes('Per hour'));
-ok('y también las notas', texto('metricas').includes('hours worked'));
+ok('y las de las estadísticas extras',
+   d.getElementById('metricas-extras').innerHTML.includes('Sales'));
 ok('las letras de los días cambian de idioma',
    dias()[0].textContent.trim().startsWith('M'));
 run("abrirDia('2026-08-07')");

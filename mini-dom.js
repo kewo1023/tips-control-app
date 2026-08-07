@@ -104,6 +104,10 @@ function crearDocumento(html) {
   return {
     documentElement: raiz,
     _meta: meta,
+    // La app engancha aquí el cierre del globo de ayuda. En las pruebas no se
+    // simula la propagación de eventos: el abrir y cerrar se comprueba
+    // llamando a las funciones directamente.
+    addEventListener: () => {},
     getElementById: id => porId[id] || null,
     createElement: t => new El(t),
     querySelector: sel => (sel.includes('theme-color') ? meta : null),

@@ -205,18 +205,47 @@ body {
 .metricas.extras .metrica { padding: 11px 10px; }
 .metricas.extras .valor { font-size: 17px; }
 
-/* La diferencia contra la semana pasada, al lado de la cifra. */
-.delta { font-size: 12px; font-weight: 600; margin-left: 5px;
-         letter-spacing: 0; white-space: nowrap; }
+/* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
+.metrica .cabeza { display: flex; align-items: center;
+                   justify-content: space-between; gap: 6px; }
+
+.info {
+  flex: none; width: 16px; height: 16px; padding: 0;
+  border: 1px solid var(--linea-alta); border-radius: 50%;
+  background: none; color: var(--tinta-3);
+  font-size: 10px; font-weight: 600; font-style: italic; line-height: 1;
+  cursor: pointer;
+}
+
+/* La diferencia contra la semana pasada va SIEMPRE en su propio renglón,
+   debajo de la cifra. Antes iba al lado y quedaba a merced del ancho: en las
+   tarjetas angostas saltaba de línea sola y la rejilla se veía desalineada.
+   Una posición fija se lee mejor que una que a veces cambia. */
+.delta { display: block; margin-top: 3px;
+         font-size: 12.5px; font-weight: 600; letter-spacing: 0; }
 .delta.sube   { color: var(--verde); }
 .delta.baja   { color: var(--rojo); }
 /* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
 .delta.plano  { color: var(--tinta-3); }
 
-/* La explicación de cada dato. Va deliberadamente apagada: tiene que estar
-   disponible para quien la busque y ser invisible para quien ya la sabe. */
-.nota { font-size: 10.5px; line-height: 1.3; color: var(--tinta-3);
-        margin-top: 5px; }
+/* ----------------------------------------------------------------------------
+   El globo de ayuda.
+
+   Va con `position: fixed` y se coloca con JavaScript debajo del botón que lo
+   abrió. La alternativa —meterlo dentro de la tarjeta— lo habría dejado
+   cortado por el `overflow: hidden` que redondea las esquinas de la rejilla, y
+   además empujaría el resto de la pantalla hacia abajo al abrirse.
+
+   Colores invertidos (tinta de fondo, papel de letra) para que se lea como
+   algo que está *encima* de la app y no como una parte más de ella.
+   -------------------------------------------------------------------------- */
+.globo {
+  position: fixed; z-index: 50;
+  width: 235px; max-width: calc(100vw - 28px);
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--tinta); color: var(--papel);
+  font-size: 12.5px; line-height: 1.35;
+}
 
 .mas {
   width: 100%; margin-top: 10px; padding: 11px;
@@ -535,6 +564,11 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
 <!-- ==========================================================================
      SECCIÓN L — Pestañas
      ====================================================================== -->
+<!-- El globo de ayuda. Es uno solo para toda la app: se le cambia el texto y se
+     lo coloca donde haga falta. Tener uno por tarjeta serían diez elementos
+     escondidos que mantener sincronizados. -->
+<div class="globo oculto" id="globo" role="tooltip"></div>
+
 <nav class="pestanas" id="pestanas">
   <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
   <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
@@ -895,6 +929,39 @@ function cambiarTema(id) {
   pintar();
 }
 
+/* ----------------------------------------------------------------------------
+   El globo de ayuda de cada dato.
+
+   Se abre con el botón (i) y se cierra tocando en cualquier otro sitio. Antes
+   la explicación estaba siempre visible debajo de cada cifra: informaba bien,
+   pero convertía la pantalla en un muro de texto gris. Una ayuda que hay que
+   pedir se lee cuando hace falta y no estorba el resto del tiempo.
+   -------------------------------------------------------------------------- */
+
+function mostrarNota(clave, boton) {
+  const globo = document.getElementById('globo');
+  globo.textContent = t(clave);
+  globo.classList.remove('oculto');
+
+  // Lo colocamos justo debajo del botón, pero sin dejar que se salga por los
+  // lados de la pantalla: en las tarjetas de la derecha se saldría siempre.
+  if (boton && boton.getBoundingClientRect) {
+    const caja = boton.getBoundingClientRect();
+    const ancho = 235;
+    const margen = 14;
+    const maximo = window.innerWidth - ancho - margen;
+    let izquierda = caja.left + caja.width / 2 - ancho / 2;
+    if (izquierda < margen) izquierda = margen;
+    if (izquierda > maximo) izquierda = Math.max(margen, maximo);
+    globo.style.left = izquierda + 'px';
+    globo.style.top = (caja.bottom + 8) + 'px';
+  }
+}
+
+function cerrarNota() {
+  document.getElementById('globo').classList.add('oculto');
+}
+
 function alternarEstadisticas() {
   datos.prefs.masEstadisticas = !datos.prefs.masEstadisticas;
   guardar();   // la preferencia se recuerda: no hay que abrirlo cada vez
@@ -1238,13 +1305,15 @@ function pintarSemana() {
       const dif = redondear(actual - previo);
       if (dif !== 0) {
         const clase = sentido === 'plano' ? 'plano' : (dif > 0 ? 'sube' : 'baja');
-        delta = ` <span class="delta ${clase}">${dif > 0 ? '+' : '−'}`
+        delta = `<span class="delta ${clase}">${dif > 0 ? '+' : '−'}`
               + `${formato(Math.abs(dif))}</span>`;
       }
     }
-    return `<div class="metrica"><div class="etiqueta">${t(claveEtiqueta)}</div>`
-         + `<div class="valor">${valor}${delta}</div>`
-         + `<div class="nota">${t(claveNota)}</div></div>`;
+    return `<div class="metrica">`
+         + `<div class="cabeza"><span class="etiqueta">${t(claveEtiqueta)}</span>`
+         + `<button class="info" onclick="mostrarNota('${claveNota}', this)"`
+         + ` aria-label="${t(claveEtiqueta)}">i</button></div>`
+         + `<div class="valor">${valor}</div>${delta}</div>`;
   };
 
   const horas = n => n + ' h';
@@ -1459,6 +1528,24 @@ function pintarAjustes() {
     pintarAtajosHora(campo);
     pintarRecibo();
   }));
+
+// Cerrar el globo al tocar en cualquier otro sitio.
+//
+// `true` al final activa la fase de captura: este manejador corre ANTES que el
+// onclick del botón (i). Así, un toque en otro botón de información cierra el
+// globo viejo y enseguida el botón abre el nuevo, en ese orden. Sin la
+// captura, el orden se invierte y el globo se cerraría justo después de
+// abrirse — que es como se ve un botón que "no funciona".
+document.addEventListener('click', evento => {
+  const destino = evento.target;
+  const esBotonInfo = destino && destino.classList
+                   && destino.classList.contains('info');
+  if (!esBotonInfo) cerrarNota();
+}, true);
+
+// Al desplazar la pantalla el globo se quedaría flotando en el aire, porque su
+// posición está fijada a la ventana y no al botón.
+window.addEventListener('scroll', cerrarNota, { passive: true });
 
 cargar();
 aplicarTema();
