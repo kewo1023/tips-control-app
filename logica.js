@@ -270,12 +270,47 @@ function horasFrecuentes(turnos, campo, cuantas = 4) {
     .slice(0, cuantas);
 }
 
-/** El turno con el mejor total neto. */
-function mejorTurno(turnos) {
+/**
+ * Cuál de las cifras calculadas es "lo que me llevé".
+ *
+ * Hay dos respuestas legítimas y dependen de cómo cobre cada persona:
+ *
+ *   - **Sin contar el sueldo** (por defecto). Las propinas menos el tip-out, y
+ *     ya. El sueldo por hora llega en el cheque semanas después y con las
+ *     retenciones descontadas, así que sumarlo al total de la noche da un
+ *     número que nunca se ve entero. Y un número inflado no lo cuestiona nadie:
+ *     favorece a quien lo lee.
+ *   - **Contándolo.** Para quien prefiera ver el ingreso bruto del turno
+ *     completo, sueldo incluido.
+ *
+ * Las dos cifras ya venían calculadas por separado en `calcularTurno` y
+ * `resumir`; esta función solo elige. Por eso el interruptor no recalcula nada
+ * ni toca el historial: cambia lo que se pinta, no lo que se guardó.
+ *
+ * Sirve igual para un turno que para un resumen de la semana, porque ambos
+ * devuelven las mismas cuatro claves.
+ */
+function cifrasPrincipales(calculo, contarSueldo) {
+  const c = calculo || {};
+  return contarSueldo
+    ? { total: c.totalNeto     || 0, porHora: c.totalPorHora   || 0 }
+    : { total: c.netoPropinas  || 0, porHora: c.propinaPorHora || 0 };
+}
+
+/**
+ * El turno que más dejó, con el mismo criterio que se está mostrando.
+ *
+ * Si la app no cuenta el sueldo, el "mejor día" tampoco puede contarlo: un día
+ * corto con propinas altas y otro largo con propinas flojas pueden intercambiar
+ * el puesto según qué se sume. Que la pantalla diga que el mejor fue el martes
+ * mientras la cifra más alta está en el jueves es de las cosas que hacen
+ * desconfiar de toda la app, aunque las dos cuentas estén bien.
+ */
+function mejorTurno(turnos, contarSueldo) {
   const lista = Array.isArray(turnos) ? turnos : [];
   if (lista.length === 0) return null;
-  return lista.reduce((mejor, t) =>
-    calcularTurno(t).totalNeto > calcularTurno(mejor).totalNeto ? t : mejor);
+  const valor = t => cifrasPrincipales(calcularTurno(t), contarSueldo).total;
+  return lista.reduce((mejor, t) => valor(t) > valor(mejor) ? t : mejor);
 }
 
 /** Los turnos de una fecha concreta. */
@@ -367,7 +402,7 @@ if (typeof module !== 'undefined' && module.exports) {
     redondear, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasDeLaSemana, turnosDelDia,
-    horasFrecuentes, mejorTurno,
+    horasFrecuentes, mejorTurno, cifrasPrincipales,
     turnoValido, fusionarTurnos
   };
 }

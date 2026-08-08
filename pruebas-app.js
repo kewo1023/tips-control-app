@@ -229,18 +229,20 @@ grupo('Registrar el turno');
 set('f-entrada', '17:00'); set('f-salida', '23:00');
 set('f-ventas', '1200'); set('f-efectivo', '60'); set('f-tarjeta', '120');
 ok('el recibo descuenta el tip-out', texto('recibo').includes('$78.00'));
-ok('el recibo suma el sueldo de 6 h', texto('recibo').includes('$60.00'));
-ok('el recibo cierra en $162.00', texto('recibo').includes('$162.00'));
-ok('y muestra el por hora', texto('recibo').includes('$27.00/h'));
+ok('el recibo muestra el sueldo de 6 h aparte', texto('recibo').includes('$60.00'));
+// 6 h · propinas 180 · tip-out 78 → 102. El sueldo (60) NO se suma.
+ok('el recibo cierra en las propinas netas', texto('recibo').includes('$102.00'));
+ok('y no en el total con sueldo', !texto('recibo').includes('$162.00'));
+ok('el por hora va sin sueldo: 102 / 6', texto('recibo').includes('$17.00/h'));
 run('guardarTurno()');
 ok('guardó el turno', D().turnos.length === 1);
 ok('con la fecha del día tocado', D().turnos[0].fecha === '2026-08-06');
 ok('con identificador único, no la hora', String(D().turnos[0].id).length > 15);
 ok('volvió a la semana', !d.getElementById('p-semana')._classes.has('oculto'));
 ok('el jueves ya no está vacío', !dias()[3]._classes.has('vacio'));
-ok('el jueves muestra su monto', dias()[3].textContent.includes('$162'));
+ok('el jueves muestra su monto', dias()[3].textContent.includes('$102'));
 ok('el jueves dibuja su barra', dias()[3].querySelectorAll('.barra').length === 1);
-ok('el total de la semana es $162.00', texto('total-semana') === '$162.00');
+ok('el total de la semana es $102.00', texto('total-semana') === '$102.00');
 ok('resume turnos y horas', texto('contra-semana').includes('1 turno')
                          && texto('contra-semana').includes('6 h'));
 ok('quedó guardado en el teléfono', almacen.tipsControl !== undefined);
@@ -272,7 +274,8 @@ ok('el viernes cruzó la medianoche: 8 h',
 ok('la barra del viernes es más alta que la del jueves',
    parseFloat(dias()[4].querySelectorAll('.barra')[0].style.height) >
    parseFloat(dias()[3].querySelectorAll('.barra')[0].style.height));
-ok('el total suma los dos turnos', texto('total-semana') === '$453.00');
+// jueves 95.5 (ventas ya corregidas a 1300) + viernes 217.5 = 313
+ok('el total suma los dos turnos', texto('total-semana') === '$313.00');
 ok('dice 2 turnos', texto('contra-semana').includes('2 turnos'));
 
 
@@ -320,7 +323,53 @@ ok('el botón Hoy vuelve a la semana actual', texto('rango') === '3 ago – 9 ag
 run("lunes = lunesDeLaSemana('2026-08-10'); pintar();");
 ok('la semana siguiente compara con la anterior',
    texto('contra-semana').includes('que la semana pasada'));
-ok('y marca la caída', texto('contra-semana').includes('−$453.00'));
+ok('y marca la caída', texto('contra-semana').includes('−$313.00'));
+
+
+/* ==========================================================================
+   Sumar o no el sueldo por hora.
+
+   En este punto hay dos turnos guardados:
+     jueves  6 h · propinas netas  95.5 · sueldo 60 → 155.5
+     viernes 8 h · propinas netas 217.5 · sueldo 80 → 297.5
+   Sin sueldo la semana son 313.00 y con sueldo 453.00; 14 horas en total.
+   ========================================================================== */
+grupo('Sumar el sueldo por hora al total');
+
+// El grupo anterior dejó la vista en la semana siguiente. Sin volver a la de
+// los turnos, todo esto mediría una semana vacía y pasaría o fallaría por
+// motivos que no tienen nada que ver con el interruptor.
+run('irAHoy()');
+
+ok('viene apagado de fábrica', D().prefs.contarSueldo === false);
+ok('la semana muestra solo las propinas netas', texto('total-semana') === '$313.00');
+ok('y el por hora va sin sueldo: 313 / 14', texto('metricas').includes('$22.36'));
+
+d.getElementById('a-contar-sueldo').checked = true;
+run('cambiarContarSueldo()');
+run("irA('semana')");
+ok('encendido, la semana sube al total con sueldo', texto('total-semana') === '$453.00');
+ok('y el por hora también: 453 / 14', texto('metricas').includes('$32.36'));
+
+// El interruptor no toca los datos: las dos cifras salen de lo mismo.
+ok('los turnos guardados no cambian', D().turnos.length === 2);
+ok('ni su tip-out', D().turnos[1].tipOut === 82.5);
+
+// En el recibo, encendido el sueldo suma; apagado se ve pero aparte.
+dias()[3].click();
+ok('encendido el recibo cierra con sueldo', texto('recibo').includes('$155.50'));
+run("irA('semana')");
+
+d.getElementById('a-contar-sueldo').checked = false;
+run('cambiarContarSueldo()');
+ok('apagarlo devuelve el total de antes', texto('total-semana') === '$313.00');
+ok('la preferencia queda guardada en el teléfono',
+   JSON.parse(almacen.tipsControl).prefs.contarSueldo === false);
+
+dias()[3].click();
+ok('apagado el recibo cierra sin sueldo', texto('recibo').includes('$95.50'));
+ok('pero el sueldo se sigue viendo', texto('recibo').includes('$60.00'));
+run("irA('semana')");
 
 
 grupo('Tema claro y oscuro');

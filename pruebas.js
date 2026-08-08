@@ -259,10 +259,63 @@ probar('ignora los turnos sin hora',
 grupo('Mejor turno');
 
 probar('encuentra el turno que más dejó',
-  L.mejorTurno([CENA, BRUNCH]).fecha, CENA.fecha);      // 162 contra 161.5
+  L.mejorTurno([CENA, BRUNCH], true).fecha, CENA.fecha);      // 162 contra 161.5
 
 probar('sin turnos devuelve nada',
   L.mejorTurno([]), null);
+
+
+/* --------------------------------------------------------------------------
+   Qué cifra es "lo que me llevé"
+
+   Por defecto el sueldo por hora NO se suma: llega en el cheque, semanas
+   después y con las retenciones ya quitadas, así que sumarlo a la noche da un
+   número que nunca se ve entero.
+   -------------------------------------------------------------------------- */
+grupo('La cifra principal');
+
+const TURNO_MIXTO = {
+  fecha: '2026-08-05', entrada: '17:00', salida: '23:00',
+  ventas: 1000, efectivo: 40, tarjeta: 160, tarifaHora: 8, tipOut: 65
+};
+// A mano: 6 h · propinas 200 · tip-out 65 → netoPropinas 135
+//         sueldo 6 × 8 = 48 → totalNeto 183
+const C = L.calcularTurno(TURNO_MIXTO);
+
+probar('la cuenta de partida es la esperada', [C.netoPropinas, C.sueldoBase, C.totalNeto],
+  [135, 48, 183]);
+
+probar('sin contar el sueldo, el total son las propinas netas',
+  L.cifrasPrincipales(C, false).total, 135);
+
+probar('contándolo, sube al total con sueldo',
+  L.cifrasPrincipales(C, true).total, 183);
+
+probar('el por hora también cambia de criterio',
+  [L.cifrasPrincipales(C, false).porHora, L.cifrasPrincipales(C, true).porHora],
+  [22.5, 30.5]);
+
+probar('lo que no se cuenta no se pierde: el sueldo sigue calculado',
+  C.sueldoBase, 48);
+
+probar('sin argumentos no revienta',
+  L.cifrasPrincipales(null, false), { total: 0, porHora: 0 });
+
+/* El mejor día tiene que ordenar con el mismo criterio que la pantalla, o dirá
+   que el mejor fue un día que no es el de la cifra más alta.
+   CORTO: 3 h, propinas netas 150, sueldo 24 → 174
+   LARGO: 9 h, propinas netas 140, sueldo 72 → 212
+   Sin contar el sueldo gana CORTO; contándolo gana LARGO. */
+const CORTO = { fecha: '2026-08-05', entrada: '18:00', salida: '21:00',
+                ventas: 0, efectivo: 150, tarjeta: 0, tarifaHora: 8, tipOut: 0 };
+const LARGO = { fecha: '2026-08-06', entrada: '14:00', salida: '23:00',
+                ventas: 0, efectivo: 140, tarjeta: 0, tarifaHora: 8, tipOut: 0 };
+
+probar('sin contar el sueldo, el mejor es el de más propinas',
+  L.mejorTurno([CORTO, LARGO], false).fecha, CORTO.fecha);
+
+probar('contándolo, gana el turno largo',
+  L.mejorTurno([CORTO, LARGO], true).fecha, LARGO.fecha);
 
 
 /* --------------------------------------------------------------------------

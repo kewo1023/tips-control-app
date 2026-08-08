@@ -343,6 +343,12 @@ input[type=time] {
 .recibo .resta { color: var(--rojo); }
 .recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
 
+/* El sueldo por hora cuando NO se suma al total: va debajo de la raya final,
+   más pequeño y en gris. Se ve porque es dinero que sí cobras, pero se lee
+   como una nota al pie y no como parte de la suma de arriba. */
+.recibo .aparte { padding-top: 9px; font-size: 13px; }
+.recibo .aparte span { color: var(--tinta-3) !important; }
+
 /* ============================================================================
    SECCIÓN G — Botones
    ========================================================================== */
@@ -536,6 +542,15 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
       <input type="number" id="a-tarifa" inputmode="decimal" step="0.01" min="0"
              onchange="guardarAjustes()" placeholder="0.00">
     </div>
+
+    <label class="check">
+      <input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()">
+      <span data-t="sumarSueldo">Sumar el sueldo por hora al total</span>
+    </label>
+    <p class="intro" style="margin:9px 0 0; font-size:12px"
+       data-t="sumarSueldoNota">
+      Apagado, el total de cada turno son solo las propinas menos el tip-out.
+      El sueldo se sigue viendo aparte.</p>
   </div>
 
   <h2 class="seccion" data-t="idioma">Idioma</h2>
@@ -747,6 +762,8 @@ const TEXTOS = {
     empezar: 'Empezar',
     faltaTarifa: 'Pon tu sueldo por hora. Si te pagan solo con propinas, escribe 0.',
     faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
+    sumarSueldo: 'Sumar el sueldo por hora al total',
+    sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
     datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
     confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
@@ -814,6 +831,8 @@ const TEXTOS = {
     empezar: 'Start',
     faltaTarifa: 'Enter your hourly wage. If you are paid in tips only, type 0.',
     faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
+    sumarSueldo: 'Add hourly wage to the total',
+    sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
     archivoMalo: "That file doesn't look like a Tips Control backup.",
     datosIlegibles: 'Saved data could not be read. Starting fresh.',
     confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
@@ -874,7 +893,13 @@ let datos = {
     { id: nuevoId(), nombre: 'Bakery', porcentaje: null }
   ],
   turnos: [],
-  prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es' }
+  // `contarSueldo` arranca apagado. El sueldo por hora llega en el cheque,
+  // semanas después y con las retenciones ya quitadas, así que sumarlo al total
+  // de la noche da una cifra que nunca se ve entera. Y de los dos errores
+  // posibles, inflar es el peor: un número que te favorece no lo cuestiona
+  // nadie.
+  prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es',
+           contarSueldo: false }
 };
 
 const TEMAS = [
@@ -945,7 +970,7 @@ function cargar() {
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
     datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                    ...(datos.prefs || {}) };
+                    contarSueldo: false, ...(datos.prefs || {}) };
 
     // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
     // saldría la pantalla de bienvenida como si fuera nuevo: pedirle datos que
@@ -1069,6 +1094,19 @@ function cambiarTema(id) {
   datos.prefs.tema = id;
   guardar();
   aplicarTema();
+  pintar();
+}
+
+/**
+ * Sumar o no el sueldo por hora al total de cada turno.
+ *
+ * Es solo una preferencia de lo que se pinta: no recalcula nada ni toca los
+ * turnos guardados. Encenderlo y apagarlo cien veces deja los datos igual que
+ * al principio, porque las dos cifras se calculan al vuelo desde lo mismo.
+ */
+function cambiarContarSueldo() {
+  datos.prefs.contarSueldo = !!document.getElementById('a-contar-sueldo').checked;
+  guardar();
   pintar();
 }
 
@@ -1512,10 +1550,14 @@ function pintarSemana() {
   // mirando una semana vacía sin entender por qué.
   document.getElementById('btn-siguiente').disabled = esSemanaActual;
 
-  // El día que más ganaste marca la altura máxima de las barras.
+  // El día que más ganaste marca la altura máxima de las barras. Se mide con
+  // la misma cifra que se muestra: unas barras que comparan una cosa mientras
+  // los números dicen otra son peores que no tener barras.
+  const conSueldo = !!datos.prefs.contarSueldo;
   const totales = fechas.map(f => {
     const turnoDelDia = turnosDelDia(datos.turnos, f)[0];
-    return turnoDelDia ? calcularTurno(turnoDelDia).totalNeto : 0;
+    return turnoDelDia
+      ? cifrasPrincipales(calcularTurno(turnoDelDia), conSueldo).total : 0;
   });
   const tope = Math.max(...totales, 1);
 
@@ -1552,12 +1594,14 @@ function pintarSemana() {
     caja.appendChild(boton);
   });
 
-  document.getElementById('total-semana').textContent = $(r.totalNeto);
+  const cifras = cifrasPrincipales(r, conSueldo);
+  document.getElementById('total-semana').textContent = $(cifras.total);
 
   // Comparación con la semana anterior: un número solo no dice si fue buena
   // semana; comparado con el anterior, sí.
   const anteriores = diasDeLaSemana(sumarDias(lunes, -7));
   const rAnterior = resumir(datos.turnos.filter(x => anteriores.includes(x.fecha)));
+  const cifrasAnterior = cifrasPrincipales(rAnterior, conSueldo);
   const hayAnterior = rAnterior.turnos > 0;
 
   const resumenTurnos = `${r.turnos} ${plural(r.turnos, 'turno', 'turnos')}`
@@ -1566,7 +1610,7 @@ function pintarSemana() {
   if (!hayAnterior) {
     contra.textContent = r.turnos === 0 ? t('sinTurnos') : resumenTurnos;
   } else {
-    const dif = redondear(r.totalNeto - rAnterior.totalNeto);
+    const dif = redondear(cifras.total - cifrasAnterior.total);
     contra.innerHTML = resumenTurnos
       + ` · <span class="${dif >= 0 ? 'sube' : 'baja'}">`
       + `${dif >= 0 ? '+' : '−'}${$(Math.abs(dif))}</span> ${t('queSemanaPasada')}`;
@@ -1611,7 +1655,7 @@ function pintarSemana() {
   // la tarjeta llega en el cheque, el efectivo va al bolsillo esa noche.
   document.getElementById('metricas').innerHTML =
       metrica('mHoras',    r.horas + ' h',      r.horas,        rAnterior.horas,        horas, 'plano', 'nHoras')
-    + metrica('mPorHora',  $(r.totalPorHora),   r.totalPorHora, rAnterior.totalPorHora, $,     'mas',   'nPorHora')
+    + metrica('mPorHora',  $(cifras.porHora),   cifras.porHora, cifrasAnterior.porHora, $,     'mas',   'nPorHora')
     + metrica('mEfectivo', $0(r.efectivo),      r.efectivo,     rAnterior.efectivo,     $0,    'mas',   'nEfectivo')
     + metrica('mTarjeta',  $0(r.tarjeta),       r.tarjeta,      rAnterior.tarjeta,      $0,    'mas',   'nTarjeta');
 
@@ -1627,13 +1671,14 @@ function pintarSemana() {
     + metrica('mPorTurno', $0(r.promedioPorTurno), r.promedioPorTurno, rAnterior.promedioPorTurno, $0, 'mas', 'nPorTurno');
   document.getElementById('metricas-extras').classList.toggle('oculto', !abierto);
 
-  const mejor = mejorTurno(deLaSemana);
+  const mejor = mejorTurno(deLaSemana, conSueldo);
   const lineaMejor = document.getElementById('mejor-dia');
   lineaMejor.classList.toggle('oculto', !abierto || !mejor);
   if (mejor && abierto) {
     const cm = calcularTurno(mejor);
     lineaMejor.textContent = `${t('mejorDia')}: ${soloDia(mejor.fecha)} `
-      + `${t('conEn')} ${$(cm.totalNeto)} ${t('enHoras')} ${cm.horas} h.`;
+      + `${t('conEn')} ${$(cifrasPrincipales(cm, conSueldo).total)} `
+      + `${t('enHoras')} ${cm.horas} h.`;
   }
 
   document.getElementById('btn-mas').textContent =
@@ -1718,6 +1763,9 @@ function pintarRecibo() {
     `<div class="${claseFila}"><span>${etiqueta}</span>`
   + `<span class="${claseValor}">${valor}</span></div>`;
 
+  const conSueldo = !!datos.prefs.contarSueldo;
+  const cifras = cifrasPrincipales(c, conSueldo);
+
   const cuantos = turno.tipoutDetalle.length;
   let html = fila(t('mPropinas'), $(c.propinas));
   if (c.tipOut > 0) {
@@ -1725,14 +1773,25 @@ function pintarRecibo() {
                + `${plural(cuantos, 'ayudante', 'ayudantesPl')}`,
                  '− ' + $(c.tipOut), 'resta');
   }
-  if (c.sueldoBase > 0) {
-    html += fila(`${t('sueldoRecibo')} · ${c.horas} h`, '+ ' + $(c.sueldoBase));
-  }
   if (turno.ventas > 0) {
     html += fila(t('propinaSobreVentas'), c.porcentajeVentas + '%');
   }
-  html += fila(`${t('teLlevas')}${c.horas > 0 ? ` · ${$(c.totalPorHora)}/h` : ''}`,
-               $(c.totalNeto), '', 'final');
+  if (c.sueldoBase > 0 && conSueldo) {
+    html += fila(`${t('sueldoRecibo')} · ${c.horas} h`, '+ ' + $(c.sueldoBase));
+  }
+
+  html += fila(`${t('teLlevas')}${c.horas > 0 ? ` · ${$(cifras.porHora)}/h` : ''}`,
+               $(cifras.total), '', 'final');
+
+  /* Con el sueldo fuera de la cuenta, la línea va DESPUÉS del total y sin
+     signo. Es información, no un sumando.
+     El signo importa más de lo que parece: un "+ $48" encima de un total que no
+     lo incluye es una resta que no cuadra, y quien la vea va a pensar que la
+     app se equivocó antes de pensar que no se suma a propósito. */
+  if (c.sueldoBase > 0 && !conSueldo) {
+    html += fila(`${t('sueldoRecibo')} · ${c.horas} h`, $(c.sueldoBase),
+                 'tenue', 'aparte');
+  }
 
   document.getElementById('recibo').innerHTML = html;
 }
@@ -1741,6 +1800,7 @@ function pintarRecibo() {
 function pintarAjustes() {
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
+  document.getElementById('a-contar-sueldo').checked = !!datos.prefs.contarSueldo;
 
   const idiomas = document.getElementById('idiomas');
   idiomas.innerHTML = '';
@@ -1900,7 +1960,7 @@ const FUNCIONES_NECESARIAS = [
   'redondear', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
-  'turnoValido', 'fusionarTurnos'
+  'turnoValido', 'fusionarTurnos', 'cifrasPrincipales'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la
