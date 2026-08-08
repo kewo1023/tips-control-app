@@ -84,6 +84,121 @@ const ok = (n, c) => { c ? pasadas++ : falladas++; console.log((c ? '  ✓ ' : '
 const grupo = t => console.log('\n' + t);
 
 
+/* ==========================================================================
+   La bienvenida va PRIMERO porque es lo primero que ve alguien que instala la
+   app: el almacenamiento arranca vacío, igual que en un teléfono nuevo. Al
+   final de este bloque se completa la configuración, y de ahí en adelante el
+   resto de las pruebas corren sobre una app ya configurada.
+   ========================================================================== */
+grupo('Bienvenida (app recién instalada)');
+
+ok('abre en la bienvenida, no en la semana',
+   !d.getElementById('p-bienvenida')._classes.has('oculto'));
+ok('la semana está escondida', d.getElementById('p-semana')._classes.has('oculto'));
+ok('las pestañas están escondidas', d.getElementById('pestanas')._classes.has('oculto'));
+ok('todavía no está configurada', D().configurado === false);
+
+ok('propone los 4 roles más comunes',
+   d.querySelectorAll('#b-roles .rol-fila').length === 4);
+
+/* La razón de ser de toda la pantalla: los porcentajes NO vienen puestos. Si
+   llegaran con los del restaurante de Kev, alguien podría quedárselos sin
+   enterarse y ver un neto que no es el suyo durante semanas. */
+ok('con los porcentajes en blanco',
+   D().roles.every(r => r.porcentaje === null));
+ok('y la suma en cero', texto('b-total') === '0%');
+
+// Sin tarifa no se puede empezar.
+avisos.length = 0;
+d.getElementById('b-tarifa').value = '';
+run('terminarBienvenida()');
+ok('sin sueldo por hora no deja empezar', D().configurado === false);
+ok('y lo dice en vez de quedarse callada', avisos.length === 1);
+
+// Con tarifa pero sin porcentajes, tampoco: un tip-out en cero infla el neto.
+avisos.length = 0;
+d.getElementById('b-tarifa').value = '8';
+run('terminarBienvenida()');
+ok('sin ningún porcentaje tampoco deja empezar', D().configurado === false);
+ok('y explica que existe la casilla', avisos[0].includes('casilla'));
+
+// La salida explícita para quien trabaja donde no se reparte.
+avisos.length = 0;
+d.getElementById('b-sin-tipout').checked = true;
+run('terminarBienvenida()');
+ok('marcando "no hay tip-out" sí deja empezar', D().configurado === true);
+ok('y se queda sin roles, que es la verdad', D().roles.length === 0);
+ok('sin avisos', avisos.length === 0);
+ok('y aterriza en la semana', !d.getElementById('p-semana')._classes.has('oculto'));
+ok('con las pestañas de vuelta', !d.getElementById('pestanas')._classes.has('oculto'));
+
+// Un restaurante sin nombre no deja el encabezado en blanco.
+ok('sin nombre pone uno por defecto', D().trabajo.nombre.length > 0);
+
+/* Ahora el camino normal, que es el que deja el estado para el resto del
+   archivo: se vuelve a la bienvenida y se configura con tip-out de verdad. */
+run(`datos.configurado = false;
+     datos.trabajo = { nombre: 'Mi restaurante', tarifaHora: 0 };
+     datos.roles = [
+       { id: 'r1', nombre: 'Busser', porcentaje: 3 },
+       { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
+       { id: 'r3', nombre: 'Runner', porcentaje: 1 },
+       { id: 'r4', nombre: 'Bakery', porcentaje: 1 }
+     ];
+     irA('bienvenida');`);
+d.getElementById('b-sin-tipout').checked = false;
+d.getElementById('b-tarifa').value = '8';
+avisos.length = 0;
+run('terminarBienvenida()');
+
+ok('con tarifa y porcentajes se completa', D().configurado === true);
+ok('guarda la tarifa que se escribió', D().trabajo.tarifaHora === 8);
+ok('conserva los 4 roles', D().roles.length === 4);
+ok('queda guardado en el teléfono',
+   JSON.parse(almacen.tipsControl).configurado === true);
+
+// Ya configurada, no vuelve a salir.
+run("irA('semana')");
+ok('una vez configurada ya no reaparece',
+   d.getElementById('p-bienvenida')._classes.has('oculto'));
+
+/* Quien ya venía usando la app no puede toparse con esta pantalla. Sus datos
+   guardados no traen `configurado`, y sin la migración le pediría configurar de
+   nuevo algo que ya tiene, encima de un historial que ya existe. */
+almacen.tipsControl = JSON.stringify({
+  turnos: [{ id: 'viejo', fecha: '2026-08-03', ventas: 900, efectivo: 20,
+             tarjeta: 120, entrada: '17:00', salida: '23:00', tarifaHora: 8,
+             tipOut: 58 }],
+  trabajo: { nombre: 'De antes', tarifaHora: 8 }
+});
+run('cargar()');
+ok('un usuario de antes no ve la bienvenida', D().configurado === true);
+
+almacen.tipsControl = JSON.stringify({
+  turnos: [], trabajo: { nombre: '', tarifaHora: 12 }
+});
+run('cargar()');
+ok('con tarifa puesta pero sin turnos, tampoco', D().configurado === true);
+
+almacen.tipsControl = JSON.stringify({
+  turnos: [], trabajo: { nombre: '', tarifaHora: 0 }
+});
+run('cargar()');
+ok('quien no tiene ni turnos ni tarifa sí la ve', D().configurado === false);
+
+// Dejar el estado como lo esperan las pruebas siguientes.
+run(`datos.configurado = true;
+     datos.turnos = [];
+     datos.trabajo = { nombre: 'Mi restaurante', tarifaHora: 0 };
+     datos.roles = [
+       { id: 'r1', nombre: 'Busser', porcentaje: 3 },
+       { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
+       { id: 'r3', nombre: 'Runner', porcentaje: 1 },
+       { id: 'r4', nombre: 'Bakery', porcentaje: 1 }
+     ];
+     guardar(); irA('semana');`);
+
+
 /* ========================================================================== */
 grupo('Arranque en la semana actual');
 ok('abre en la pantalla de semana', !d.getElementById('p-semana')._classes.has('oculto'));

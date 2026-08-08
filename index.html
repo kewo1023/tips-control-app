@@ -396,6 +396,21 @@ button { font-family: inherit; }
 .segmentado button.activo { border-color: var(--verde); color: var(--verde);
                             font-weight: 600; }
 
+/* Texto de introducción de la bienvenida. Es el único párrafo largo de la app:
+   se lee una vez en la vida y explica por qué le estamos pidiendo datos antes
+   de dejarle hacer nada. Pedir sin explicar es lo que hace que la gente
+   abandone en la primera pantalla. */
+.intro { font-size: 14px; line-height: 1.5; color: var(--tinta-2);
+         margin: 4px 2px 0; }
+
+/* La casilla y su texto van dentro de la misma etiqueta para que se pueda
+   tocar el texto además del cuadrito: en un teléfono, acertarle a un cuadro de
+   16 px con el pulgar es pedir demasiado. */
+.check { display: flex; gap: 9px; align-items: flex-start; margin-top: 13px;
+         font-size: 13px; color: var(--tinta-2); cursor: pointer; }
+.check input { width: 18px; height: 18px; margin: 1px 0 0; flex: none;
+               accent-color: var(--verde); }
+
 .rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
 .rol-fila input[type=text] { flex: 1; }
 .rol-fila input[type=number] { width: 74px; }
@@ -562,6 +577,65 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
 
 
 <!-- ==========================================================================
+     SECCIÓN K2 — Pantalla: BIENVENIDA
+
+     Se ve una sola vez, la primera. Existe porque los valores por defecto de la
+     app son los del restaurante de Kev, y quien la abra sin cambiarlos va a
+     registrar turnos con el tip-out de OTRO sitio durante semanas sin
+     enterarse. Eso no es una app a la que le faltan datos: es una app que le
+     dice a alguien que ganó una cantidad que no ganó.
+
+     Por eso no hay botón de "lo hago después". La única salida es decir
+     explícitamente que en su restaurante no se paga tip-out.
+     ====================================================================== -->
+<section id="p-bienvenida" class="oculto">
+  <div class="barra-titulo"><span class="fecha" data-t="bienvenida">Bienvenido</span></div>
+  <p class="intro" data-t="bienvenidaIntro">
+    Antes de empezar, dos datos de tu trabajo. Sin ellos las cuentas saldrían
+    con los valores de otro restaurante.</p>
+
+  <h2 class="seccion" data-t="idioma">Idioma</h2>
+  <div class="tarjeta">
+    <div class="segmentado" id="b-idiomas"></div>
+  </div>
+
+  <h2 class="seccion" data-t="trabajo">Trabajo</h2>
+  <div class="tarjeta">
+    <div class="campo">
+      <label class="etiqueta" data-t="restaurante" for="b-nombre">Restaurante</label>
+      <input type="text" id="b-nombre" onchange="guardarBienvenida()">
+    </div>
+    <div class="campo">
+      <label class="etiqueta" data-t="sueldoHora" for="b-tarifa">Sueldo por hora</label>
+      <input type="number" id="b-tarifa" inputmode="decimal" step="0.01" min="0"
+             placeholder="0.00" onchange="guardarBienvenida()">
+    </div>
+  </div>
+
+  <h2 class="seccion" data-t="ayudantesTipout">Ayudantes y tip-out</h2>
+  <div class="tarjeta">
+    <p class="intro" style="margin:0 0 12px" data-t="bienvenidaTipout">
+      El porcentaje de tus ventas que le pagas a cada rol. Los nombres son los
+      más comunes: cámbialos o quita los que no existan en tu restaurante.</p>
+    <div id="b-roles"></div>
+    <button class="chico" id="b-agregar-rol" data-t="agregarRol"
+            onclick="agregarRol()">+ Agregar rol</button>
+    <p style="margin:13px 0 0; font-size:13px; color:var(--tinta-2)">
+      <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
+      <strong id="b-total">0%</strong></p>
+
+    <label class="check">
+      <input type="checkbox" id="b-sin-tipout" onchange="pintarBienvenida()">
+      <span data-t="sinTipout">En mi restaurante no se paga tip-out</span>
+    </label>
+  </div>
+
+  <button class="principal" data-t="empezar" style="margin-top:20px"
+          onclick="terminarBienvenida()">Empezar</button>
+</section>
+
+
+<!-- ==========================================================================
      SECCIÓN L — Pestañas
      ====================================================================== -->
 <!-- El globo de ayuda. Es uno solo para toda la app: se le cambia el texto y se
@@ -666,6 +740,13 @@ const TEXTOS = {
     resumenIgnorados: 'Otros %1 no se pudieron leer y se dejaron fuera.',
     errorImportar: 'Algo falló al importar y no se cambió nada. Manda esta pantalla por WhatsApp:',
     appAMedias: 'La app se actualizó a medias y no puede abrir sin riesgo. Tus turnos están a salvo: no se ha tocado nada. Ciérrala del todo (deslízala hacia arriba) y vuelve a abrirla.',
+    bienvenida: 'Bienvenido',
+    bienvenidaIntro: 'Antes de empezar, dos datos de tu trabajo. Sin ellos las cuentas saldrían con los valores de otro restaurante.',
+    bienvenidaTipout: 'El porcentaje de tus ventas que le pagas a cada rol. Los nombres son los más comunes: cámbialos o quita los que no existan en tu restaurante.',
+    sinTipout: 'En mi restaurante no se paga tip-out',
+    empezar: 'Empezar',
+    faltaTarifa: 'Pon tu sueldo por hora. Si te pagan solo con propinas, escribe 0.',
+    faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
     datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
     confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
@@ -726,6 +807,13 @@ const TEXTOS = {
     resumenIgnorados: 'Another %1 could not be read and were left out.',
     errorImportar: 'Something failed during the import and nothing was changed. Send this screen over WhatsApp:',
     appAMedias: 'The app updated halfway and cannot open safely. Your shifts are fine: nothing was touched. Close it completely (swipe it up) and open it again.',
+    bienvenida: 'Welcome',
+    bienvenidaIntro: 'Before you start, two things about your job. Without them the math would use another restaurant’s numbers.',
+    bienvenidaTipout: 'The percentage of your sales you pay each role. These are the most common names: change them or remove the ones your restaurant doesn’t have.',
+    sinTipout: 'My restaurant has no tip-out',
+    empezar: 'Start',
+    faltaTarifa: 'Enter your hourly wage. If you are paid in tips only, type 0.',
+    faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
     archivoMalo: "That file doesn't look like a Tips Control backup.",
     datosIlegibles: 'Saved data could not be read. Starting fresh.',
     confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
@@ -765,12 +853,25 @@ function rellenar(texto, ...valores) {
 const CLAVE = 'tipsControl';
 
 let datos = {
-  trabajo: { nombre: 'Mi restaurante', tarifaHora: 0 },
+  // `configurado` marca si alguien ya pasó por la pantalla de bienvenida.
+  // Sin esta bandera habría que adivinarlo mirando si la tarifa es 0, y eso es
+  // deducir una cosa de un dato que significa otra: el día que alguien gane de
+  // verdad $0 por hora, la app le pediría configurarse cada vez que la abra.
+  configurado: false,
+
+  trabajo: { nombre: '', tarifaHora: 0 },
+
+  // Los nombres vienen puestos porque son casi los mismos en cualquier
+  // restaurante de Estados Unidos. Los porcentajes vienen VACÍOS porque no lo
+  // son nunca: son los de un sitio concreto, y dejarlos rellenos hacía que se
+  // heredaran de un restaurante ajeno con solo tocar "Empezar" sin mirar.
+  // Escribir un número cuesta menos que escribir "Busser", y es el dato que de
+  // verdad hay que pensar.
   roles: [
-    { id: 1, nombre: 'Busser', porcentaje: 3 },
-    { id: 2, nombre: 'Barra',  porcentaje: 1.5 },
-    { id: 3, nombre: 'Runner', porcentaje: 1 },
-    { id: 4, nombre: 'Bakery', porcentaje: 1 }
+    { id: nuevoId(), nombre: 'Busser', porcentaje: null },
+    { id: nuevoId(), nombre: 'Barra',  porcentaje: null },
+    { id: nuevoId(), nombre: 'Runner', porcentaje: null },
+    { id: nuevoId(), nombre: 'Bakery', porcentaje: null }
   ],
   turnos: [],
   prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es' }
@@ -837,12 +938,32 @@ function cargar() {
   try {
     // Mezclar con los valores por defecto, no reemplazar: así los datos
     // guardados con una versión vieja no llegan sin los campos nuevos.
-    datos = { ...datos, ...JSON.parse(g) };
+    const guardado = JSON.parse(g);
+    datos = { ...datos, ...guardado };
+
     // Red de seguridad: los datos guardados por una versión anterior no traen
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
     datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
                     ...(datos.prefs || {}) };
+
+    // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
+    // saldría la pantalla de bienvenida como si fuera nuevo: pedirle datos que
+    // ya dio, encima de un historial que ya existe. Si tiene turnos guardados o
+    // una tarifa puesta, es que configuró la app en su momento, aunque fuera
+    // antes de que esa pantalla existiera.
+    //
+    // Ojo con la pregunta: se le hace a `guardado`, no a `datos`. Después de
+    // mezclar con los valores por defecto, `datos.configurado` ya vale `false`
+    // aunque el teléfono no supiera nada de esa clave, así que preguntarle a
+    // `datos` daba siempre "sí la trae" y la migración no se ejecutaba nunca.
+    // Es la diferencia entre "no lo has dicho" y "has dicho que no", que sobre
+    // el papel se parecen y en la práctica mandaban a Kev a reconfigurar una
+    // app que llevaba meses usando. Lo destapó una prueba.
+    if (guardado.configurado === undefined) {
+      datos.configurado = datos.turnos.length > 0
+                       || Number(datos.trabajo && datos.trabajo.tarifaHora) > 0;
+    }
   } catch (e) {
     console.error('No se pudieron leer los datos:', e);
     alert(t('datosIlegibles'));
@@ -1118,9 +1239,76 @@ function guardarAjustes() {
 }
 
 function agregarRol() {
-  datos.roles.push({ id: nuevoId(), nombre: t('nuevoRol'), porcentaje: 0 });
+  // `null`, no 0: un rol recién creado no tiene porcentaje todavía, y un 0
+  // escrito en el campo se lee como una respuesta que nadie dio.
+  datos.roles.push({ id: nuevoId(), nombre: t('nuevoRol'), porcentaje: null });
   guardar();
   pintar();
+}
+
+
+/* ============================================================================
+   SECCIÓN R2 — Bienvenida
+   ----------------------------------------------------------------------------
+   La primera pantalla, una sola vez en la vida de la app.
+
+   Los campos se guardan según se escriben, no al final. Así, si alguien la deja
+   a medias y cierra la app, al volver encuentra lo que ya había puesto en vez
+   de empezar de cero. La bandera `configurado` sigue en false hasta que pulse
+   Empezar, que es lo que decide si la pantalla vuelve a salir.
+   ========================================================================== */
+
+function guardarBienvenida() {
+  datos.trabajo.nombre     = val('b-nombre').trim();
+  datos.trabajo.tarifaHora = num('b-tarifa');
+  guardar();
+}
+
+/**
+ * Cierra la bienvenida, si está completa.
+ *
+ * Las dos validaciones existen por la misma razón: la app calcula el dinero de
+ * alguien. Con la tarifa en blanco, el sueldo base sale en cero y el "total por
+ * hora" miente por debajo. Con los porcentajes en blanco, el tip-out sale en
+ * cero y el neto miente por arriba, que es peor.
+ *
+ * Por eso "no se paga tip-out" es una casilla que hay que marcar y no un campo
+ * que se puede dejar vacío. Vacío y cero se ven igual en la pantalla, pero
+ * significan cosas distintas: uno es "no lo he puesto" y el otro es "no
+ * aplica". La app tiene que saber cuál de los dos es.
+ */
+function terminarBienvenida() {
+  guardarBienvenida();
+
+  // Sin `.trim()` un campo con solo espacios pasaría la comprobación.
+  if (val('b-tarifa').trim() === '') {
+    alert(t('faltaTarifa'));
+    // `focus` puede no existir según dónde corra esto (el navegador de mentira
+    // de las pruebas no lo tiene). Que falte no puede tumbar la validación.
+    const campo = document.getElementById('b-tarifa');
+    if (campo.focus) campo.focus();
+    return;
+  }
+
+  const sinTipOut = document.getElementById('b-sin-tipout').checked;
+  const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
+
+  if (!sinTipOut && suma === 0) {
+    alert(t('faltaTipout'));
+    return;
+  }
+
+  // Sin tip-out no hacen falta los roles. Se vacían en vez de dejarlos a 0:
+  // unos ayudantes al 0% seguirían apareciendo como chips en el formulario de
+  // cada turno, pidiendo una decisión que no cambia nada. La lista vacía dice
+  // la verdad, que es que ahí no se reparte.
+  if (sinTipOut) datos.roles = [];
+
+  if (!datos.trabajo.nombre) datos.trabajo.nombre = t('miRestaurante');
+
+  datos.configurado = true;
+  guardar();
+  irA('semana');
 }
 
 function cambiarRol(id, campo, valor) {
@@ -1289,16 +1477,22 @@ function pintar() {
   document.getElementById('p-semana').classList.toggle('oculto', pantalla !== 'semana');
   document.getElementById('p-turno').classList.toggle('oculto', pantalla !== 'turno');
   document.getElementById('p-ajustes').classList.toggle('oculto', pantalla !== 'ajustes');
+  document.getElementById('p-bienvenida').classList
+    .toggle('oculto', pantalla !== 'bienvenida');
 
   // Con el formulario abierto se esconden las pestañas: estás en medio de una
   // tarea y saltar a otra sección solo sirve para perder lo que escribiste.
-  document.getElementById('pestanas').classList.toggle('oculto', pantalla === 'turno');
+  // En la bienvenida se esconden por otro motivo: son la única salida hacia una
+  // app que todavía no sabe calcular nada bien.
+  document.getElementById('pestanas').classList
+    .toggle('oculto', pantalla === 'turno' || pantalla === 'bienvenida');
   document.getElementById('tab-semana').classList.toggle('activa', pantalla === 'semana');
   document.getElementById('tab-ajustes').classList.toggle('activa', pantalla === 'ajustes');
 
-  if (pantalla === 'semana')  pintarSemana();
-  if (pantalla === 'turno')   pintarTurno();
-  if (pantalla === 'ajustes') pintarAjustes();
+  if (pantalla === 'semana')     pintarSemana();
+  if (pantalla === 'turno')      pintarTurno();
+  if (pantalla === 'ajustes')    pintarAjustes();
+  if (pantalla === 'bienvenida') pintarBienvenida();
 }
 
 /* --- La semana --- */
@@ -1568,8 +1762,25 @@ function pintarAjustes() {
     temas.appendChild(boton);
   });
 
-  const lista = document.getElementById('roles');
+  pintarListaRoles('roles', 'a-total');
+}
+
+/**
+ * Dibuja la lista editable de roles. La usan Ajustes y la Bienvenida.
+ *
+ * Estaba escrita dentro de `pintarAjustes` y la bienvenida necesitaba lo
+ * mismo. Copiarla habría dejado dos listas que se parecen hasta el día en que
+ * alguien arregla un fallo en una sola: el error clásico de duplicar en vez de
+ * compartir.
+ *
+ * @param {string}  idLista   dónde van las filas
+ * @param {string}  idTotal   dónde va la suma de porcentajes
+ * @param {boolean} apagada   sin tip-out: se ve, pero no se puede tocar
+ */
+function pintarListaRoles(idLista, idTotal, apagada) {
+  const lista = document.getElementById(idLista);
   lista.innerHTML = '';
+
   datos.roles.forEach(rol => {
     const fila = document.createElement('div');
     fila.className = 'rol-fila';
@@ -1577,6 +1788,7 @@ function pintarAjustes() {
     const nombre = document.createElement('input');
     nombre.type = 'text';
     nombre.value = rol.nombre;
+    nombre.disabled = !!apagada;
     nombre.onchange = e => cambiarRol(rol.id, 'nombre', e.target.value);
 
     const pct = document.createElement('input');
@@ -1584,21 +1796,50 @@ function pintarAjustes() {
     pct.inputMode = 'decimal';
     pct.step = '0.1';
     pct.min = '0';
-    pct.value = rol.porcentaje;
+    // Un porcentaje sin poner vale `null`, y eso deja el campo en blanco. Un 0
+    // se vería como una respuesta ya dada, que es justo lo que no queremos:
+    // el campo tiene que pedir el número, no fingir que ya lo tiene.
+    pct.value = rol.porcentaje === null || rol.porcentaje === undefined
+              ? '' : rol.porcentaje;
+    pct.placeholder = '%';
+    pct.disabled = !!apagada;
     pct.onchange = e => cambiarRol(rol.id, 'porcentaje', e.target.value);
 
     const quitar = document.createElement('button');
     quitar.className = 'chico';
     quitar.style.color = 'var(--rojo)';
     quitar.textContent = '✕';
+    quitar.disabled = !!apagada;
     quitar.onclick = () => borrarRol(rol.id);
 
     fila.append(nombre, pct, quitar);
     lista.appendChild(fila);
   });
 
+  lista.style.opacity = apagada ? '0.4' : '';
+
   const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
-  document.getElementById('a-total').textContent = redondear(suma) + '%';
+  document.getElementById(idTotal).textContent = redondear(suma) + '%';
+}
+
+/* --- Bienvenida --- */
+function pintarBienvenida() {
+  document.getElementById('b-nombre').value = datos.trabajo.nombre || '';
+  document.getElementById('b-tarifa').value = datos.trabajo.tarifaHora || '';
+
+  const idiomas = document.getElementById('b-idiomas');
+  idiomas.innerHTML = '';
+  IDIOMAS.forEach(idioma => {
+    const boton = document.createElement('button');
+    boton.textContent = idioma.nombre;
+    boton.className = (datos.prefs.idioma || 'es') === idioma.id ? 'activo' : '';
+    boton.onclick = () => cambiarIdioma(idioma.id);
+    idiomas.appendChild(boton);
+  });
+
+  const sinTipOut = document.getElementById('b-sin-tipout').checked;
+  pintarListaRoles('b-roles', 'b-total', sinTipOut);
+  document.getElementById('b-agregar-rol').disabled = sinTipOut;
 }
 
 
@@ -1662,6 +1903,10 @@ const FUNCIONES_NECESARIAS = [
   'turnoValido', 'fusionarTurnos'
 ];
 
+/* Al añadir una función a logica.js que use index.html, añadirla también a la
+   lista de arriba. Es la que detecta que los dos archivos llegaron en
+   versiones distintas. */
+
 cargar();
 aplicarTema();
 document.documentElement.lang = (datos.prefs.idioma || 'es');
@@ -1676,6 +1921,10 @@ if (faltan.length > 0) {
   alert(t('appAMedias'));
 } else {
   lunes = lunesDeLaSemana(hoy());
+  // Quien nunca ha configurado la app no entra por la semana: entra por la
+  // bienvenida. Abrir directamente en un calendario vacío no le dice qué hacer
+  // ni le avisa de que los porcentajes que trae puestos no son los suyos.
+  if (!datos.configurado) pantalla = 'bienvenida';
   pintar();
 }
 

@@ -13,7 +13,7 @@
       creer que tu cambio no se subió. Es el error número uno de este montaje.
    ========================================================================== */
 
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE = 'tips-control-' + VERSION;
 
 const ARCHIVOS = [
