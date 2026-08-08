@@ -100,9 +100,20 @@ function crearDocumento(html) {
 
   const raiz = new El('html');
   const meta = new El('meta');   // el <meta name="theme-color">
+  // `document.body` lo usa la exportación: mete el enlace de descarga en la
+  // página, lo pulsa y lo quita. Un enlace suelto en memoria funciona en casi
+  // todos los navegadores, y "casi todos" es justo lo que no sirve cuando la
+  // app está en el teléfono de otra persona.
+  const cuerpo = new El('body');
+  cuerpo.removeChild = hijo => {
+    const i = cuerpo.children.indexOf(hijo);
+    if (i >= 0) cuerpo.children.splice(i, 1);
+    return hijo;
+  };
 
   return {
     documentElement: raiz,
+    body: cuerpo,
     _meta: meta,
     // La app engancha aquí el cierre del globo de ayuda. En las pruebas no se
     // simula la propagación de eventos: el abrir y cerrar se comprueba

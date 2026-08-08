@@ -57,6 +57,9 @@ const ctx = {
     removeItem: k => { delete almacen[k]; }
   },
   location: { reload: () => {} },
+  // La exportación aplaza la liberación del archivo. En las pruebas no
+  // esperamos: lo que importa es que se llame, no cuándo.
+  setTimeout: fn => { fn(); return 0; },
   URL: { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} },
   Blob: function () {}, FileReader: function () {}
 };
@@ -588,6 +591,68 @@ ok('y los botones siguen funcionando después',
 run("datos.roles = []; irA('semana');");
 dias()[2].click();
 ok('sin roles configurados avisa en vez de fallar', texto('chips').includes('Ajustes'));
+
+
+/* ==========================================================================
+   Cuando el teléfono no deja guardar.
+
+   Pasa de verdad: almacenamiento lleno, o navegación privada en iOS, donde
+   escribir está prohibido. Antes esto rompía la función a la mitad sin decir
+   nada y el turno desaparecía. Es el fallo más caro que puede tener la app.
+   ========================================================================== */
+grupo('El teléfono no deja guardar');
+
+run("datos.configurado = true; datos.turnos = []; irA('semana')");
+const guardarDeVerdad = ctx.localStorage.setItem;
+ctx.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+
+avisos.length = 0;
+dias()[2].click();                      // miércoles 5
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '1000'); set('f-efectivo', '50'); set('f-tarjeta', '150');
+run('guardarTurno()');
+
+ok('avisa en vez de quedarse callada', avisos.length === 1);
+ok('el aviso dice qué hacer', avisos[0].includes('espacio'));
+/* Lo más importante de todo el grupo: no volver a la semana. Salir del
+   formulario le diría a alguien que su turno quedó registrado cuando no lo
+   está, y de paso le borraría de la pantalla lo que acaba de escribir. */
+ok('no cierra el formulario', !d.getElementById('p-turno')._classes.has('oculto'));
+ok('y lo escrito sigue en pantalla', d.getElementById('f-ventas').value === '1000');
+
+ctx.localStorage.setItem = guardarDeVerdad;
+run('guardarTurno()');
+ok('al volver a funcionar, guarda sin repetir el turno', D().turnos.length === 1);
+run("irA('semana')");
+
+
+grupo('Datos ilegibles: no se destruye lo que había');
+almacen.tipsControl = '{esto no es json';
+avisos.length = 0;
+run('cargar()');
+ok('avisa', avisos.length === 1);
+ok('y dice que no borre nada', avisos[0].includes('NO borres'));
+/* Antes el aviso decía "se empieza de cero" y acto seguido el primer guardado
+   machacaba el original, que casi siempre es recuperable a mano. */
+const copias = Object.keys(almacen).filter(k => k.includes('-roto-'));
+ok('aparta una copia de lo que había', copias.length === 1);
+ok('con el contenido intacto', almacen[copias[0]] === '{esto no es json');
+
+
+grupo('Borrar todos los datos');
+almacen.tipsControl = JSON.stringify({ configurado: true,
+  trabajo: { nombre: 'X', tarifaHora: 8 }, roles: [],
+  turnos: [{ id: 'a', fecha: '2026-08-05', ventas: 100, efectivo: 20,
+             tarjeta: 30, entrada: '17:00', salida: '23:00',
+             tarifaHora: 8, tipOut: 0 }] });
+run('cargar()');
+avisos.length = 0;
+run('borrarTodo()');
+/* `confirm` siempre dice que sí en las pruebas, así que este camino es el de
+   quien acepta el respaldo: se exporta y se le pide volver a pulsar. */
+ok('ofrece el respaldo antes de borrar', avisos.length === 1);
+ok('y no borra todavía', D().turnos.length === 1);
+ok('el aviso explica que hay que volver a tocar', avisos[0].includes('vuelve a tocar'));
 
 
 /* ========================================================================== */

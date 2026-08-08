@@ -759,7 +759,11 @@ const TEXTOS = {
     ayudante: 'ayudante', ayudantesPl: 'ayudantes',
     sueldoRecibo: 'Sueldo', propinaSobreVentas: 'Propina sobre ventas',
     teLlevas: 'Te llevas',
-    rolesEnAjustes: 'Agrega tus roles en Ajustes.',
+    /* Sirve para los dos casos que llevan a no tener roles: quien marcó en la
+       bienvenida que en su restaurante no se reparte, y quien los borró todos
+       sin querer. Al primero, "agrega tus roles en Ajustes" a secas lo dejaba
+       pensando que le faltaba algo por hacer. */
+    rolesEnAjustes: 'Este turno va sin tip-out. Si en tu restaurante sí se reparte, agrega los roles en Ajustes.',
 
     // Ajustes
     trabajo: 'Trabajo', restaurante: 'Restaurante', sueldoHora: 'Sueldo por hora',
@@ -774,9 +778,10 @@ const TEXTOS = {
     miRestaurante: 'Mi restaurante', nuevoRol: 'Nuevo rol',
 
     // Avisos
-    faltaHora: 'Falta la hora de entrada o de salida.',
-    faltaPlata: 'Escribe al menos las ventas o la propina del turno.',
-    confirmBorrarTurno: '¿Borrar el turno del',
+    faltaHora: 'Falta la hora de entrada o la de salida. Sin las dos no se puede calcular cuánto ganaste por hora.',
+    faltaPlata: 'Escribe al menos las ventas o la propina del turno. Un turno sin ninguna cifra no se puede guardar.',
+    confirmBorrarTurno: 'Se va a borrar el turno del',
+    confirmBorrarTurno2: 'No se puede deshacer.',
     confirmQuitarRol: '¿Quitar "%s"? Los turnos ya guardados no cambian.',
     confirmImportar: 'El respaldo trae %1 turnos. Se agregan solo los días que hoy tienes vacíos: nada de lo que ya está guardado se borra. Tus ajustes sí se reemplazan por los del respaldo. ¿Seguir?',
     resumenImportar: 'Listo: %1 turnos agregados, %2 omitidos porque ese día ya tenía turno.',
@@ -794,10 +799,13 @@ const TEXTOS = {
     sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
     tamanoLetra: 'Tamaño de la letra',
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
-    archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
-    datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
-    confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
-    confirmBorrarTodo2: 'No se puede deshacer. ¿De verdad?'
+    archivoMalo: 'Ese archivo no parece un respaldo de Tips Control. Busca el que empieza por "tips-control-" y termina en .json, el que sale al tocar Exportar. Tus turnos no se han tocado.',
+    datosIlegibles: 'No se pudieron leer los datos guardados en este teléfono. Se guardó una copia de lo que había por si se puede recuperar, así que NO borres la app ni sus datos. Manda una captura de esta pantalla antes de seguir usándola.',
+    noSeGuardo: 'No se pudo guardar en este teléfono. Puede que no quede espacio, o que estés navegando en modo privado. Lo que escribiste sigue en pantalla: apúntalo en otro sitio antes de cerrar, o libera espacio y vuelve a intentarlo.',
+    ofrecerRespaldo: 'Tienes %1 turnos guardados. ¿Quieres descargar un respaldo antes de borrarlos?',
+    respaldoAntesDeBorrar: 'Se descargó el respaldo. Guárdalo donde lo puedas encontrar y vuelve a tocar Borrar todos los datos cuando quieras seguir.',
+    confirmBorrarTodo: 'Se van a borrar %1 turnos de este teléfono. ¿Seguro?',
+    confirmBorrarTodo2: 'No se puede deshacer y no hay forma de recuperarlos. ¿De verdad?'
   },
 
   en: {
@@ -832,7 +840,7 @@ const TEXTOS = {
     ayudante: 'person', ayudantesPl: 'people',
     sueldoRecibo: 'Wages', propinaSobreVentas: 'Tip % of sales',
     teLlevas: 'You take home',
-    rolesEnAjustes: 'Add your roles in Settings.',
+    rolesEnAjustes: 'This shift has no tip-out. If your restaurant does share tips, add the roles in Settings.',
 
     trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
     idioma: 'Language', apariencia: 'Appearance',
@@ -845,9 +853,10 @@ const TEXTOS = {
     temaAuto: 'Automatic', temaClaro: 'Light', temaOscuro: 'Dark',
     miRestaurante: 'My restaurant', nuevoRol: 'New role',
 
-    faltaHora: 'Clock-in or clock-out time is missing.',
-    faltaPlata: 'Enter at least the sales or the tips for this shift.',
-    confirmBorrarTurno: 'Delete the shift from',
+    faltaHora: 'Clock-in or clock-out time is missing. Without both, hourly earnings can’t be calculated.',
+    faltaPlata: 'Enter at least the sales or the tips for this shift. A shift with no figures can’t be saved.',
+    confirmBorrarTurno: 'This will delete the shift from',
+    confirmBorrarTurno2: 'It cannot be undone.',
     confirmQuitarRol: 'Remove "%s"? Saved shifts stay as they are.',
     confirmImportar: 'The backup has %1 shifts. Only days that are empty right now will be added: nothing already saved gets deleted. Your settings will be replaced by the ones in the backup. Continue?',
     resumenImportar: 'Done: %1 shifts added, %2 skipped because that day already had a shift.',
@@ -865,10 +874,13 @@ const TEXTOS = {
     sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
     tamanoLetra: 'Text size',
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
-    archivoMalo: "That file doesn't look like a Tips Control backup.",
-    datosIlegibles: 'Saved data could not be read. Starting fresh.',
-    confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
-    confirmBorrarTodo2: "This can't be undone. Really?"
+    archivoMalo: 'That file doesn’t look like a Tips Control backup. Look for the one starting with "tips-control-" and ending in .json, the one you get from Export. Your shifts were not touched.',
+    datosIlegibles: 'The data saved on this phone could not be read. A copy of what was there has been kept in case it can be recovered, so do NOT delete the app or its data. Send a screenshot of this message before you keep using it.',
+    noSeGuardo: 'Could not save on this phone. You may be out of space, or browsing in private mode. What you typed is still on screen: write it down somewhere before closing, or free up space and try again.',
+    ofrecerRespaldo: 'You have %1 shifts saved. Do you want to download a backup before deleting them?',
+    respaldoAntesDeBorrar: 'Backup downloaded. Save it somewhere you can find it, then tap Delete all data again when you are ready.',
+    confirmBorrarTodo: 'This will delete %1 shifts from this phone. Sure?',
+    confirmBorrarTodo2: 'It cannot be undone and there is no way to get them back. Really?'
   }
 };
 
@@ -978,7 +990,35 @@ let rolesActivos = [];
    SECCIÓN N — Guardar, cargar y formato
    ========================================================================== */
 
-function guardar() { localStorage.setItem(CLAVE, JSON.stringify(datos)); }
+/**
+ * Guarda todo en el teléfono. Devuelve si lo consiguió.
+ *
+ * Esta era la línea más peligrosa de la app, y era una sola línea sin
+ * protección: `localStorage.setItem(...)`. Parece que no puede fallar, y falla
+ * en dos casos que le van a pasar a alguien:
+ *
+ *   - **El almacenamiento está lleno.** El navegador corta y lanza un error.
+ *   - **Navegación privada en iOS.** Escribir está prohibido.
+ *
+ * Sin `try`, ese error corta la función que estaba guardando el turno. La app
+ * no decía nada: la persona pulsaba Guardar, volvía a la semana y su turno no
+ * estaba. Es el mismo fallo mudo que ya nos costó una tarde con la importación,
+ * pero peor, porque aquí lo que se pierde es el trabajo de una noche.
+ *
+ * Devolver `true`/`false` en vez de solo avisar permite que quien llama decida:
+ * `guardarTurno` se queda en el formulario si esto falla, para que no se pierda
+ * lo que la persona acaba de escribir.
+ */
+function guardar() {
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify(datos));
+    return true;
+  } catch (e) {
+    console.error('No se pudo guardar:', e);
+    alert(t('noSeGuardo'));
+    return false;
+  }
+}
 
 /**
  * Identificador único para turnos y roles.
@@ -1036,6 +1076,26 @@ function cargar() {
     }
   } catch (e) {
     console.error('No se pudieron leer los datos:', e);
+
+    /* Antes esto solo avisaba, y el aviso decía "se empieza de cero". Las dos
+       cosas estaban mal.
+
+       Que los datos no se puedan leer casi nunca significa que se hayan
+       perdido: significa que el texto guardado tiene algo roto (un guardado
+       cortado a la mitad, por ejemplo). Ese texto suele ser recuperable a mano.
+       Pero la app seguía funcionando encima y, al primer `guardar()`, lo
+       machacaba con los valores por defecto. O sea que el mensaje anunciaba una
+       pérdida que todavía no había ocurrido y acto seguido la provocaba.
+
+       Ahora se aparta una copia con su fecha antes de tocar nada. Ocupa lo
+       mismo que ocupaba y puede salvar meses de trabajo. Si ni siquiera se
+       puede copiar, no insistimos: el aviso es lo importante. */
+    try {
+      localStorage.setItem(CLAVE + '-roto-' + hoy(), g);
+    } catch (e2) {
+      console.error('Tampoco se pudo apartar la copia:', e2);
+    }
+
     alert(t('datosIlegibles'));
   }
 }
@@ -1318,7 +1378,12 @@ function guardarTurno() {
   const i = datos.turnos.findIndex(t => t.id === turno.id);
   if (i >= 0) datos.turnos[i] = turno; else datos.turnos.push(turno);
 
-  guardar();
+  // Si no se pudo guardar, NO salimos del formulario. Volver a la semana
+  // después de un fallo es decirle a alguien que su turno quedó registrado
+  // cuando no lo está, y además le borra de la pantalla lo que acaba de
+  // escribir. Quedándose aquí, el aviso se lee con los datos todavía delante y
+  // puede reintentar o apuntarlos en otro sitio.
+  if (!guardar()) return;
   // Al guardar, saltamos a la semana de ese turno: si corregiste un día de
   // otra semana, quieres verlo, no volver a donde estabas.
   lunes = lunesDeLaSemana(turno.fecha);
@@ -1328,7 +1393,10 @@ function guardarTurno() {
 function borrarTurno() {
   const turno = turnosDelDia(datos.turnos, fechaAbierta)[0];
   if (!turno) return;
-  if (!confirm(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}?`)) return;
+  // La fecha en la pregunta evita el peor error posible aquí: borrar el día
+  // equivocado por haber tocado la celda de al lado.
+  if (!confirm(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}. `
+             + `${t('confirmBorrarTurno2')}`)) return;
   datos.turnos = datos.turnos.filter(x => x.id !== turno.id);
   guardar();
   irA('semana');
@@ -1415,7 +1483,10 @@ function terminarBienvenida() {
   if (!datos.trabajo.nombre) datos.trabajo.nombre = t('miRestaurante');
 
   datos.configurado = true;
-  guardar();
+  // Igual que al guardar un turno: si no se pudo escribir, no seguimos como si
+  // todo hubiera ido bien. Aquí la persona se queda en la bienvenida con sus
+  // datos puestos, que es donde puede reintentar.
+  if (!guardar()) return;
   irA('semana');
 }
 
@@ -1549,7 +1620,25 @@ function importar(evento) {
 }
 
 function borrarTodo() {
-  if (!confirm(t('confirmBorrarTodo'))) return;
+  /* Antes de la primera pregunta va la oferta de exportar.
+     Quien llega a este botón suele venir de "algo se ve raro, lo borro y
+     empiezo de nuevo". Ofrecerle el respaldo justo ahí es el único momento en
+     que sirve: después ya no hay nada que respaldar. Y cuesta un toque.
+
+     La cuenta de turnos va en la pregunta a propósito: "borrar todo" es
+     abstracto, "perder 87 turnos" no. El mismo aviso con un número delante se
+     lee distinto. */
+  const cuantos = datos.turnos.length;
+
+  if (cuantos > 0 && confirm(rellenar(t('ofrecerRespaldo'), cuantos))) {
+    exportar();
+    // No seguimos de largo: la descarga tarda un instante y encadenar el
+    // borrado sin confirmar dejaría a alguien sin datos y sin archivo.
+    alert(t('respaldoAntesDeBorrar'));
+    return;
+  }
+
+  if (!confirm(rellenar(t('confirmBorrarTodo'), cuantos))) return;
   if (!confirm(t('confirmBorrarTodo2'))) return;
   localStorage.removeItem(CLAVE);
   location.reload();
