@@ -664,6 +664,8 @@ const TEXTOS = {
     confirmImportar: 'El respaldo trae %1 turnos. Se agregan solo los días que hoy tienes vacíos: nada de lo que ya está guardado se borra. Tus ajustes sí se reemplazan por los del respaldo. ¿Seguir?',
     resumenImportar: 'Listo: %1 turnos agregados, %2 omitidos porque ese día ya tenía turno.',
     resumenIgnorados: 'Otros %1 no se pudieron leer y se dejaron fuera.',
+    errorImportar: 'Algo falló al importar y no se cambió nada. Manda esta pantalla por WhatsApp:',
+    appAMedias: 'La app se actualizó a medias y no puede abrir sin riesgo. Tus turnos están a salvo: no se ha tocado nada. Ciérrala del todo (deslízala hacia arriba) y vuelve a abrirla.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
     datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
     confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
@@ -722,6 +724,8 @@ const TEXTOS = {
     confirmImportar: 'The backup has %1 shifts. Only days that are empty right now will be added: nothing already saved gets deleted. Your settings will be replaced by the ones in the backup. Continue?',
     resumenImportar: 'Done: %1 shifts added, %2 skipped because that day already had a shift.',
     resumenIgnorados: 'Another %1 could not be read and were left out.',
+    errorImportar: 'Something failed during the import and nothing was changed. Send this screen over WhatsApp:',
+    appAMedias: 'The app updated halfway and cannot open safely. Your shifts are fine: nothing was touched. Close it completely (swipe it up) and open it again.',
     archivoMalo: "That file doesn't look like a Tips Control backup.",
     datosIlegibles: 'Saved data could not be read. Starting fresh.',
     confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
@@ -1148,12 +1152,28 @@ function borrarRol(id) {
    ========================================================================== */
 
 function exportar() {
-  const enlace = document.createElement('a');
-  enlace.href = URL.createObjectURL(
+  const url = URL.createObjectURL(
     new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }));
+
+  const enlace = document.createElement('a');
+  enlace.href = url;
   enlace.download = `tips-control-${hoy()}.json`;
+
+  // El enlace tiene que estar dentro de la página para que el clic cuente.
+  // Suelto en memoria funciona en casi todos los navegadores, pero "casi
+  // todos" es justo el tipo de detalle que falla en el teléfono de otro.
+  document.body.appendChild(enlace);
   enlace.click();
-  URL.revokeObjectURL(enlace.href);
+  document.body.removeChild(enlace);
+
+  // Antes esta línea iba pegada al clic, y ahí estaba el problema: revocar la
+  // URL le quita al navegador el archivo de debajo. Si todavía no había
+  // terminado de leerlo, la descarga salía vacía o no salía. Como es cuestión
+  // de milisegundos, funcionaba en las pruebas y fallaba de vez en cuando de
+  // verdad: el peor tipo de fallo, el que no se deja reproducir.
+  //
+  // Es cerrar Excel en el mismo instante en que le das a Guardar.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /**
@@ -1192,20 +1212,36 @@ function importar(evento) {
 
     if (!confirm(rellenar(t('confirmImportar'), leido.turnos.length))) return;
 
-    const fusion = fusionarTurnos(datos.turnos, leido.turnos);
-    datos = { ...datos, ...leido, turnos: fusion.turnos };
-    datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                    ...(datos.prefs || {}) };
-    guardar();
-    irA('semana');
+    // Todo lo que sigue va dentro de una red de seguridad.
+    //
+    // Sin ella, cualquier fallo aquí dentro corta la función en seco y la app
+    // se queda callada: la persona acepta el aviso, no ve nada, y no tiene
+    // forma de saber si sus datos entraron, entraron a medias o no entraron.
+    // Un error que se anuncia es un problema; un error mudo es un misterio, y
+    // los misterios con dinero de por medio destruyen la confianza en la app.
+    try {
+      const fusion = fusionarTurnos(datos.turnos, leido.turnos);
+      datos = { ...datos, ...leido, turnos: fusion.turnos };
+      datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
+                      ...(datos.prefs || {}) };
+      guardar();
+      irA('semana');
 
-    // Decir exactamente qué pasó. Un "listo" deja a la persona sin saber si
-    // faltó algo, y con dinero de por medio esa duda no se va sola.
-    let resumen = rellenar(t('resumenImportar'), fusion.agregados, fusion.omitidos);
-    if (fusion.invalidos > 0) {
-      resumen += ' ' + rellenar(t('resumenIgnorados'), fusion.invalidos);
+      // Decir exactamente qué pasó. Un "listo" deja a la persona sin saber si
+      // faltó algo, y con dinero de por medio esa duda no se va sola.
+      let resumen = rellenar(t('resumenImportar'), fusion.agregados, fusion.omitidos);
+      if (fusion.invalidos > 0) {
+        resumen += ' ' + rellenar(t('resumenIgnorados'), fusion.invalidos);
+      }
+      alert(resumen);
+
+    } catch (err) {
+      // El detalle técnico va detrás del mensaje humano a propósito: al
+      // usuario le sobra, pero es lo único que permite arreglarlo cuando te
+      // manda la captura por WhatsApp un domingo.
+      console.error('Falló la importación:', err);
+      alert(t('errorImportar') + '\n\n' + (err && err.message ? err.message : err));
     }
-    alert(resumen);
   };
 
   // Si el archivo no se puede ni leer (se quitó la memoria, permisos), hay que
@@ -1604,11 +1640,44 @@ document.addEventListener('click', evento => {
 // posición está fijada a la ventana y no al botón.
 window.addEventListener('scroll', cerrarNota, { passive: true });
 
+/* ----------------------------------------------------------------------------
+   Revisión de arranque: ¿llegaron los dos archivos, y de la misma versión?
+
+   Esto existe por un fallo real del 8 de agosto de 2026. El teléfono descargó
+   el index.html nuevo pero se quedó con el logica.js viejo en la memoria del
+   navegador. Resultado: la app se veía actualizada, pero al importar un
+   respaldo llamaba a una función que en su copia de logica.js todavía no
+   existía. No mostró ningún error. Simplemente no hizo nada, y parecía que la
+   importación estaba rota.
+
+   Que dos archivos que se necesitan lleguen en versiones distintas es normal en
+   una app web. Lo que no es aceptable es que la app no se dé cuenta. Esta lista
+   es el equivalente a contar los jugadores antes de empezar el partido: cuesta
+   diez segundos y evita descubrir a los veinte minutos que juegas con diez.
+   -------------------------------------------------------------------------- */
+const FUNCIONES_NECESARIAS = [
+  'redondear', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
+  'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
+  'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
+  'turnoValido', 'fusionarTurnos'
+];
+
 cargar();
 aplicarTema();
 document.documentElement.lang = (datos.prefs.idioma || 'es');
-lunes = lunesDeLaSemana(hoy());
-pintar();
+
+const faltan = FUNCIONES_NECESARIAS.filter(n => typeof window[n] !== 'function');
+
+if (faltan.length > 0) {
+  // Parar aquí a propósito. Seguir pintando con media app cargada produce
+  // errores raros en sitios que no tienen nada que ver con la causa, y a quien
+  // los sufre le parecen datos perdidos.
+  console.error('logica.js llegó incompleto. Faltan:', faltan);
+  alert(t('appAMedias'));
+} else {
+  lunes = lunesDeLaSemana(hoy());
+  pintar();
+}
 
 // Si el tema está en Automático y cambias el del teléfono (o entra el modo
 // nocturno solo al anochecer), la app se entera y cambia en el momento, sin

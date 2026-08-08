@@ -13,7 +13,7 @@
       creer que tu cambio no se subió. Es el error número uno de este montaje.
    ========================================================================== */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = 'tips-control-' + VERSION;
 
 const ARCHIVOS = [
@@ -59,13 +59,35 @@ self.addEventListener('activate', evento => {
 self.addEventListener('fetch', evento => {
   if (evento.request.method !== 'GET') return;
 
+  /* "Primero la red" tenía una gotera, y el 8 de agosto de 2026 nos costó una
+     tarde de diagnóstico.
+
+     Este `fetch` no habla directamente con internet: pasa antes por la memoria
+     del propio navegador, que guarda los archivos por su cuenta durante unos
+     minutos. GitHub Pages le dice que puede quedárselos diez. Así que pedir
+     "primero la red" devolvía a veces la copia de hace un rato.
+
+     Con index.html casi nunca pasa, porque una página abierta se revalida. Con
+     logica.js sí: es un archivo secundario y el navegador lo da por bueno. El
+     resultado fue el peor de los mundos: pantalla nueva, cálculos viejos. La
+     app parecía actualizada y no lo estaba.
+
+     `cache: 'reload'` le prohíbe usar esa copia y lo obliga a ir a la red. Se
+     aplica solo a los archivos secundarios: una petición de navegación no se
+     puede reconstruir así, y da error al intentarlo. */
+  const peticion = evento.request.mode === 'navigate'
+    ? evento.request
+    : new Request(evento.request, { cache: 'reload' });
+
   evento.respondWith(
-    fetch(evento.request)
+    fetch(peticion)
       .then(respuesta => {
         const copia = respuesta.clone();
         caches.open(CACHE).then(c => c.put(evento.request, copia));
         return respuesta;
       })
+      // Sin señal: la copia guardada. Se busca por la petición original, que
+      // es la clave con la que se guardó.
       .catch(() => caches.match(evento.request))
   );
 });
