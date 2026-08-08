@@ -266,6 +266,95 @@ probar('sin turnos devuelve nada',
 
 
 /* --------------------------------------------------------------------------
+   Fusionar un respaldo con lo que ya hay
+
+   Estas pruebas son las más importantes del archivo. Todas las demás
+   comprueban que una cuenta dé bien; estas comprueban que nadie pierda su
+   historial ni vea dinero que no ganó.
+   -------------------------------------------------------------------------- */
+grupo('Turno válido');
+
+probar('un turno con fecha en regla pasa',
+  L.turnoValido({ id: 'a', fecha: '2026-08-05' }), true);
+
+probar('sin fecha no pasa',
+  L.turnoValido({ id: 'a' }), false);
+
+probar('con la fecha al revés no pasa',
+  L.turnoValido({ id: 'a', fecha: '05/08/2026' }), false);
+
+probar('un texto suelto no es un turno',
+  L.turnoValido('2026-08-05'), false);
+
+probar('nada no es un turno',
+  L.turnoValido(null), false);
+
+
+grupo('Fusionar turnos');
+
+/* Un turno del teléfono y su gemelo del archivo: mismo id, pero el del archivo
+   trae las ventas de antes de una corrección. */
+const EN_TELEFONO = { id: 'uno', fecha: '2026-08-05', ventas: 1000,
+                      efectivo: 40, tarjeta: 160, entrada: '17:00',
+                      salida: '23:00', tarifaHora: 8, tipOut: 65 };
+const MISMO_ID    = { ...EN_TELEFONO, ventas: 900, tarjeta: 100 };
+const MISMA_FECHA = { ...EN_TELEFONO, id: 'otro' };
+const DIA_NUEVO   = { ...EN_TELEFONO, id: 'dos', fecha: '2026-08-06' };
+const DIA_VIEJO   = { ...EN_TELEFONO, id: 'tres', fecha: '2026-08-01' };
+
+probar('en un teléfono vacío entra todo el archivo',
+  L.fusionarTurnos([], [DIA_VIEJO, DIA_NUEVO]).agregados, 2);
+
+probar('un archivo vacío no quita nada',
+  L.fusionarTurnos([EN_TELEFONO], []).turnos.length, 1);
+
+probar('un día que no existía se agrega',
+  L.fusionarTurnos([EN_TELEFONO], [DIA_NUEVO]).agregados, 1);
+
+probar('el mismo turno dos veces no se duplica',
+  L.fusionarTurnos([EN_TELEFONO], [MISMO_ID]).turnos.length, 1);
+
+probar('y se cuenta como omitido, no como agregado',
+  L.fusionarTurnos([EN_TELEFONO], [MISMO_ID]).omitidos, 1);
+
+/* El corazón del asunto: gana lo que está en el teléfono. Si el archivo
+   pisara al turno corregido, la corrección se perdería sin avisar. */
+probar('ante el mismo id manda el teléfono, no el archivo',
+  L.fusionarTurnos([EN_TELEFONO], [MISMO_ID]).turnos[0].ventas, 1000);
+
+probar('dos registros distintos del mismo día: solo queda uno',
+  L.fusionarTurnos([EN_TELEFONO], [MISMA_FECHA]).turnos.length, 1);
+
+probar('y el que queda es el del teléfono',
+  L.fusionarTurnos([EN_TELEFONO], [MISMA_FECHA]).turnos[0].id, 'uno');
+
+/* La prueba que justifica toda la regla: si el turno del 5 de agosto entrara
+   dos veces, el neto de esa semana saldría al doble y nadie lo notaría. */
+probar('fusionar no infla el neto',
+  L.resumir(L.fusionarTurnos([EN_TELEFONO], [MISMA_FECHA, MISMO_ID]).turnos).totalNeto,
+  L.resumir([EN_TELEFONO]).totalNeto);
+
+probar('dos turnos del archivo el mismo día: entra uno',
+  L.fusionarTurnos([], [DIA_NUEVO, { ...DIA_NUEVO, id: 'cuatro' }]).agregados, 1);
+
+probar('la basura del archivo se descarta',
+  L.fusionarTurnos([], [DIA_NUEVO, { id: 'x' }, null]).invalidos, 2);
+
+probar('y no llega a la lista',
+  L.fusionarTurnos([], [DIA_NUEVO, { id: 'x' }, null]).turnos.length, 1);
+
+probar('el resultado queda ordenado por fecha',
+  L.fusionarTurnos([DIA_NUEVO], [DIA_VIEJO]).turnos.map(t => t.fecha),
+  ['2026-08-01', '2026-08-06']);
+
+probar('un turno roto que ya estaba guardado también se limpia',
+  L.fusionarTurnos([{ id: 'malo' }], []).turnos.length, 0);
+
+probar('sin argumentos no revienta',
+  L.fusionarTurnos(undefined, undefined).turnos, []);
+
+
+/* --------------------------------------------------------------------------
    Resultado
    -------------------------------------------------------------------------- */
 console.log(`\n${'─'.repeat(50)}`);

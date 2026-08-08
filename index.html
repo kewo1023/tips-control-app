@@ -661,7 +661,9 @@ const TEXTOS = {
     faltaPlata: 'Escribe al menos las ventas o la propina del turno.',
     confirmBorrarTurno: '¿Borrar el turno del',
     confirmQuitarRol: '¿Quitar "%s"? Los turnos ya guardados no cambian.',
-    confirmImportar: 'Se reemplazan tus datos por %s turnos del respaldo. ¿Seguro?',
+    confirmImportar: 'El respaldo trae %1 turnos. Se agregan solo los días que hoy tienes vacíos: nada de lo que ya está guardado se borra. Tus ajustes sí se reemplazan por los del respaldo. ¿Seguir?',
+    resumenImportar: 'Listo: %1 turnos agregados, %2 omitidos porque ese día ya tenía turno.',
+    resumenIgnorados: 'Otros %1 no se pudieron leer y se dejaron fuera.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
     datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
     confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
@@ -717,7 +719,9 @@ const TEXTOS = {
     faltaPlata: 'Enter at least the sales or the tips for this shift.',
     confirmBorrarTurno: 'Delete the shift from',
     confirmQuitarRol: 'Remove "%s"? Saved shifts stay as they are.',
-    confirmImportar: 'This replaces your data with %s shifts from the backup. Sure?',
+    confirmImportar: 'The backup has %1 shifts. Only days that are empty right now will be added: nothing already saved gets deleted. Your settings will be replaced by the ones in the backup. Continue?',
+    resumenImportar: 'Done: %1 shifts added, %2 skipped because that day already had a shift.',
+    resumenIgnorados: 'Another %1 could not be read and were left out.',
     archivoMalo: "That file doesn't look like a Tips Control backup.",
     datosIlegibles: 'Saved data could not be read. Starting fresh.',
     confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
@@ -738,6 +742,20 @@ function t(clave) {
 /** Singular o plural, en el idioma activo. */
 function plural(n, claveSingular, clavePlural) {
   return n === 1 ? t(claveSingular) : t(clavePlural);
+}
+
+/**
+ * Mete valores en los huecos de un texto: rellenar('Van %1 de %2', 3, 7).
+ *
+ * `texto.replace('%s', x)` solo cambia el primer hueco, así que un mensaje con
+ * dos datos salía a medias. Los huecos van numerados (%1, %2) y no en orden de
+ * aparición a propósito: al traducir, el inglés a veces necesita los datos en
+ * otro orden que el español, y con huecos numerados eso no obliga a tocar el
+ * código.
+ */
+function rellenar(texto, ...valores) {
+  return String(texto).replace(/%(\d+)/g,
+    (hueco, n) => valores[n - 1] !== undefined ? valores[n - 1] : hueco);
 }
 
 const CLAVE = 'tipsControl';
@@ -1138,23 +1156,62 @@ function exportar() {
   URL.revokeObjectURL(enlace.href);
 }
 
+/**
+ * Mete un archivo de respaldo entre los datos que ya hay.
+ *
+ * Antes esta función hacía `datos = { ...datos, ...leido }`, que reemplazaba la
+ * lista de turnos entera. Alguien que importara un respaldo de hace un mes para
+ * recuperar un día perdía el mes completo, y el aviso solo le decía cuántos
+ * turnos TRAÍA el archivo, nunca cuántos iba a destruir. Ahora se fusiona: el
+ * archivo solo puede llenar días vacíos (ver `fusionarTurnos` en logica.js).
+ *
+ * Los ajustes sí se reemplazan por los del respaldo, y eso es seguro porque
+ * cada turno guarda congelados su tarifa y su tip-out: cambiar los porcentajes
+ * de hoy no mueve ni un centavo de lo ya registrado.
+ */
 function importar(evento) {
   const archivo = evento.target.files[0];
   if (!archivo) return;
+
   const lector = new FileReader();
+
   lector.onload = e => {
+    let leido;
     try {
-      const leido = JSON.parse(e.target.result);
-      if (!Array.isArray(leido.turnos)) throw new Error('sin turnos');
-      if (!confirm(t('confirmImportar')
-            .replace('%s', leido.turnos.length))) return;
-      datos = { ...datos, ...leido };
-      guardar();
-      irA('semana');
+      leido = JSON.parse(e.target.result);
     } catch (err) {
       alert(t('archivoMalo'));
+      return;
     }
+    // Un JSON válido no es un respaldo válido. Cualquier archivo .json del
+    // teléfono se abre sin error y no tiene nada que ver con esta app.
+    if (!leido || typeof leido !== 'object' || !Array.isArray(leido.turnos)) {
+      alert(t('archivoMalo'));
+      return;
+    }
+
+    if (!confirm(rellenar(t('confirmImportar'), leido.turnos.length))) return;
+
+    const fusion = fusionarTurnos(datos.turnos, leido.turnos);
+    datos = { ...datos, ...leido, turnos: fusion.turnos };
+    datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
+                    ...(datos.prefs || {}) };
+    guardar();
+    irA('semana');
+
+    // Decir exactamente qué pasó. Un "listo" deja a la persona sin saber si
+    // faltó algo, y con dinero de por medio esa duda no se va sola.
+    let resumen = rellenar(t('resumenImportar'), fusion.agregados, fusion.omitidos);
+    if (fusion.invalidos > 0) {
+      resumen += ' ' + rellenar(t('resumenIgnorados'), fusion.invalidos);
+    }
+    alert(resumen);
   };
+
+  // Si el archivo no se puede ni leer (se quitó la memoria, permisos), hay que
+  // decirlo: sin esto la app se queda callada y parece que no pasó nada.
+  lector.onerror = () => alert(t('archivoMalo'));
+
   lector.readAsText(archivo);
   evento.target.value = '';
 }

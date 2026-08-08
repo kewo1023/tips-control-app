@@ -283,6 +283,81 @@ function turnosDelDia(turnos, fecha) {
   return (Array.isArray(turnos) ? turnos : []).filter(t => t.fecha === fecha);
 }
 
+/* --- Fusionar un respaldo con lo que ya hay ------------------------------ */
+
+/**
+ * ¿Tiene este turno la pinta mínima de ser un turno?
+ *
+ * No comprueba que los números sean razonables, solo que exista una fecha con
+ * el formato correcto. Es lo imprescindible para poder colocarlo en un día del
+ * calendario: sin fecha, un turno no se puede ni mostrar ni comparar.
+ */
+function turnoValido(turno) {
+  return !!turno
+      && typeof turno === 'object'
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(turno.fecha || ''));
+}
+
+/**
+ * Mete los turnos de un archivo de respaldo entre los que ya están guardados.
+ *
+ * La regla es una sola y no tiene excepciones: **lo que está en el teléfono
+ * nunca se toca.** El archivo solo puede agregar días que hoy están vacíos.
+ *
+ * ¿Por qué tan conservador? Porque un turno del archivo y uno del teléfono con
+ * el mismo identificador pueden diferir por una edición, y no hay forma de
+ * saber cuál es la buena: los turnos no guardan la hora en que se modificaron.
+ * Sin ese dato, cualquier regla que decida "gana el archivo" está adivinando, y
+ * adivinar con el dinero de otro no es una opción. Ante la duda, se conserva lo
+ * que la persona tiene delante.
+ *
+ * Un turno se omite por dos motivos distintos:
+ *
+ *   - **Mismo id.** Es el mismo turno; ya está.
+ *   - **Misma fecha, id distinto.** Son dos registros diferentes del mismo día,
+ *     normalmente porque se creó uno en cada dispositivo. Este es el caso
+ *     peligroso: si se agregaran los dos, la app sumaría dos veces las propinas
+ *     de ese día. El modelo es de un turno por día justamente para que esto no
+ *     pase. Y un total inflado es peor que uno incompleto: un turno que falta
+ *     salta a la vista, un total de más nadie lo cuestiona, se lo cree.
+ *
+ * Devuelve las cuentas además de la lista, para poder decirle a la persona qué
+ * pasó exactamente en vez de un "listo" que no significa nada.
+ *
+ * @param {Array} actuales   los turnos que ya están en el teléfono
+ * @param {Array} importados los turnos que vienen del archivo
+ * @returns {{ turnos, agregados, omitidos, invalidos }}
+ */
+function fusionarTurnos(actuales, importados) {
+  const base  = (Array.isArray(actuales) ? actuales : []).filter(turnoValido);
+  const nuevos = Array.isArray(importados) ? importados : [];
+
+  // Dos índices para no recorrer la lista entera por cada turno del archivo.
+  // Con 20 turnos daría igual; con tres años de historial, no.
+  const ids    = new Set(base.map(t => t.id));
+  const fechas = new Set(base.map(t => t.fecha));
+
+  const resultado = base.slice();
+  let agregados = 0, omitidos = 0, invalidos = 0;
+
+  nuevos.forEach(turno => {
+    if (!turnoValido(turno)) { invalidos++; return; }
+    if (ids.has(turno.id) || fechas.has(turno.fecha)) { omitidos++; return; }
+
+    resultado.push(turno);
+    ids.add(turno.id);
+    fechas.add(turno.fecha);   // dos turnos del archivo en el mismo día: entra uno
+    agregados++;
+  });
+
+  // Ordenados por fecha, para que la lista guardada tenga siempre el mismo
+  // orden venga de donde venga.
+  resultado.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+
+  return { turnos: resultado, agregados, omitidos, invalidos };
+}
+
+
 /* --- Para que node pueda probar este archivo ----------------------------- */
 /* En el navegador estas funciones ya quedan disponibles al cargar el script.
    `module` solo existe cuando el archivo lo abre node, así que esta línea es
@@ -292,6 +367,7 @@ if (typeof module !== 'undefined' && module.exports) {
     redondear, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasDeLaSemana, turnosDelDia,
-    horasFrecuentes, mejorTurno
+    horasFrecuentes, mejorTurno,
+    turnoValido, fusionarTurnos
   };
 }
