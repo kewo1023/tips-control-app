@@ -372,6 +372,30 @@ ok('pero el sueldo se sigue viendo', texto('recibo').includes('$60.00'));
 run("irA('semana')");
 
 
+grupo('Tamaño de la letra');
+run('irA("ajustes")');
+ok('ofrece tres tamaños', hijos('escalas').length === 3);
+ok('arranca en Normal', D().prefs.escala === 'normal');
+ok('y eso es el 100%', d.documentElement.style.fontSize === '100%');
+
+run('cambiarEscala("mayor")');
+ok('cambiar de tamaño agranda la base', d.documentElement.style.fontSize === '132%');
+ok('y queda guardado', JSON.parse(almacen.tipsControl).prefs.escala === 'mayor');
+
+/* Un valor que no reconocemos no puede dejar la pantalla en un tamaño
+   indefinido: sin esta red, un respaldo de otra versión podría dejar la app
+   ilegible y sin forma de volver a Ajustes para arreglarlo. */
+run('datos.prefs.escala = "gigantesco"; aplicarEscala();');
+ok('un tamaño desconocido cae en Normal', d.documentElement.style.fontSize === '100%');
+
+run('cambiarEscala("normal")');
+ok('volver a Normal deja la base como estaba',
+   d.documentElement.style.fontSize === '100%');
+
+// El tamaño es solo apariencia: no puede tocar ni un dato.
+ok('cambiar el tamaño no toca los turnos', D().turnos.length === 2);
+
+
 grupo('Tema claro y oscuro');
 run('irA("ajustes")');
 ok('ofrece tres temas', hijos('temas').length === 3);

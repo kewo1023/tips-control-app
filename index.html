@@ -88,20 +88,43 @@
    ========================================================================== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* ----------------------------------------------------------------------------
+   El tamaño de la letra, para quien no ve de cerca.
+
+   Todos los tamaños de esta hoja están en `rem`, que significa "veces el
+   tamaño base". `aplicarEscala()` cambia ese tamaño base aquí arriba y toda la
+   app crece a la vez, manteniendo las proporciones: la cifra sigue siendo
+   cuatro veces su etiqueta, que es de donde sale el carácter de la app. Si
+   cada tamaño estuviera en píxeles habría que tocar cuarenta reglas y la
+   jerarquía se rompería en la primera que se olvidara.
+
+   Va en porcentaje y no en píxeles a propósito: así se multiplica por el
+   tamaño de letra que la persona ya tenga puesto en su navegador en vez de
+   pisarlo. Quien ya había agrandado la letra de todo su teléfono no debería
+   ver la nuestra encoger al abrir la app.
+
+   Los márgenes y los rellenos siguen en píxeles: si creciera todo, en tamaño
+   grande cabrían tres datos por pantalla. Lo que crece es la letra; el aire
+   entre las cosas se queda como está. Las únicas medidas que crecen con ella
+   son las que la contienen —el alto de cada día, los círculos de ayuda, el
+   hueco de la barra de abajo—, porque si no la cortarían.
+   -------------------------------------------------------------------------- */
+html { font-size: 100%; }
+
 body {
   margin: 0;
-  padding: 0 14px calc(76px + env(safe-area-inset-bottom));
+  padding: 0 14px calc(4.75rem + env(safe-area-inset-bottom));
   background: var(--papel);
   color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
 
 /* Versalitas: la etiqueta de todo dato numérico */
 .etiqueta {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -128,9 +151,9 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 2px 12px;
 }
-.cabecera .lugar { font-size: 13px; color: var(--tinta-2); }
+.cabecera .lugar { font-size: 0.8125rem; color: var(--tinta-2); }
 .cabecera .hoy {
-  font-size: 12px; color: var(--verde); font-weight: 600;
+  font-size: 0.75rem; color: var(--verde); font-weight: 600;
   padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
   background: none; cursor: pointer;
 }
@@ -139,11 +162,11 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 12px;
 }
-.semana-nav .rango { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.semana-nav .rango { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
 .semana-nav button {
-  width: 40px; height: 40px; border: 1px solid var(--linea);
+  width: 2.5rem; height: 2.5rem; border: 1px solid var(--linea);
   background: var(--tarjeta); color: var(--tinta-2); border-radius: 10px;
-  font-size: 17px; line-height: 1; cursor: pointer;
+  font-size: 1.0625rem; line-height: 1; cursor: pointer;
 }
 .semana-nav button:disabled { opacity: .35; }
 
@@ -158,7 +181,7 @@ body {
 
 .dia {
   position: relative; overflow: hidden;
-  height: 82px; padding: 7px 2px 6px;
+  height: 5.125rem; padding: 7px 2px 6px;
   display: flex; flex-direction: column; align-items: center;
   border: 1px solid var(--linea); border-radius: 9px;
   background: var(--tarjeta); color: var(--tinta);
@@ -169,10 +192,10 @@ body {
   background: var(--verde-suave);
 }
 .dia .letra, .dia .num, .dia .monto { position: relative; }
-.dia .letra { font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+.dia .letra { font-size: 0.5625rem; font-weight: 600; letter-spacing: 0.06em;
               color: var(--tinta-3); text-transform: uppercase; }
-.dia .num   { font-size: 15px; font-weight: 500; margin-top: 1px; }
-.dia .monto { font-size: 11px; font-weight: 600; color: var(--verde);
+.dia .num   { font-size: 0.9375rem; font-weight: 500; margin-top: 1px; }
+.dia .monto { font-size: 0.6875rem; font-weight: 600; color: var(--verde);
               margin-top: auto; font-variant-numeric: tabular-nums; }
 .dia.vacio .num { color: var(--tinta-3); font-weight: 400; }
 .dia.hoy { border-color: var(--tinta); }
@@ -183,10 +206,10 @@ body {
    ========================================================================== */
 .total { padding: 22px 2px 6px; }
 .total .cantidad {
-  font-size: 42px; font-weight: 600; line-height: 1;
+  font-size: 2.625rem; font-weight: 600; line-height: 1;
   margin: 6px 0 4px; color: var(--tinta);
 }
-.total .contra { font-size: 13px; color: var(--tinta-2); }
+.total .contra { font-size: 0.8125rem; color: var(--tinta-2); }
 .total .sube { color: var(--verde); font-weight: 600; }
 .total .baja { color: var(--rojo); font-weight: 600; }
 
@@ -200,20 +223,20 @@ body {
 }
 .metricas.extras { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
 .metrica { background: var(--tarjeta); padding: 12px 12px; }
-.metrica .valor { font-size: 22px; font-weight: 600; margin-top: 3px;
+.metrica .valor { font-size: 1.375rem; font-weight: 600; margin-top: 3px;
                   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .metricas.extras .metrica { padding: 11px 10px; }
-.metricas.extras .valor { font-size: 17px; }
+.metricas.extras .valor { font-size: 1.0625rem; }
 
 /* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
 .metrica .cabeza { display: flex; align-items: center;
                    justify-content: space-between; gap: 6px; }
 
 .info {
-  flex: none; width: 16px; height: 16px; padding: 0;
+  flex: none; width: 1rem; height: 1rem; padding: 0;
   border: 1px solid var(--linea-alta); border-radius: 50%;
   background: none; color: var(--tinta-3);
-  font-size: 10px; font-weight: 600; font-style: italic; line-height: 1;
+  font-size: 0.625rem; font-weight: 600; font-style: italic; line-height: 1;
   cursor: pointer;
 }
 
@@ -222,7 +245,7 @@ body {
    tarjetas angostas saltaba de línea sola y la rejilla se veía desalineada.
    Una posición fija se lee mejor que una que a veces cambia. */
 .delta { display: block; margin-top: 3px;
-         font-size: 12.5px; font-weight: 600; letter-spacing: 0; }
+         font-size: 0.78125rem; font-weight: 600; letter-spacing: 0; }
 .delta.sube   { color: var(--verde); }
 .delta.baja   { color: var(--rojo); }
 /* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
@@ -244,15 +267,15 @@ body {
   width: 235px; max-width: calc(100vw - 28px);
   padding: 10px 12px; border-radius: 10px;
   background: var(--tinta); color: var(--papel);
-  font-size: 12.5px; line-height: 1.35;
+  font-size: 0.78125rem; line-height: 1.35;
 }
 
 .mas {
   width: 100%; margin-top: 10px; padding: 11px;
   background: none; border: 1px solid var(--linea); border-radius: 10px;
-  color: var(--tinta-2); font-size: 13px; cursor: pointer;
+  color: var(--tinta-2); font-size: 0.8125rem; cursor: pointer;
 }
-.dato-suelto { font-size: 13px; color: var(--tinta-2); padding: 12px 2px 0; }
+.dato-suelto { font-size: 0.8125rem; color: var(--tinta-2); padding: 12px 2px 0; }
 
 /* ============================================================================
    SECCIÓN F — Formulario del turno
@@ -261,10 +284,10 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 0 14px; margin-bottom: 4px;
 }
-.barra-titulo .fecha { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.barra-titulo .fecha { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
 .barra-titulo button {
   border: none; background: none; color: var(--tinta-2);
-  font-size: 15px; cursor: pointer; padding: 6px;
+  font-size: 0.9375rem; cursor: pointer; padding: 6px;
 }
 
 .campo { margin-bottom: 13px; }
@@ -275,8 +298,11 @@ input[type=text], input[type=number], input[type=time] {
   width: 100%; padding: 11px 12px;
   border: 1px solid var(--linea); border-radius: 9px;
   background: var(--papel); color: var(--tinta);
-  /* 16px exactos: con menos, Safari en iPhone hace zoom al tocar el campo. */
-  font-size: 16px; font-family: inherit;
+  /* 1rem = 16px con el tamaño Normal, y más con los otros. Nunca menos, que es
+     lo que importa: por debajo de 16px, Safari en iPhone hace zoom al tocar el
+     campo y descoloca la pantalla. Por eso este valor va en rem y no en una
+     medida que pueda encoger. */
+  font-size: 1rem; font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
 input:focus { outline: none; border-color: var(--tinta); }
@@ -315,7 +341,7 @@ input[type=time] {
 .horas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .horas button {
   padding: 5px 8px; border: 1px solid var(--linea); border-radius: 7px;
-  background: none; color: var(--tinta-2); font-size: 12px;
+  background: none; color: var(--tinta-2); font-size: 0.75rem;
   font-variant-numeric: tabular-nums; cursor: pointer;
 }
 .horas button.puesta { border-color: var(--verde); color: var(--verde); }
@@ -324,21 +350,21 @@ input[type=time] {
 .chip {
   padding: 8px 13px; border: 1px solid var(--linea); border-radius: 999px;
   background: var(--papel); color: var(--tinta-2);
-  font-size: 13px; cursor: pointer; user-select: none;
+  font-size: 0.8125rem; cursor: pointer; user-select: none;
 }
 .chip.activo { border-color: var(--verde); color: var(--verde); font-weight: 600; }
 .chip small { opacity: .7; margin-left: 3px; }
 
 /* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
    guía el ojo desde el concepto hasta la cifra. */
-.recibo { font-size: 14px; }
+.recibo { font-size: 0.875rem; }
 .recibo div { display: flex; justify-content: space-between; padding: 5px 0;
               color: var(--tinta-2); }
 .recibo .final {
   border-top: 1px solid var(--linea); margin-top: 7px; padding-top: 11px;
-  color: var(--tinta); font-size: 15px;
+  color: var(--tinta); font-size: 0.9375rem;
 }
-.recibo .final span:last-child { font-size: 26px; font-weight: 600;
+.recibo .final span:last-child { font-size: 1.625rem; font-weight: 600;
                                  letter-spacing: -0.025em; }
 .recibo .resta { color: var(--rojo); }
 .recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
@@ -346,7 +372,7 @@ input[type=time] {
 /* El sueldo por hora cuando NO se suma al total: va debajo de la raya final,
    más pequeño y en gris. Se ve porque es dinero que sí cobras, pero se lee
    como una nota al pie y no como parte de la suma de arriba. */
-.recibo .aparte { padding-top: 9px; font-size: 13px; }
+.recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
 .recibo .aparte span { color: var(--tinta-3) !important; }
 
 /* ============================================================================
@@ -358,16 +384,16 @@ button { font-family: inherit; }
   width: 100%; padding: 15px; margin-top: 4px;
   background: var(--tinta); color: var(--papel);
   border: none; border-radius: 11px;
-  font-size: 16px; font-weight: 600; cursor: pointer;
+  font-size: 1rem; font-weight: 600; cursor: pointer;
 }
 .secundario {
   width: 100%; padding: 12px; margin-top: 8px;
   background: none; color: var(--tinta-2);
   border: 1px solid var(--linea); border-radius: 11px;
-  font-size: 14px; cursor: pointer;
+  font-size: 0.875rem; cursor: pointer;
 }
 .secundario.riesgo { color: var(--rojo); }
-.chico { padding: 7px 11px; font-size: 13px; border: 1px solid var(--linea);
+.chico { padding: 7px 11px; font-size: 0.8125rem; border: 1px solid var(--linea);
          border-radius: 8px; background: var(--papel); color: var(--tinta);
          cursor: pointer; }
 
@@ -381,14 +407,14 @@ button { font-family: inherit; }
 }
 .pestanas button {
   flex: 1; border: none; background: none; padding: 11px 0 13px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--tinta-3); cursor: pointer;
 }
 .pestanas button.activa { color: var(--verde); }
 
 .oculto { display: none !important; }
 .vacio { text-align: center; color: var(--tinta-3); padding: 30px 20px;
-         font-size: 14px; }
+         font-size: 0.875rem; }
 /* Control segmentado: tres opciones donde solo una puede estar activa. Se usa
    en vez de un menú desplegable porque las tres caben a la vista: elegir es un
    toque, no dos, y de paso ves qué opciones hay sin tener que abrir nada. */
@@ -397,7 +423,7 @@ button { font-family: inherit; }
 .segmentado button {
   padding: 11px 6px; border: 1px solid var(--linea); border-radius: 9px;
   background: var(--papel); color: var(--tinta-2);
-  font-size: 13px; cursor: pointer;
+  font-size: 0.8125rem; cursor: pointer;
 }
 .segmentado button.activo { border-color: var(--verde); color: var(--verde);
                             font-weight: 600; }
@@ -406,21 +432,21 @@ button { font-family: inherit; }
    se lee una vez en la vida y explica por qué le estamos pidiendo datos antes
    de dejarle hacer nada. Pedir sin explicar es lo que hace que la gente
    abandone en la primera pantalla. */
-.intro { font-size: 14px; line-height: 1.5; color: var(--tinta-2);
+.intro { font-size: 0.875rem; line-height: 1.5; color: var(--tinta-2);
          margin: 4px 2px 0; }
 
 /* La casilla y su texto van dentro de la misma etiqueta para que se pueda
    tocar el texto además del cuadrito: en un teléfono, acertarle a un cuadro de
    16 px con el pulgar es pedir demasiado. */
 .check { display: flex; gap: 9px; align-items: flex-start; margin-top: 13px;
-         font-size: 13px; color: var(--tinta-2); cursor: pointer; }
+         font-size: 0.8125rem; color: var(--tinta-2); cursor: pointer; }
 .check input { width: 18px; height: 18px; margin: 1px 0 0; flex: none;
                accent-color: var(--verde); }
 
 .rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
 .rol-fila input[type=text] { flex: 1; }
 .rol-fila input[type=number] { width: 74px; }
-h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
+h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
              text-transform: uppercase; color: var(--tinta-3);
              margin: 24px 0 9px 2px; }
 </style>
@@ -547,7 +573,7 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
       <input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()">
       <span data-t="sumarSueldo">Sumar el sueldo por hora al total</span>
     </label>
-    <p class="intro" style="margin:9px 0 0; font-size:12px"
+    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
        data-t="sumarSueldoNota">
       Apagado, el total de cada turno son solo las propinas menos el tip-out.
       El sueldo se sigue viendo aparte.</p>
@@ -561,13 +587,15 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
   <h2 class="seccion" data-t="apariencia">Apariencia</h2>
   <div class="tarjeta">
     <div class="segmentado" id="temas"></div>
+    <p class="etiqueta" style="margin:15px 0 8px" data-t="tamanoLetra">Tamaño de la letra</p>
+    <div class="segmentado" id="escalas"></div>
   </div>
 
   <h2 class="seccion" data-t="ayudantesTipout">Ayudantes y tip-out</h2>
   <div class="tarjeta">
     <div id="roles"></div>
     <button class="chico" data-t="agregarRol" onclick="agregarRol()">+ Agregar rol</button>
-    <p style="margin:13px 0 0; font-size:13px; color:var(--tinta-2)">
+    <p style="margin:13px 0 0; font-size: 0.8125rem; color:var(--tinta-2)">
       <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="a-total">0%</strong></p>
   </div>
@@ -575,7 +603,7 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
   <h2 class="seccion" data-t="respaldo">Respaldo</h2>
   <div class="tarjeta">
     <p data-t="soloTelefono"
-       style="margin:0 0 11px; font-size:13px; color:var(--tinta-2)">
+       style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)">
       Los datos viven solo en este teléfono. Exporta de vez en cuando.</p>
     <div class="fila">
       <button class="chico" data-t="exportar" onclick="exportar()">Exportar</button>
@@ -635,7 +663,7 @@ h2.seccion { font-size: 10px; font-weight: 600; letter-spacing: 0.09em;
     <div id="b-roles"></div>
     <button class="chico" id="b-agregar-rol" data-t="agregarRol"
             onclick="agregarRol()">+ Agregar rol</button>
-    <p style="margin:13px 0 0; font-size:13px; color:var(--tinta-2)">
+    <p style="margin:13px 0 0; font-size: 0.8125rem; color:var(--tinta-2)">
       <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="b-total">0%</strong></p>
 
@@ -764,6 +792,8 @@ const TEXTOS = {
     faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
     sumarSueldo: 'Sumar el sueldo por hora al total',
     sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
+    tamanoLetra: 'Tamaño de la letra',
+    escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control.',
     datosIlegibles: 'Los datos guardados no se pudieron leer. Se empieza de cero.',
     confirmBorrarTodo: 'Esto borra TODOS tus turnos de este teléfono. ¿Seguro?',
@@ -833,6 +863,8 @@ const TEXTOS = {
     faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
     sumarSueldo: 'Add hourly wage to the total',
     sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
+    tamanoLetra: 'Text size',
+    escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
     archivoMalo: "That file doesn't look like a Tips Control backup.",
     datosIlegibles: 'Saved data could not be read. Starting fresh.',
     confirmBorrarTodo: 'This deletes ALL your shifts from this phone. Sure?',
@@ -899,13 +931,25 @@ let datos = {
   // posibles, inflar es el peor: un número que te favorece no lo cuestiona
   // nadie.
   prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es',
-           contarSueldo: false }
+           contarSueldo: false, escala: 'normal' }
 };
 
 const TEMAS = [
   { id: 'auto', clave: 'temaAuto' },
   { id: 'claro', clave: 'temaClaro' },
   { id: 'oscuro', clave: 'temaOscuro' }
+];
+
+/* Tres tamaños, no un deslizador.
+   Un deslizador tiene infinitas posiciones y no se pueden probar todas: alguna
+   se vería mal y nos enteraríamos por WhatsApp. Tres se revisan en el teléfono
+   en cinco minutos y se sabe que las tres están bien.
+   Los saltos son de +15% y +32%: por debajo de eso el cambio no se nota y la
+   persona vuelve a Ajustes creyendo que el botón no funcionó. */
+const ESCALAS = [
+  { id: 'normal', clave: 'escalaNormal', factor: 1 },
+  { id: 'grande', clave: 'escalaGrande', factor: 1.15 },
+  { id: 'mayor',  clave: 'escalaMayor',  factor: 1.32 }
 ];
 
 /* Los nombres de los idiomas van SIEMPRE en su propio idioma. Si alguien abre
@@ -970,7 +1014,8 @@ function cargar() {
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
     datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                    contarSueldo: false, ...(datos.prefs || {}) };
+                    contarSueldo: false, escala: 'normal',
+                    ...(datos.prefs || {}) };
 
     // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
     // saldría la pantalla de bienvenida como si fuera nuevo: pedirle datos que
@@ -1094,6 +1139,31 @@ function cambiarTema(id) {
   datos.prefs.tema = id;
   guardar();
   aplicarTema();
+  pintar();
+}
+
+/**
+ * Aplica el tamaño de letra elegido.
+ *
+ * Toda la hoja de estilos está en `rem`, así que basta con cambiar el tamaño
+ * base de la etiqueta <html> para que crezca la app entera sin perder las
+ * proporciones.
+ *
+ * Si el valor guardado no lo reconocemos —un respaldo de una versión futura,
+ * un archivo tocado a mano— se cae al Normal en vez de dejar la app con un
+ * tamaño indefinido. Un valor raro no puede convertirse en una pantalla
+ * ilegible sin forma de volver atrás.
+ */
+function aplicarEscala() {
+  const elegida = ESCALAS.find(e => e.id === (datos.prefs.escala || 'normal'))
+               || ESCALAS[0];
+  document.documentElement.style.fontSize = Math.round(elegida.factor * 100) + '%';
+}
+
+function cambiarEscala(id) {
+  datos.prefs.escala = id;
+  guardar();
+  aplicarEscala();
   pintar();
 }
 
@@ -1699,7 +1769,7 @@ function pintarTurno() {
   const chips = document.getElementById('chips');
   chips.innerHTML = '';
   if (datos.roles.length === 0) {
-    chips.innerHTML = '<span style="font-size:13px;color:var(--tinta-3)">'
+    chips.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-3)">'
                     + t('rolesEnAjustes') + '</span>';
   }
   datos.roles.forEach(rol => {
@@ -1820,6 +1890,19 @@ function pintarAjustes() {
     boton.className = (datos.prefs.tema || 'auto') === tema.id ? 'activo' : '';
     boton.onclick = () => cambiarTema(tema.id);
     temas.appendChild(boton);
+  });
+
+  const escalas = document.getElementById('escalas');
+  escalas.innerHTML = '';
+  ESCALAS.forEach(escala => {
+    const boton = document.createElement('button');
+    boton.textContent = t(escala.clave);
+    // Cada botón se muestra en el tamaño que representa: se elige viendo el
+    // resultado, no leyendo una palabra que hay que imaginarse.
+    boton.style.fontSize = Math.round(escala.factor * 100) + '%';
+    boton.className = (datos.prefs.escala || 'normal') === escala.id ? 'activo' : '';
+    boton.onclick = () => cambiarEscala(escala.id);
+    escalas.appendChild(boton);
   });
 
   pintarListaRoles('roles', 'a-total');
@@ -1969,6 +2052,7 @@ const FUNCIONES_NECESARIAS = [
 
 cargar();
 aplicarTema();
+aplicarEscala();
 document.documentElement.lang = (datos.prefs.idioma || 'es');
 
 const faltan = FUNCIONES_NECESARIAS.filter(n => typeof window[n] !== 'function');
