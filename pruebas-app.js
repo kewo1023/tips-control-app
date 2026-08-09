@@ -378,8 +378,10 @@ run("irA('semana')");
 grupo('Tamaño de la letra');
 run('irA("ajustes")');
 ok('ofrece tres tamaños', hijos('escalas').length === 3);
-ok('arranca en Normal', D().prefs.escala === 'normal');
-ok('y eso es el 100%', d.documentElement.style.fontSize === '100%');
+// Arranca en Grande y no en Normal: el valor por defecto tiene que servirle a
+// quien no hizo la app, leyendo de pie al final del turno.
+ok('arranca en Grande', D().prefs.escala === 'grande');
+ok('y eso es el 115%', d.documentElement.style.fontSize === '115%');
 
 run('cambiarEscala("mayor")');
 ok('cambiar de tamaño agranda la base', d.documentElement.style.fontSize === '132%');
@@ -402,7 +404,10 @@ ok('cambiar el tamaño no toca los turnos', D().turnos.length === 2);
 grupo('Tema claro y oscuro');
 run('irA("ajustes")');
 ok('ofrece tres temas', hijos('temas').length === 3);
-ok('arranca en Automático', hijos('temas')[0]._classes.has('activo'));
+// Arranca en Claro (el segundo de los tres: auto, claro, oscuro). La primera
+// pantalla que ve alguien que abre el enlace de un compañero tiene que ser la
+// misma para todos, y el cierre de caja se hace con las luces encendidas.
+ok('arranca en Claro', hijos('temas')[1]._classes.has('activo'));
 ok('el sistema dice claro, la app está clara',
    d.documentElement.dataset.tema === 'claro');
 hijos('temas')[2].click();
@@ -424,6 +429,57 @@ run('cambiarTema("claro")');
 ok('pero una elección explícita le gana al sistema',
    d.documentElement.dataset.tema === 'claro');
 sistemaOscuro = false;
+
+
+/* El desastre que se quiere evitar al cambiar un valor por defecto: que el
+   cambio se le aplique a quien lleva meses usando la app. Alguien que eligió
+   Automático y letra Normal tiene que seguir viendo Automático y letra Normal
+   aunque los que abren la app hoy por primera vez arranquen en Claro y Grande.
+   Un default que pisa una elección ya hecha es peor que un default malo: la
+   persona no cambió nada y aun así le cambió la app. */
+grupo('Cambiar un valor por defecto no toca a quien ya usa la app');
+/* Este grupo pisa los turnos y los roles para montar sus propios casos, y los
+   grupos de más abajo cuentan con los que ya había. Se guarda el estado antes y
+   se devuelve al final. La alternativa —dejarlo como quede— hace que una prueba
+   de aquí reviente otra que está 40 líneas más abajo y no tiene nada que ver,
+   y ese día nadie relaciona una cosa con la otra. */
+const estadoAntesDeLosDefaults = almacen.tipsControl;
+
+almacen.tipsControl = JSON.stringify({
+  configurado: true,
+  turnos: [], roles: [],
+  trabajo: { nombre: 'El de siempre', tarifaHora: 8 },
+  prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es',
+           contarSueldo: false, escala: 'normal', comparar: true }
+});
+run('cargar()');
+ok('conserva el tema que ya había elegido', D().prefs.tema === 'auto');
+ok('y el tamaño de letra que ya tenía', D().prefs.escala === 'normal');
+
+/* El caso contrario, sin el cual el de arriba pasaría también con el código
+   roto: quien no tiene ninguna preferencia sí recibe los valores nuevos.
+   Hay que vaciar `datos.prefs` a mano porque `cargar()` conserva a propósito lo
+   que ya está en memoria, y en memoria están las preferencias de la prueba
+   anterior. Alguien que abre la app por primera vez no tiene ninguna de las
+   dos cosas. */
+almacen.tipsControl = JSON.stringify({
+  configurado: true, turnos: [], roles: [],
+  trabajo: { nombre: 'Nuevo', tarifaHora: 8 }
+});
+run('datos.prefs = {}');
+run('cargar()');
+ok('quien no tenía preferencias recibe las nuevas', D().prefs.tema === 'claro');
+ok('también el tamaño de letra', D().prefs.escala === 'grande');
+/* Esta faltaba y por eso no se vio: la copia de los valores por defecto que usa
+   la importación estaba a medias, sin `comparar`. Un respaldo viejo dejaba esa
+   preferencia en undefined, que se lee como "no", y las comparaciones de la
+   semana desaparecían sin que nadie hubiera tocado nada. */
+ok('y ninguna preferencia se queda sin valor',
+   Object.keys(run('PREFS_POR_DEFECTO')).every(k => D().prefs[k] !== undefined));
+
+// Devolver el estado que esperan los grupos siguientes.
+almacen.tipsControl = estadoAntesDeLosDefaults;
+run('cargar()');
 
 
 grupo('Ajustes');

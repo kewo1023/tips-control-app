@@ -21,7 +21,11 @@
 (function () {
   try {
     const guardado = JSON.parse(localStorage.getItem('tipsControl') || '{}');
-    const elegido = (guardado.prefs && guardado.prefs.tema) || 'auto';
+    /* Este 'claro' es el mismo valor que `PREFS_POR_DEFECTO.tema` de más abajo,
+       y no hay forma de leerlo desde aquí: esto corre antes que nada para que la
+       app no abra en claro y salte a oscuro medio segundo después. Si algún día
+       se cambia el tema por defecto, hay que cambiarlo en los dos sitios. */
+    const elegido = (guardado.prefs && guardado.prefs.tema) || 'claro';
     const oscuro = elegido === 'oscuro' || (elegido === 'auto' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.tema = oscuro ? 'oscuro' : 'claro';
@@ -863,6 +867,10 @@ const TEXTOS = {
     instIOS: 'Se abre como una app normal, sin la barra del navegador.',
     instPaso1a: 'Toca',
     instPaso1b: 'en la barra de Safari (abajo del todo).',
+    /* Chrome y Firefox de iPhone son Safari por dentro, pero el botón de
+       compartir lo tienen arriba a la derecha y no abajo. Es la clase de detalle
+       que convierte un paso a paso en un mensaje de WhatsApp. */
+    instPaso1bOtro: 'arriba a la derecha, en la barra del navegador.',
     instPaso2: 'Baja y toca <b>«Añadir a pantalla de inicio»</b> (en inglés, <b>Add to Home Screen</b>).',
     instPaso3: 'Toca <b>«Añadir»</b> arriba a la derecha. Listo.',
     instBoton: 'Instalar la app',
@@ -875,7 +883,7 @@ const TEXTOS = {
     /* Este es el texto que hace que el banner no se lea como un capricho. Sin
        él, "instálala" es una molestia; con él, es la diferencia entre conservar
        tus turnos y perderlos. */
-    instAviso: 'Importante: sin instalar, el teléfono puede borrar tus turnos si pasas una semana sin abrir la app.',
+    instAviso: 'Importante: instálala antes de registrar turnos. Lo que apuntes aquí en el navegador no pasa a la app instalada, y el teléfono puede borrarlo si pasas una semana sin abrirla.',
 
     // Métricas y su explicación
     mHoras: 'Horas',        nHoras: 'Suma de la duración de cada turno.',
@@ -1016,6 +1024,7 @@ const TEXTOS = {
     instIOS: 'It opens like a normal app, with no browser bar.',
     instPaso1a: 'Tap',
     instPaso1b: 'in the Safari bar (at the very bottom).',
+    instPaso1bOtro: 'in the top right of the browser bar.',
     instPaso2: 'Scroll down and tap <b>Add to Home Screen</b>.',
     instPaso3: 'Tap <b>Add</b> in the top right. Done.',
     instBoton: 'Install the app',
@@ -1025,7 +1034,7 @@ const TEXTOS = {
     instCopiada: 'Copied!',
     instCopiarMal: 'Could not copy it. Here is the address:',
     instLuego: 'Not now',
-    instAviso: 'Important: without installing, your phone may delete your shifts if you go a week without opening the app.',
+    instAviso: 'Important: install it before logging any shifts. What you enter here in the browser does not carry over to the installed app, and your phone may delete it if you go a week without opening it.',
 
     idioma: 'Language', apariencia: 'Appearance',
     ayudantesTipout: 'Support staff and tip-out', agregarRol: '+ Add role',
@@ -1127,6 +1136,35 @@ function rellenar(texto, ...valores) {
 
 const CLAVE = 'tipsControl';
 
+/* Las preferencias con las que arranca alguien que abre la app por primera vez.
+   Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
+   de importar un respaldo— se había quedado a medias, sin `escala`, `comparar`
+   ni `contarSueldo`: quien importara un archivo viejo se quedaba con `comparar`
+   valiendo undefined, que se lee como "no", y perdía las comparaciones de la
+   semana sin haber tocado nada. Un valor por defecto copiado en varios sitios no
+   está mal escrito, está esperando a que alguien actualice solo dos de tres.
+
+   Por qué CLARO y no AUTOMÁTICO: es lo primero que ve alguien que abre un enlace
+   que le pasó un compañero, y la primera impresión tiene que ser la misma para
+   todos y la más fácil de leer. El momento de uso ayuda: el cierre de caja se
+   hace con las luces del restaurante encendidas, no a oscuras.
+
+   Por qué GRANDE y no NORMAL: el default tiene que servirle a quien no hizo la
+   app y no se sabe dónde está cada número, leyendo de pie al final del turno.
+   Quien quiera más densidad la baja en Ajustes en dos toques; quien no lee bien
+   la letra pequeña a lo mejor ni llega a Ajustes.
+
+   Esto NO cambia nada a quien ya usa la app: `cargar()` mezcla estos valores por
+   debajo de los que ya tenga guardados, así que los suyos ganan siempre. */
+const PREFS_POR_DEFECTO = {
+  masEstadisticas: false,
+  tema: 'claro',
+  idioma: 'es',
+  contarSueldo: false,
+  escala: 'grande',
+  comparar: true
+};
+
 let datos = {
   // `configurado` marca si alguien ya pasó por la pantalla de bienvenida.
   // Sin esta bandera habría que adivinarlo mirando si la tarifa es 0, y eso es
@@ -1154,8 +1192,7 @@ let datos = {
   // de la noche da una cifra que nunca se ve entera. Y de los dos errores
   // posibles, inflar es el peor: un número que te favorece no lo cuestiona
   // nadie.
-  prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es',
-           contarSueldo: false, escala: 'normal', comparar: true }
+  prefs: { ...PREFS_POR_DEFECTO }
 };
 
 const TEMAS = [
@@ -1273,9 +1310,10 @@ function cargar() {
     // Red de seguridad: los datos guardados por una versión anterior no traen
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
-    datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                    contarSueldo: false, escala: 'normal', comparar: true,
-                    ...(datos.prefs || {}) };
+    // Los suyos van DESPUÉS a propósito: lo que ya eligió la persona pisa al
+    // valor por defecto, nunca al revés. Si se invirtiera el orden, cambiar un
+    // default aquí le cambiaría el tema a todo el mundo sin avisar.
+    datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
 
     // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
     // saldría la pantalla de bienvenida como si fuera nuevo: pedirle datos que
@@ -1822,8 +1860,7 @@ function importar(evento) {
     try {
       const fusion = fusionarTurnos(datos.turnos, leido.turnos);
       datos = { ...datos, ...leido, turnos: fusion.turnos };
-      datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                      ...(datos.prefs || {}) };
+      datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
       guardar();
       irA('semana');
 
@@ -1963,6 +2000,20 @@ function enNavegadorDeOtraApp() {
   return esIOS() && !/Safari/i.test(navigator.userAgent);
 }
 
+/**
+ * ¿Es Chrome, Firefox, Edge u Opera dentro de un iPhone?
+ *
+ * Todos ellos son Safari por dentro —Apple obliga a usar su motor—, así que la
+ * app funciona igual y se puede instalar igual. Lo único que cambia es dónde
+ * está el botón de compartir: en Safari va abajo y en estos va arriba a la
+ * derecha. Sin esta distinción, el paso 1 mandaba a mirar al sitio equivocado,
+ * que es peor que no dar el paso: quien mira donde le dices y no encuentra nada
+ * deja de confiar en el resto de las instrucciones.
+ */
+function esOtroNavegadorIOS() {
+  return esIOS() && /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent);
+}
+
 function ahoraNo() {
   instalarOculto = true;
   pintarBanner();
@@ -2042,7 +2093,8 @@ function pintarBanner() {
   } else {
     cuerpo.innerHTML =
       '<p>' + t('instIOS') + '</p><ol>'
-      + '<li>' + t('instPaso1a') + ' ' + ICONO_COMPARTIR + ' ' + t('instPaso1b') + '</li>'
+      + '<li>' + t('instPaso1a') + ' ' + ICONO_COMPARTIR + ' '
+        + t(esOtroNavegadorIOS() ? 'instPaso1bOtro' : 'instPaso1b') + '</li>'
       + '<li>' + t('instPaso2') + '</li>'
       + '<li>' + t('instPaso3') + '</li>'
       + '</ol><p class="aviso">' + t('instAviso') + '</p>';
