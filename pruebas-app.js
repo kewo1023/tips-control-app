@@ -30,6 +30,9 @@ const script = bloques[bloques.length - 1];
 const avisos = [];
 let almacen = {};
 let sistemaOscuro = false;
+// Si la app se está viendo desde la pantalla de inicio (instalada) o desde el
+// navegador. Por defecto, desde el navegador de un ordenador.
+let modoStandalone = false;
 const document = crearDocumento(html);
 
 const HOY = new Date(2026, 7, 6, 12, 0, 0);   // jueves
@@ -49,8 +52,17 @@ const ctx = {
   crypto: require('crypto').webcrypto,
   alert: m => avisos.push(String(m)),
   confirm: () => true,
-  navigator: {}, addEventListener: () => {},
-  matchMedia: () => ({ matches: sistemaOscuro, addEventListener: () => {} }),
+  navigator: { userAgent: '', maxTouchPoints: 0 }, addEventListener: () => {},
+  /* Antes esto devolvía `sistemaOscuro` fuera cual fuera la pregunta, y eso se
+     volvió un problema al aparecer la pantalla de instalación: `estaInstalada()`
+     pregunta por `display-mode: standalone` y recibía la respuesta del modo
+     oscuro. Con el tema en oscuro, la app se creía instalada. Un doble de
+     pruebas que contesta a todo lo mismo miente en cuanto le preguntas dos
+     cosas distintas. */
+  matchMedia: consulta => ({
+    matches: /display-mode/.test(String(consulta)) ? modoStandalone : sistemaOscuro,
+    addEventListener: () => {}
+  }),
   localStorage: {
     getItem: k => (k in almacen ? almacen[k] : null),
     setItem: (k, v) => { almacen[k] = String(v); },
@@ -871,6 +883,55 @@ ok('sin quedarse oculto por el camino', !dlg()._classes.has('oculto'));
 run('cerrarDialogo(true)');
 ok('cerrado el último, se cierra del todo', dlg()._classes.has('oculto'));
 ok('y no queda ninguno en la cola', run('colaDialogos').length === 0);
+
+
+/* La pantalla de instalación.
+   Se prueba de última porque cambia el navegador de mentira por uno que dice
+   ser un iPhone, y dejarlo así confundiría a cualquier prueba de más abajo. */
+grupo('La pantalla de instalación');
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) '
+             + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 '
+             + 'Mobile/15E148 Safari/604.1';
+
+ok('en un ordenador no se pide instalar nada', run('debeInstalar()') === false);
+
+ctx.navigator.userAgent = IPHONE;
+run('instalarOculto = false');
+ok('en un iPhone sin instalar, sí', run('debeInstalar()') === true);
+
+modoStandalone = true;
+ok('pero no si ya está instalada', run('debeInstalar()') === false);
+modoStandalone = false;
+
+/* Que la pantalla se dibuje de verdad. Sin esto, las pruebas de arriba dirían
+   que "hay que instalar" aunque la pantalla saliera en blanco. */
+run("pantalla = 'instalacion'; pintar()");
+ok('la pantalla se muestra',
+   !d.getElementById('p-instalacion')._classes.has('oculto'));
+ok('con las pestañas escondidas, como la bienvenida',
+   d.getElementById('pestanas')._classes.has('oculto'));
+ok('y explica los tres pasos',
+   (d.getElementById('inst2-cuerpo').innerHTML.match(/<li>/g) || []).length === 3);
+ok('avisa de que lo escrito aquí no pasa a la app instalada',
+   d.getElementById('inst2-cuerpo').innerHTML.includes('no pasa a la app instalada'));
+
+/* La salida. Existe solo para que un fallo de detección en algún teléfono raro
+   no deje a esa persona encerrada fuera de su app, así que tiene que llevar a
+   algún sitio de verdad. `preguntar` acepta siempre en las pruebas, que es el
+   caso de quien confirma que prefiere el navegador. */
+run('datos.configurado = false');
+run('seguirSinInstalar()');
+ok('la salida lleva a la bienvenida si no se ha configurado',
+   run('pantalla') === 'bienvenida');
+
+run('instalarOculto = false; datos.configurado = true');
+run('seguirSinInstalar()');
+ok('y a la semana si ya se configuró antes', run('pantalla') === 'semana');
+ok('quien ya salió sigue viendo el aviso en la semana',
+   !d.getElementById('instalar')._classes.has('oculto'));
+
+// Dejar el navegador de mentira como estaba.
+ctx.navigator.userAgent = '';
 
 
 /* ========================================================================== */
