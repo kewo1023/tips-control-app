@@ -478,6 +478,53 @@ button { font-family: inherit; }
 .rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
 .rol-fila input[type=text] { flex: 1; }
 .rol-fila input[type=number] { width: 74px; }
+/* ============================================================================
+   SECCIÓN A2 — El aviso de instalación
+   ----------------------------------------------------------------------------
+   Va dentro de la pantalla de la semana y NO flotando encima, a propósito. Un
+   banner fijo tapa contenido y esta app ya tiene una barra ocupando la parte de
+   abajo. Este empuja el resto hacia abajo, crece con el tamaño de letra como
+   todo lo demás, y desaparece del todo en cuanto la app está instalada — que es
+   el único final bueno que tiene esta historia.
+   ========================================================================== */
+.instalar {
+  background: var(--tarjeta);
+  border: 1px solid var(--linea-alta);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 0 14px;
+}
+.instalar p { margin: 6px 0 0; font-size: 0.875rem; color: var(--tinta-2); }
+.instalar ol { margin: 8px 0 0; padding-left: 1.2em; font-size: 0.875rem; }
+.instalar li { margin-bottom: 5px; }
+.instalar b { color: var(--tinta); font-weight: 600; }
+/* El ícono de Compartir, metido en la frase. Que se vea el dibujo exacto que hay
+   que buscar vale más que cualquier descripción: "el cuadrito con la flecha"
+   obliga a traducir palabras a un dibujo, y ahí es donde la gente se pierde. */
+.instalar svg { vertical-align: -3px; margin: 0 1px; }
+/* El aviso de por qué importa. Es la única parte que no se puede resumir: sin
+   ella, "instálala" suena a capricho del que hizo la app. */
+.instalar .aviso {
+  margin-top: 10px; font-size: 0.8125rem; color: var(--tinta-3); line-height: 1.4;
+}
+.instalar-botones {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
+}
+/* El texto del botón verde va en color de papel y no en blanco fijo: en modo
+   oscuro el verde se aclara y un blanco encima quedaría ilegible. */
+.instalar-accion {
+  background: var(--verde); color: var(--papel); border: 0; border-radius: 9px;
+  padding: 10px 16px; font-size: 0.875rem; font-weight: 600; font-family: inherit;
+}
+.instalar-secundario {
+  background: transparent; color: var(--tinta); border: 1px solid var(--linea-alta);
+  border-radius: 9px; padding: 10px 14px; font-size: 0.875rem; font-family: inherit;
+}
+.instalar-luego {
+  background: transparent; border: 0; color: var(--tinta-3);
+  font-size: 0.8125rem; font-family: inherit; padding: 10px 4px; margin-left: auto;
+}
+
 h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
              text-transform: uppercase; color: var(--tinta-3);
              margin: 24px 0 9px 2px; }
@@ -489,6 +536,19 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
      SECCIÓN I — Pantalla: SEMANA (la principal)
      ====================================================================== -->
 <section id="p-semana">
+  <!-- Primero en la pantalla porque es lo primero que hay que hacer. Debajo de
+       las métricas no lo leería nadie: quien no ha instalado la app tampoco
+       tiene métricas que mirar todavía. -->
+  <div class="instalar oculto" id="instalar">
+    <div class="etiqueta" id="inst-titulo"></div>
+    <div id="inst-cuerpo"></div>
+    <div class="instalar-botones">
+      <button class="instalar-accion oculto" id="inst-btn" onclick="instalarAhora()"></button>
+      <button class="instalar-secundario oculto" id="inst-copiar" onclick="copiarDireccion()"></button>
+      <button class="instalar-luego" id="inst-luego" onclick="ahoraNo()"></button>
+    </div>
+  </div>
+
   <div class="cabecera">
     <span class="lugar" id="lugar"></span>
     <button class="hoy oculto" id="btn-hoy" data-t="hoy" onclick="irAHoy()">Hoy</button>
@@ -798,6 +858,25 @@ const TEXTOS = {
     semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
     letrasDias: ['L','M','X','J','V','S','D'],
 
+    // Aviso de instalación
+    instTitulo: 'Instala la app',
+    instIOS: 'Se abre como una app normal, sin la barra del navegador.',
+    instPaso1a: 'Toca',
+    instPaso1b: 'en la barra de Safari (abajo del todo).',
+    instPaso2: 'Baja y toca <b>«Añadir a pantalla de inicio»</b> (en inglés, <b>Add to Home Screen</b>).',
+    instPaso3: 'Toca <b>«Añadir»</b> arriba a la derecha. Listo.',
+    instBoton: 'Instalar la app',
+    instAndroid: 'Se abre como una app normal, sin la barra del navegador.',
+    instOtro: 'Estás viendo la app dentro de otra aplicación (WhatsApp, Instagram…) y desde aquí no se puede instalar. Copia la dirección y ábrela en <b>Safari</b>.',
+    instCopiar: 'Copiar dirección',
+    instCopiada: '¡Copiada!',
+    instCopiarMal: 'No se pudo copiar sola. Esta es la dirección:',
+    instLuego: 'Ahora no',
+    /* Este es el texto que hace que el banner no se lea como un capricho. Sin
+       él, "instálala" es una molestia; con él, es la diferencia entre conservar
+       tus turnos y perderlos. */
+    instAviso: 'Importante: sin instalar, el teléfono puede borrar tus turnos si pasas una semana sin abrir la app.',
+
     // Métricas y su explicación
     mHoras: 'Horas',        nHoras: 'Suma de la duración de cada turno.',
     mPorHora: 'Por hora',   nPorHora: 'Todo lo que te llevas ÷ horas trabajadas.',
@@ -932,6 +1011,22 @@ const TEXTOS = {
     rolesEnAjustes: 'This shift has no tip-out. If your restaurant does share tips, add the roles in Settings.',
 
     trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
+    // Install prompt
+    instTitulo: 'Install the app',
+    instIOS: 'It opens like a normal app, with no browser bar.',
+    instPaso1a: 'Tap',
+    instPaso1b: 'in the Safari bar (at the very bottom).',
+    instPaso2: 'Scroll down and tap <b>Add to Home Screen</b>.',
+    instPaso3: 'Tap <b>Add</b> in the top right. Done.',
+    instBoton: 'Install the app',
+    instAndroid: 'It opens like a normal app, with no browser bar.',
+    instOtro: 'You are viewing the app inside another application (WhatsApp, Instagram…) and it cannot be installed from here. Copy the address and open it in <b>Safari</b>.',
+    instCopiar: 'Copy address',
+    instCopiada: 'Copied!',
+    instCopiarMal: 'Could not copy it. Here is the address:',
+    instLuego: 'Not now',
+    instAviso: 'Important: without installing, your phone may delete your shifts if you go a week without opening the app.',
+
     idioma: 'Language', apariencia: 'Appearance',
     ayudantesTipout: 'Support staff and tip-out', agregarRol: '+ Add role',
     sobreVentas: 'Percentage of shift sales. With everyone:',
@@ -1794,6 +1889,168 @@ function borrarTodo() {
  * `data-ph="clave"` recibe su placeholder. Así no hay que ir elemento por
  * elemento desde el código: se marca en el HTML y esta función se encarga.
  */
+/* ============================================================================
+   SECCIÓN S2 — El aviso de instalación
+   ----------------------------------------------------------------------------
+   Por qué existe: en iPhone no hay forma de mostrar un botón de instalar. Apple
+   no implementa el evento `beforeinstallprompt` y no hay señales de que vaya a
+   hacerlo, así que el único camino es Compartir → Añadir a pantalla de inicio,
+   a mano, y alguien tiene que explicarlo. Ese alguien es esta sección, y no Kev
+   por WhatsApp.
+
+   Y no es opcional: Safari borra los datos de un sitio web tras 7 días sin
+   abrirlo. Una app instalada en la pantalla de inicio lleva su propio contador y
+   queda fuera de esa regla. Traducido: quien la use sin instalar y se vaya de
+   vacaciones vuelve sin turnos.
+   ========================================================================== */
+
+/* El permiso que da Android para abrir el diálogo de instalación. En iPhone
+   nunca llega y se queda en null: ahí está toda la diferencia entre las dos
+   plataformas. */
+let promptInstalar = null;
+
+/* "Ahora no" vive en memoria y NO se guarda a propósito. Al cerrar la app se
+   olvida y el aviso vuelve. Suena insistente y lo es: lo que está en juego es
+   perder turnos ya registrados, y el aviso desaparece para siempre en cuanto se
+   instala. Guardarlo tendría además un final ridículo — se guardaría en el mismo
+   almacenamiento que el teléfono borra a los 7 días. */
+let instalarOculto = false;
+
+window.addEventListener('beforeinstallprompt', e => {
+  // Sin esto, Chrome muestra su propia barrita abajo y perdemos el control de
+  // cuándo y dónde se pide.
+  e.preventDefault();
+  promptInstalar = e;
+  // Se repinta solo el banner y no la app entera: el evento puede llegar en
+  // cualquier momento, y un pintar() completo con el formulario abierto cierra
+  // el teclado y le borra a alguien lo que estaba escribiendo.
+  pintarBanner();
+});
+
+window.addEventListener('appinstalled', () => {
+  promptInstalar = null;
+  pintarBanner();
+});
+
+/** ¿Se está viendo desde la pantalla de inicio y no desde el navegador? */
+function estaInstalada() {
+  // Se pregunta por el modo en que se abrió la ventana, NO por el userAgent. El
+  // userAgent dice qué teléfono es; esto dice desde dónde se abrió, que es la
+  // pregunta real. `navigator.standalone` es la versión vieja de Apple y sigue
+  // haciendo falta para los iPhone que no se han actualizado.
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+
+function esIOS() {
+  const ua = navigator.userAgent;
+  // El iPad moderno miente y se presenta como un Mac. Se le pilla porque un Mac
+  // de verdad no tiene pantalla táctil con varios dedos.
+  return /iPhone|iPad|iPod/i.test(ua)
+      || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * ¿Está abierta dentro de otra app (WhatsApp, Instagram) en vez de en Safari?
+ *
+ * Este era el fallo garantizado del piloto: le pasas el enlace a un compañero
+ * por WhatsApp, él lo toca, WhatsApp abre su propio navegador de dentro — que NO
+ * tiene "Añadir a pantalla de inicio" — y te escribe diciendo que no le aparece
+ * la opción. Se detecta porque esos navegadores de dentro no ponen la palabra
+ * Safari en su identificación; Chrome y Firefox de iPhone sí la ponen.
+ */
+function enNavegadorDeOtraApp() {
+  return esIOS() && !/Safari/i.test(navigator.userAgent);
+}
+
+function ahoraNo() {
+  instalarOculto = true;
+  pintarBanner();
+}
+
+function instalarAhora() {
+  if (!promptInstalar) return;
+  promptInstalar.prompt();
+  // El permiso es de un solo uso: una vez mostrado el diálogo ya no sirve, y
+  // guardarlo para volver a usarlo daría un botón que no hace nada.
+  promptInstalar = null;
+  pintarBanner();
+}
+
+function copiarDireccion() {
+  const boton = document.getElementById('inst-copiar');
+  const url = location.href.split('#')[0];
+  // Copiar toca el portapapeles, que está fuera de la página: puede fallar sin
+  // que el código tenga nada malo (permisos, navegador viejo). Si falla, se
+  // enseña la dirección en un aviso, que sirve igual porque se puede leer y
+  // escribir a mano. Lo que no puede pasar es que el botón no haga nada.
+  try {
+    navigator.clipboard.writeText(url).then(() => {
+      boton.textContent = t('instCopiada');
+      setTimeout(() => { boton.textContent = t('instCopiar'); }, 2000);
+    }).catch(() => alert(t('instCopiarMal') + '\n\n' + url));
+  } catch (e) {
+    alert(t('instCopiarMal') + '\n\n' + url);
+  }
+}
+
+/* El dibujo del botón Compartir de iPhone. `currentColor` hace que siga al color
+   del texto y funcione igual en claro y en oscuro sin dos versiones. */
+const ICONO_COMPARTIR =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M12 15V3"/><path d="m8 7 4-4 4 4"/>' +
+  '<path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+
+function pintarBanner() {
+  const caja   = document.getElementById('instalar');
+  const cuerpo = document.getElementById('inst-cuerpo');
+  const btn    = document.getElementById('inst-btn');
+  const copiar = document.getElementById('inst-copiar');
+  const luego  = document.getElementById('inst-luego');
+  if (!caja) return;
+
+  const enAndroid = /Android/i.test(navigator.userAgent);
+  // En un ordenador no se enseña nada: nadie va a instalar esto en un portátil y
+  // a Kev le saldría el aviso cada vez que la prueba en el Mac.
+  const vale = !estaInstalada() && !instalarOculto
+            && (esIOS() || (enAndroid && promptInstalar));
+
+  caja.classList.toggle('oculto', !vale);
+  if (!vale) return;
+
+  document.getElementById('inst-titulo').textContent = t('instTitulo');
+  btn.textContent    = t('instBoton');
+  copiar.textContent = t('instCopiar');
+  luego.textContent  = t('instLuego');
+
+  /* Se usa innerHTML porque los pasos llevan negritas y un dibujo dentro de la
+     frase. Es seguro aquí y solo aquí: todo lo que entra son textos fijos
+     nuestros. El día que uno de estos textos venga de algo que escriba el
+     usuario, hay que volver a textContent. */
+  if (promptInstalar) {
+    // Android: hay botón de verdad, un toque y ya. Sobran las instrucciones.
+    cuerpo.innerHTML = '<p>' + t('instAndroid') + '</p>'
+                     + '<p class="aviso">' + t('instAviso') + '</p>';
+    btn.classList.remove('oculto');
+    copiar.classList.add('oculto');
+  } else if (enNavegadorDeOtraApp()) {
+    cuerpo.innerHTML = '<p>' + t('instOtro') + '</p>'
+                     + '<p class="aviso">' + t('instAviso') + '</p>';
+    btn.classList.add('oculto');
+    copiar.classList.remove('oculto');
+  } else {
+    cuerpo.innerHTML =
+      '<p>' + t('instIOS') + '</p><ol>'
+      + '<li>' + t('instPaso1a') + ' ' + ICONO_COMPARTIR + ' ' + t('instPaso1b') + '</li>'
+      + '<li>' + t('instPaso2') + '</li>'
+      + '<li>' + t('instPaso3') + '</li>'
+      + '</ol><p class="aviso">' + t('instAviso') + '</p>';
+    btn.classList.add('oculto');
+    copiar.classList.add('oculto');
+  }
+}
+
 function traducirEstaticos() {
   document.querySelectorAll('[data-t]').forEach(el => {
     el.textContent = t(el.dataset.t);
@@ -1829,6 +2086,12 @@ function pintar() {
     .toggle('activa', pantalla === 'ajustes' || pantalla === 'ayuda');
 
   if (pantalla === 'semana')     pintarSemana();
+  /* Sin condición a propósito: el banner vive dentro de la sección de la semana,
+     que ya se esconde sola cuando estás en otra pantalla. Meterlo dentro del if
+     de arriba funcionaría hoy, pero ataría el banner a una condición que no es
+     suya sino de la sección que lo contiene, y el día que se mueva de sitio
+     dejaría de actualizarse sin dar ningún error. */
+  pintarBanner();
   if (pantalla === 'turno')      pintarTurno();
   if (pantalla === 'ajustes')    pintarAjustes();
   if (pantalla === 'bienvenida') pintarBienvenida();
