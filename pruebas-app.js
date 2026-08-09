@@ -600,6 +600,55 @@ ok('sin roles configurados avisa en vez de fallar', texto('chips').includes('Aju
    escribir está prohibido. Antes esto rompía la función a la mitad sin decir
    nada y el turno desaparecía. Es el fallo más caro que puede tener la app.
    ========================================================================== */
+/* ==========================================================================
+   Comparar o no con la semana anterior.
+
+   Se apagan los "+$147" de colores, no las barras de los días: aquellas
+   comparan dentro de la misma semana y no llevan juicio de valor.
+   ========================================================================== */
+grupo('Comparar con la semana anterior');
+
+/* El estado se monta aquí entero en vez de heredarlo del grupo anterior. Las
+   pruebas de datos corruptos que corren más arriba dejan la lista de turnos
+   vacía, y una prueba que depende de en qué orden se ejecutan las demás falla
+   sola el día que alguien mueve un bloque. */
+run(`datos.configurado = true;
+     datos.prefs.comparar = true;
+     datos.turnos = [
+       { id: 'ahora',  fecha: '2026-08-06', ventas: 0, efectivo: 100,
+         tarjeta: 100, entrada: '17:00', salida: '23:00', tarifaHora: 0, tipOut: 0 },
+       { id: 'previo', fecha: '2026-07-30', ventas: 0, efectivo: 50,
+         tarjeta: 50, entrada: '17:00', salida: '22:00', tarifaHora: 0, tipOut: 0 }
+     ];
+     guardar(); irAHoy(); irA('semana');`);
+
+// Esta semana 200, la pasada 100: la diferencia es +$100.
+ok('viene encendido de fábrica', D().prefs.comparar === true);
+ok('y se ve la comparación', texto('contra-semana').includes('que la semana pasada'));
+ok('con la diferencia calculada', texto('contra-semana').includes('+$100.00'));
+ok('y deltas en las métricas', texto('metricas').includes('+$50'));
+
+d.getElementById('a-comparar').checked = false;
+run("cambiarComparar(); irA('semana');");
+ok('apagado desaparece la comparación',
+   !texto('contra-semana').includes('que la semana pasada'));
+ok('y los deltas de las métricas', !texto('metricas').includes('+$50'));
+/* Lo que NO puede desaparecer: el resumen de turnos y horas es un dato útil,
+   no una comparación. Quitarlo dejaría la línea vacía. */
+ok('pero el resumen de turnos y horas se queda',
+   texto('contra-semana').includes('1 turno') && texto('contra-semana').includes('6 h'));
+ok('y el total de la semana no se toca', texto('total-semana') === '$200.00');
+/* Las barras comparan dentro de la misma semana, sin colores ni juicio: esas
+   se quedan pase lo que pase. */
+ok('las barras de los días siguen ahí',
+   dias().filter(x => x.querySelectorAll('.barra').length === 1).length === 1);
+ok('queda guardado', JSON.parse(almacen.tipsControl).prefs.comparar === false);
+
+d.getElementById('a-comparar').checked = true;
+run("cambiarComparar(); irA('semana');");
+ok('encenderlo la devuelve', texto('contra-semana').includes('+$100.00'));
+
+
 grupo('La Ayuda');
 run("irA('ajustes')");
 run("irA('ayuda')");

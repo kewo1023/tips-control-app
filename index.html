@@ -618,6 +618,11 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
   <h2 class="seccion" data-t="apariencia">Apariencia</h2>
   <div class="tarjeta">
+    <label class="check" style="margin:0 0 15px">
+      <input type="checkbox" id="a-comparar" onchange="cambiarComparar()">
+      <span data-t="verComparaciones">Comparar con la semana anterior</span>
+    </label>
+
     <div class="segmentado" id="temas"></div>
     <p class="etiqueta" style="margin:15px 0 8px" data-t="tamanoLetra">Tamaño de la letra</p>
     <div class="segmentado" id="escalas"></div>
@@ -853,6 +858,7 @@ const TEXTOS = {
     faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
     sumarSueldo: 'Sumar el sueldo por hora al total',
     sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
+    verComparaciones: 'Comparar con la semana anterior',
     tamanoLetra: 'Tamaño de la letra',
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
 
@@ -955,6 +961,7 @@ const TEXTOS = {
     faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
     sumarSueldo: 'Add hourly wage to the total',
     sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
+    verComparaciones: 'Compare with last week',
     tamanoLetra: 'Text size',
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
 
@@ -1053,7 +1060,7 @@ let datos = {
   // posibles, inflar es el peor: un número que te favorece no lo cuestiona
   // nadie.
   prefs: { masEstadisticas: false, tema: 'auto', idioma: 'es',
-           contarSueldo: false, escala: 'normal' }
+           contarSueldo: false, escala: 'normal', comparar: true }
 };
 
 const TEMAS = [
@@ -1172,7 +1179,7 @@ function cargar() {
     // `prefs`, y sin esta línea el primer toque al botón de estadísticas
     // reventaría contra un `undefined`.
     datos.prefs = { masEstadisticas: false, tema: 'auto', idioma: 'es',
-                    contarSueldo: false, escala: 'normal',
+                    contarSueldo: false, escala: 'normal', comparar: true,
                     ...(datos.prefs || {}) };
 
     // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
@@ -1352,6 +1359,19 @@ function cambiarEscala(id) {
  * turnos guardados. Encenderlo y apagarlo cien veces deja los datos igual que
  * al principio, porque las dos cifras se calculan al vuelo desde lo mismo.
  */
+/**
+ * Mostrar o no las diferencias contra la semana anterior.
+ *
+ * Apaga los "+$147" de colores: el de debajo del total y el de cada métrica.
+ * No toca las barras de los días, que comparan dentro de la misma semana y no
+ * llevan juicio de valor.
+ */
+function cambiarComparar() {
+  datos.prefs.comparar = !!document.getElementById('a-comparar').checked;
+  guardar();
+  pintar();
+}
+
 function cambiarContarSueldo() {
   datos.prefs.contarSueldo = !!document.getElementById('a-contar-sueldo').checked;
   guardar();
@@ -1884,12 +1904,24 @@ function pintarSemana() {
   const anteriores = diasDeLaSemana(sumarDias(lunes, -7));
   const rAnterior = resumir(datos.turnos.filter(x => anteriores.includes(x.fecha)));
   const cifrasAnterior = cifrasPrincipales(rAnterior, conSueldo);
-  const hayAnterior = rAnterior.turnos > 0;
+  /* Se compara si hay con qué **y** si la persona quiere.
+     El nombre dice las dos cosas a propósito: se llamaba `hayAnterior`, y
+     colgarle de tapadillo una preferencia a una variable que solo hablaba de
+     datos deja a la siguiente persona buscando media hora por qué no salen los
+     números aunque la semana pasada esté llena.
+
+     Por qué se puede apagar: una comparación no es un dato neutro. Terminas un
+     martes flojo, abres la app a apuntar tus $80 y lo primero que lees es
+     "−$147 que la semana pasada" en rojo. Quien lleva las cuentas justas no lee
+     ahí un dato, lee un reproche, y la app deja de ser un cuaderno para
+     convertirse en un jefe. Las barras de los días se quedan: comparan dentro
+     de la misma semana, sin juicio y sin colores. */
+  const mostrarComparacion = rAnterior.turnos > 0 && !!datos.prefs.comparar;
 
   const resumenTurnos = `${r.turnos} ${plural(r.turnos, 'turno', 'turnos')}`
                       + ` · ${r.horas} h`;
   const contra = document.getElementById('contra-semana');
-  if (!hayAnterior) {
+  if (!mostrarComparacion) {
     contra.textContent = r.turnos === 0 ? t('sinTurnos') : resumenTurnos;
   } else {
     const dif = redondear(cifras.total - cifrasAnterior.total);
@@ -1914,7 +1946,7 @@ function pintarSemana() {
   const metrica = (claveEtiqueta, valor, actual, previo, formato,
                    sentido, claveNota) => {
     let delta = '';
-    if (hayAnterior) {
+    if (mostrarComparacion) {
       const dif = redondear(actual - previo);
       if (dif !== 0) {
         const clase = sentido === 'plano' ? 'plano' : (dif > 0 ? 'sube' : 'baja');
@@ -2083,6 +2115,7 @@ function pintarAjustes() {
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
   document.getElementById('a-contar-sueldo').checked = !!datos.prefs.contarSueldo;
+  document.getElementById('a-comparar').checked = !!datos.prefs.comparar;
 
   const idiomas = document.getElementById('idiomas');
   idiomas.innerHTML = '';
