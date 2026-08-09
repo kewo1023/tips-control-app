@@ -70,6 +70,22 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(__dirname + '/logica.js', 'utf8'), ctx);
 vm.runInContext(script, ctx);
 
+/* --- El diálogo, en las pruebas ------------------------------------------
+   La app ya no usa `alert()` ni `confirm()` del navegador: tiene los suyos
+   (`avisar` y `preguntar`), porque los del sistema salen con el nombre del
+   repositorio en el título y iOS deja apagarlos con "Eliminar cuadros de
+   diálogo", lo que dejaba mudos también los avisos de error.
+
+   Aquí se sustituyen por versiones que apuntan lo que se dijo y aceptan
+   siempre, que es justo lo que hacían antes `alert: m => avisos.push(m)` y
+   `confirm: () => true`. Se guardan los originales para poder probar el
+   diálogo de verdad más abajo: si solo se probara la versión de mentira, las
+   pruebas dirían que todo va bien aunque el diálogo no se dibujara nunca. */
+const avisarReal = ctx.avisar;
+const preguntarReal = ctx.preguntar;
+ctx.avisar = m => { avisos.push(String(m)); };
+ctx.preguntar = (m, alAceptar) => { avisos.push(String(m)); alAceptar(); };
+
 /* --- Ayudas para escribir las pruebas ------------------------------------ */
 const d = document;
 const run = s => vm.runInContext(s, ctx);
@@ -799,11 +815,62 @@ almacen.tipsControl = JSON.stringify({ configurado: true,
 run('cargar()');
 avisos.length = 0;
 run('borrarTodo()');
-/* `confirm` siempre dice que sí en las pruebas, así que este camino es el de
-   quien acepta el respaldo: se exporta y se le pide volver a pulsar. */
-ok('ofrece el respaldo antes de borrar', avisos.length === 1);
+/* `preguntar` siempre dice que sí en las pruebas, así que este camino es el de
+   quien acepta el respaldo: se exporta y se le pide volver a pulsar.
+   Ahora `avisos` recoge dos cosas y no una: la pregunta y el aviso. Antes las
+   preguntas no se apuntaban porque `confirm()` solo devolvía verdadero o falso
+   y no pasaba por aquí; que ahora queden registradas es lo que permite
+   comprobar que la oferta del respaldo se hace, y no solo que se exportó. */
+ok('ofrece el respaldo antes de borrar', avisos.length === 2);
 ok('y no borra todavía', D().turnos.length === 1);
-ok('el aviso explica que hay que volver a tocar', avisos[0].includes('vuelve a tocar'));
+ok('el aviso explica que hay que volver a tocar', avisos[1].includes('vuelve a tocar'));
+
+
+/* El diálogo de verdad, no el de mentira que usan las pruebas de arriba.
+   Se llama a `cerrarDialogo()` en vez de tocar los botones porque el mini-dom
+   solo dispara los `onclick` que se asignan desde el código, y los de este
+   diálogo están escritos en el HTML. Que el botón esté bien cableado se ve en
+   el teléfono; lo que se prueba aquí es lo que decide: qué se muestra, qué
+   botones salen y qué pasa al contestar. */
+grupo('El diálogo propio');
+const dlg = () => d.getElementById('dialogo');
+
+avisarReal('Se acabó el espacio');
+ok('un aviso abre el diálogo', !dlg()._classes.has('oculto'));
+ok('con el texto que se le pasó', texto('dialogo-texto') === 'Se acabó el espacio');
+ok('y sin botón de cancelar',
+   d.getElementById('dialogo-cancelar')._classes.has('oculto'));
+ok('el botón dice Entendido', texto('dialogo-ok') === 'Entendido');
+run('cerrarDialogo(true)');
+ok('al aceptar se cierra', dlg()._classes.has('oculto'));
+
+let hizo = false;
+preguntarReal('¿Borro el turno?', () => { hizo = true; });
+ok('una pregunta sí ofrece cancelar',
+   !d.getElementById('dialogo-cancelar')._classes.has('oculto'));
+run('cerrarDialogo(false)');
+ok('cancelar no ejecuta nada', hizo === false);
+ok('y cierra igual', dlg()._classes.has('oculto'));
+
+// El caso contrario: sin él, la prueba de arriba pasaría también si el diálogo
+// no ejecutara NUNCA lo que se le pide.
+preguntarReal('¿Borro el turno?', () => { hizo = true; });
+run('cerrarDialogo(true)');
+ok('aceptar sí lo ejecuta', hizo === true);
+
+/* La cola. Es el motivo por el que hay cola: al borrar todos los datos, si la
+   exportación falla salta su aviso y justo después el que dice que el respaldo
+   se descargó. Sin cola, el segundo pisaba al primero y el error desaparecía
+   antes de que nadie llegara a leerlo. */
+avisarReal('Primero');
+avisarReal('Segundo');
+ok('con dos avisos se muestra el primero', texto('dialogo-texto') === 'Primero');
+run('cerrarDialogo(true)');
+ok('y al cerrarlo aparece el segundo', texto('dialogo-texto') === 'Segundo');
+ok('sin quedarse oculto por el camino', !dlg()._classes.has('oculto'));
+run('cerrarDialogo(true)');
+ok('cerrado el último, se cierra del todo', dlg()._classes.has('oculto'));
+ok('y no queda ninguno en la cola', run('colaDialogos').length === 0);
 
 
 /* ========================================================================== */

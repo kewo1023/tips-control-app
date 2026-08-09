@@ -529,6 +529,52 @@ button { font-family: inherit; }
   font-size: 0.8125rem; font-family: inherit; padding: 10px 4px; margin-left: auto;
 }
 
+/* ============================================================================
+   SECCIÓN A3 — El diálogo propio
+   ----------------------------------------------------------------------------
+   Sustituye a `alert()` y `confirm()` del navegador por dos motivos, y el
+   segundo es el importante:
+
+   1. Los del navegador salen con el título "kewo1023.github.io dice", que no se
+      puede quitar y hace que la app parezca una página web cualquiera.
+   2. Cuando una página muestra varios seguidos, iOS ofrece "Eliminar cuadros de
+      diálogo". Quien marque esa casilla —después de borrar tres roles, por
+      ejemplo— apaga sin saberlo TODOS los avisos de la app, incluido "no se
+      pudo guardar tu turno". La regla número uno de este proyecto es que nada
+      falle en silencio, y esa casilla la desactivaba con dos toques. Un <div>
+      nuestro no se puede apagar.
+   ========================================================================== */
+.dialogo-fondo {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.dialogo {
+  background: var(--tarjeta);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%; max-width: 340px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+/* `pre-line` respeta los saltos de línea del texto: varios mensajes llevan el
+   detalle técnico en una segunda línea, y sin esto salía todo pegado. */
+.dialogo-texto {
+  margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--tinta);
+  white-space: pre-line;
+}
+.dialogo-botones { display: flex; gap: 8px; margin-top: 18px; }
+.dialogo-botones button {
+  flex: 1; border-radius: 9px; padding: 12px 10px;
+  font-size: 0.9375rem; font-family: inherit; font-weight: 600;
+}
+.dialogo-ok { background: var(--verde); color: var(--papel); border: 0; }
+.dialogo-cancelar {
+  background: transparent; color: var(--tinta);
+  border: 1px solid var(--linea-alta); font-weight: 500;
+}
+
 h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
              text-transform: uppercase; color: var(--tinta-3);
              margin: 24px 0 9px 2px; }
@@ -811,6 +857,20 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
      escondidos que mantener sincronizados. -->
 <div class="globo oculto" id="globo" role="tooltip"></div>
 
+<!-- El diálogo. Uno solo para toda la app: se le cambia el texto y los botones.
+     Va fuera de las pantallas para que se vea desde cualquiera de ellas. -->
+<div class="dialogo-fondo oculto" id="dialogo" role="dialog" aria-modal="true">
+  <div class="dialogo">
+    <p class="dialogo-texto" id="dialogo-texto"></p>
+    <div class="dialogo-botones">
+      <button class="dialogo-cancelar oculto" id="dialogo-cancelar"
+              onclick="cerrarDialogo(false)"></button>
+      <button class="dialogo-ok" id="dialogo-ok"
+              onclick="cerrarDialogo(true)"></button>
+    </div>
+  </div>
+</div>
+
 <nav class="pestanas" id="pestanas">
   <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
   <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
@@ -861,6 +921,9 @@ const TEXTOS = {
     mejorDia: 'Mejor día', conEn: 'con', enHoras: 'en',
     semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
     letrasDias: ['L','M','X','J','V','S','D'],
+
+    // Los botones del diálogo
+    dlgAceptar: 'Aceptar', dlgCancelar: 'Cancelar', dlgEntendido: 'Entendido',
 
     // Aviso de instalación
     instTitulo: 'Instala la app',
@@ -1019,6 +1082,9 @@ const TEXTOS = {
     rolesEnAjustes: 'This shift has no tip-out. If your restaurant does share tips, add the roles in Settings.',
 
     trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
+    // Dialog buttons
+    dlgAceptar: 'OK', dlgCancelar: 'Cancel', dlgEntendido: 'Got it',
+
     // Install prompt
     instTitulo: 'Install the app',
     instIOS: 'It opens like a normal app, with no browser bar.',
@@ -1272,7 +1338,7 @@ function guardar() {
     return true;
   } catch (e) {
     console.error('No se pudo guardar:', e);
-    alert(t('noSeGuardo'));
+    avisar(t('noSeGuardo'));
     return false;
   }
 }
@@ -1354,7 +1420,7 @@ function cargar() {
       console.error('Tampoco se pudo apartar la copia:', e2);
     }
 
-    alert(t('datosIlegibles'));
+    avisar(t('datosIlegibles'));
   }
 }
 
@@ -1638,11 +1704,11 @@ function guardarTurno() {
   const turno = leer();
 
   if (!turno.entrada || !turno.salida) {
-    alert(t('faltaHora'));
+    avisar(t('faltaHora'));
     return;
   }
   if (turno.ventas === 0 && turno.efectivo === 0 && turno.tarjeta === 0) {
-    alert(t('faltaPlata'));
+    avisar(t('faltaPlata'));
     return;
   }
 
@@ -1666,11 +1732,12 @@ function borrarTurno() {
   if (!turno) return;
   // La fecha en la pregunta evita el peor error posible aquí: borrar el día
   // equivocado por haber tocado la celda de al lado.
-  if (!confirm(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}. `
-             + `${t('confirmBorrarTurno2')}`)) return;
-  datos.turnos = datos.turnos.filter(x => x.id !== turno.id);
-  guardar();
-  irA('semana');
+  preguntar(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}. `
+          + `${t('confirmBorrarTurno2')}`, () => {
+    datos.turnos = datos.turnos.filter(x => x.id !== turno.id);
+    guardar();
+    irA('semana');
+  });
 }
 
 
@@ -1729,7 +1796,7 @@ function terminarBienvenida() {
 
   // Sin `.trim()` un campo con solo espacios pasaría la comprobación.
   if (val('b-tarifa').trim() === '') {
-    alert(t('faltaTarifa'));
+    avisar(t('faltaTarifa'));
     // `focus` puede no existir según dónde corra esto (el navegador de mentira
     // de las pruebas no lo tiene). Que falte no puede tumbar la validación.
     const campo = document.getElementById('b-tarifa');
@@ -1741,7 +1808,7 @@ function terminarBienvenida() {
   const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
 
   if (!sinTipOut && suma === 0) {
-    alert(t('faltaTipout'));
+    avisar(t('faltaTipout'));
     return;
   }
 
@@ -1777,11 +1844,12 @@ function cambiarRol(id, campo, valor) {
 function borrarRol(id) {
   const rol = datos.roles.find(r => r.id === id);
   if (!rol) return;
-  if (!confirm(t('confirmQuitarRol').replace('%s', rol.nombre))) return;
-  datos.roles = datos.roles.filter(r => r.id !== id);
-  rolesActivos = rolesActivos.filter(n => n !== rol.nombre);
-  guardar();
-  pintar();
+  preguntar(t('confirmQuitarRol').replace('%s', rol.nombre), () => {
+    datos.roles = datos.roles.filter(r => r.id !== id);
+    rolesActivos = rolesActivos.filter(n => n !== rol.nombre);
+    guardar();
+    pintar();
+  });
 }
 
 
@@ -1838,55 +1906,61 @@ function importar(evento) {
     try {
       leido = JSON.parse(e.target.result);
     } catch (err) {
-      alert(t('archivoMalo'));
+      avisar(t('archivoMalo'));
       return;
     }
     // Un JSON válido no es un respaldo válido. Cualquier archivo .json del
     // teléfono se abre sin error y no tiene nada que ver con esta app.
     if (!leido || typeof leido !== 'object' || !Array.isArray(leido.turnos)) {
-      alert(t('archivoMalo'));
+      avisar(t('archivoMalo'));
       return;
     }
 
-    if (!confirm(rellenar(t('confirmImportar'), leido.turnos.length))) return;
-
-    // Todo lo que sigue va dentro de una red de seguridad.
-    //
-    // Sin ella, cualquier fallo aquí dentro corta la función en seco y la app
-    // se queda callada: la persona acepta el aviso, no ve nada, y no tiene
-    // forma de saber si sus datos entraron, entraron a medias o no entraron.
-    // Un error que se anuncia es un problema; un error mudo es un misterio, y
-    // los misterios con dinero de por medio destruyen la confianza en la app.
-    try {
-      const fusion = fusionarTurnos(datos.turnos, leido.turnos);
-      datos = { ...datos, ...leido, turnos: fusion.turnos };
-      datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
-      guardar();
-      irA('semana');
-
-      // Decir exactamente qué pasó. Un "listo" deja a la persona sin saber si
-      // faltó algo, y con dinero de por medio esa duda no se va sola.
-      let resumen = rellenar(t('resumenImportar'), fusion.agregados, fusion.omitidos);
-      if (fusion.invalidos > 0) {
-        resumen += ' ' + rellenar(t('resumenIgnorados'), fusion.invalidos);
-      }
-      alert(resumen);
-
-    } catch (err) {
-      // El detalle técnico va detrás del mensaje humano a propósito: al
-      // usuario le sobra, pero es lo único que permite arreglarlo cuando te
-      // manda la captura por WhatsApp un domingo.
-      console.error('Falló la importación:', err);
-      alert(t('errorImportar') + '\n\n' + (err && err.message ? err.message : err));
-    }
+    preguntar(rellenar(t('confirmImportar'), leido.turnos.length),
+              () => hacerImportacion(leido));
   };
 
   // Si el archivo no se puede ni leer (se quitó la memoria, permisos), hay que
   // decirlo: sin esto la app se queda callada y parece que no pasó nada.
-  lector.onerror = () => alert(t('archivoMalo'));
+  lector.onerror = () => avisar(t('archivoMalo'));
 
   lector.readAsText(archivo);
   evento.target.value = '';
+}
+
+/* La importación de verdad, separada de la lectura del archivo.
+   Antes iba dentro del `if (confirm(...))`. Ahora que la respuesta llega más
+   tarde, esto es lo que se ejecuta cuando la persona acepta. */
+function hacerImportacion(leido) {
+  // Todo lo que sigue va dentro de una red de seguridad.
+  //
+  // Sin ella, cualquier fallo aquí dentro corta la función en seco y la app
+  // se queda callada: la persona acepta el aviso, no ve nada, y no tiene
+  // forma de saber si sus datos entraron, entraron a medias o no entraron.
+  // Un error que se anuncia es un problema; un error mudo es un misterio, y
+  // los misterios con dinero de por medio destruyen la confianza en la app.
+  try {
+    const fusion = fusionarTurnos(datos.turnos, leido.turnos);
+    datos = { ...datos, ...leido, turnos: fusion.turnos };
+    datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
+    guardar();
+    irA('semana');
+
+    // Decir exactamente qué pasó. Un "listo" deja a la persona sin saber si
+    // faltó algo, y con dinero de por medio esa duda no se va sola.
+    let resumen = rellenar(t('resumenImportar'), fusion.agregados, fusion.omitidos);
+    if (fusion.invalidos > 0) {
+      resumen += ' ' + rellenar(t('resumenIgnorados'), fusion.invalidos);
+    }
+    avisar(resumen);
+
+  } catch (err) {
+    // El detalle técnico va detrás del mensaje humano a propósito: al
+    // usuario le sobra, pero es lo único que permite arreglarlo cuando te
+    // manda la captura por WhatsApp un domingo.
+    console.error('Falló la importación:', err);
+    avisar(t('errorImportar') + '\n\n' + (err && err.message ? err.message : err));
+  }
 }
 
 function borrarTodo() {
@@ -1900,18 +1974,34 @@ function borrarTodo() {
      lee distinto. */
   const cuantos = datos.turnos.length;
 
-  if (cuantos > 0 && confirm(rellenar(t('ofrecerRespaldo'), cuantos))) {
-    exportar();
-    // No seguimos de largo: la descarga tarda un instante y encadenar el
-    // borrado sin confirmar dejaría a alguien sin datos y sin archivo.
-    alert(t('respaldoAntesDeBorrar'));
+  if (cuantos > 0) {
+    preguntar(rellenar(t('ofrecerRespaldo'), cuantos),
+      () => {
+        exportar();
+        // No seguimos de largo: la descarga tarda un instante y encadenar el
+        // borrado sin confirmar dejaría a alguien sin datos y sin archivo.
+        avisar(t('respaldoAntesDeBorrar'));
+      },
+      // Rechazar el respaldo no cancela el borrado: sigue con las dos
+      // confirmaciones. Es el único sitio de la app donde cancelar continúa.
+      () => confirmarBorrado(cuantos));
     return;
   }
 
-  if (!confirm(rellenar(t('confirmBorrarTodo'), cuantos))) return;
-  if (!confirm(t('confirmBorrarTodo2'))) return;
-  localStorage.removeItem(CLAVE);
-  location.reload();
+  confirmarBorrado(cuantos);
+}
+
+/* Las dos confirmaciones van una dentro de la otra en vez de seguidas.
+   Con `confirm()` se podían escribir en dos líneas porque cada una congelaba la
+   app hasta tener respuesta; aquí la segunda pregunta no existe hasta que la
+   primera se contesta, y por eso vive dentro de ella. */
+function confirmarBorrado(cuantos) {
+  preguntar(rellenar(t('confirmBorrarTodo'), cuantos), () => {
+    preguntar(t('confirmBorrarTodo2'), () => {
+      localStorage.removeItem(CLAVE);
+      location.reload();
+    });
+  });
 }
 
 
@@ -1926,6 +2016,96 @@ function borrarTodo() {
  * `data-ph="clave"` recibe su placeholder. Así no hay que ir elemento por
  * elemento desde el código: se marca en el HTML y esta función se encarga.
  */
+/* ============================================================================
+   SECCIÓN S1 — El diálogo propio
+   ----------------------------------------------------------------------------
+   Dos funciones sustituyen a `alert()` y `confirm()`:
+
+     avisar('texto')             — un botón, solo informa.
+     preguntar('texto', hacer)   — dos botones; `hacer` corre solo si acepta.
+
+   Por qué `preguntar` recibe una función y no devuelve verdadero o falso, como
+   hacía `confirm()`: el del navegador congelaba la página entera hasta que
+   contestabas, y por eso podía devolver la respuesta en el momento. Un diálogo
+   hecho con HTML no congela nada —la app sigue viva por debajo—, así que cuando
+   `preguntar` termina de dibujarse todavía no hay respuesta que devolver. Lo
+   que se le pasa es qué hacer DESPUÉS, y eso se guarda hasta que la persona
+   toque un botón.
+
+   En Excel es la diferencia entre una fórmula que te da el resultado al pulsar
+   Intro y una macro que se queda esperando a que elijas algo de un menú.
+   ========================================================================== */
+
+/* Los mensajes que están esperando su turno.
+   Hace falta porque hay sitios que lanzan dos seguidos: al borrar todos los
+   datos, si la exportación falla salta su aviso y justo después el que dice que
+   el respaldo ya se descargó. Con `avisar()` no se notaba porque el navegador
+   los ponía en fila solo; aquí, sin cola, el segundo pisaba al primero y el
+   error desaparecía de la pantalla antes de que nadie lo leyera. */
+let colaDialogos = [];
+
+/**
+ * Muestra un mensaje con un solo botón. Reemplaza a `avisar()`.
+ * @param {string} texto Lo que se le dice a la persona.
+ */
+function avisar(texto) {
+  colaDialogos.push({ texto: String(texto), alAceptar: null });
+  if (colaDialogos.length === 1) mostrarDialogo();
+}
+
+/**
+ * Pregunta algo con dos botones. Reemplaza a `confirm()`.
+ * @param {string} texto La pregunta.
+ * @param {Function} alAceptar Qué hacer si dice que sí.
+ * @param {Function} [alCancelar] Qué hacer si dice que no. Casi nunca hace
+ *   falta, porque cancelar suele significar "deja las cosas como estaban". Se
+ *   usa en un solo sitio: al borrar todos los datos, rechazar el respaldo no
+ *   cancela el borrado, sigue con él.
+ */
+function preguntar(texto, alAceptar, alCancelar) {
+  colaDialogos.push({
+    texto: String(texto), alAceptar: alAceptar, alCancelar: alCancelar
+  });
+  if (colaDialogos.length === 1) mostrarDialogo();
+}
+
+function mostrarDialogo() {
+  const actual = colaDialogos[0];
+  if (!actual) return;
+
+  const caja     = document.getElementById('dialogo');
+  const cancelar = document.getElementById('dialogo-cancelar');
+  const ok       = document.getElementById('dialogo-ok');
+
+  document.getElementById('dialogo-texto').textContent = actual.texto;
+  // Una pregunta lleva salida; un aviso no la necesita, y un botón "Cancelar"
+  // en un mensaje que solo informa deja pensando que se puede cancelar algo.
+  const esPregunta = typeof actual.alAceptar === 'function';
+  cancelar.classList.toggle('oculto', !esPregunta);
+  cancelar.textContent = t('dlgCancelar');
+  ok.textContent = esPregunta ? t('dlgAceptar') : t('dlgEntendido');
+  caja.classList.remove('oculto');
+}
+
+/**
+ * Cierra el diálogo de arriba de la cola y sigue con el siguiente.
+ * @param {boolean} acepto Si tocó el botón de aceptar.
+ */
+function cerrarDialogo(acepto) {
+  const actual = colaDialogos.shift();
+  document.getElementById('dialogo').classList.add('oculto');
+
+  /* El orden importa: primero se quita de la cola y se esconde, y solo después
+     se ejecuta lo que había que hacer. Si se ejecutara antes, una acción que
+     abre otro diálogo —importar un respaldo lo hace— se encontraría el suyo
+     todavía en la cola y se quedaría esperando a un diálogo ya cerrado. */
+  if (colaDialogos.length > 0) mostrarDialogo();
+  if (!actual) return;
+  const seguir = acepto ? actual.alAceptar : actual.alCancelar;
+  if (typeof seguir === 'function') seguir();
+}
+
+
 /* ============================================================================
    SECCIÓN S2 — El aviso de instalación
    ----------------------------------------------------------------------------
@@ -2039,9 +2219,9 @@ function copiarDireccion() {
     navigator.clipboard.writeText(url).then(() => {
       boton.textContent = t('instCopiada');
       setTimeout(() => { boton.textContent = t('instCopiar'); }, 2000);
-    }).catch(() => alert(t('instCopiarMal') + '\n\n' + url));
+    }).catch(() => avisar(t('instCopiarMal') + '\n\n' + url));
   } catch (e) {
-    alert(t('instCopiarMal') + '\n\n' + url);
+    avisar(t('instCopiarMal') + '\n\n' + url);
   }
 }
 
@@ -2672,7 +2852,7 @@ if (faltan.length > 0) {
   // errores raros en sitios que no tienen nada que ver con la causa, y a quien
   // los sufre le parecen datos perdidos.
   console.error('logica.js llegó incompleto. Faltan:', faltan);
-  alert(t('appAMedias'));
+  avisar(t('appAMedias'));
 } else {
   lunes = lunesDeLaSemana(hoy());
   // Quien nunca ha configurado la app no entra por la semana: entra por la
