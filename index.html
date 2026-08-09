@@ -428,6 +428,38 @@ button { font-family: inherit; }
 .segmentado button.activo { border-color: var(--verde); color: var(--verde);
                             font-weight: 600; }
 
+/* ----------------------------------------------------------------------------
+   La Ayuda: preguntas que se despliegan.
+
+   Van cerradas de entrada. Ocho respuestas abiertas a la vez son un muro de
+   texto que nadie lee; ocho preguntas cortas se recorren con la vista en dos
+   segundos y se abre solo la que hacía falta.
+
+   La flecha gira en lugar de cambiar de símbolo: el mismo elemento moviéndose
+   se entiende como "esto se abre", mientras que un + que se convierte en − hay
+   que interpretarlo.
+   -------------------------------------------------------------------------- */
+.ayuda-item { border-bottom: 1px solid var(--linea); }
+.ayuda-item:last-child { border-bottom: none; }
+
+.ayuda-p {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 14px 2px;
+  background: none; border: none; text-align: left;
+  color: var(--tinta); font-family: inherit; font-size: 0.875rem;
+  font-weight: 500; line-height: 1.35; cursor: pointer;
+}
+.ayuda-p .flecha {
+  flex: none; color: var(--tinta-3); font-size: 0.75rem;
+  transition: transform .15s;
+}
+.ayuda-item.abierta .flecha { transform: rotate(90deg); }
+
+.ayuda-r {
+  padding: 0 2px 15px; margin: -4px 0 0;
+  font-size: 0.8125rem; line-height: 1.55; color: var(--tinta-2);
+}
+
 /* Texto de introducción de la bienvenida. Es el único párrafo largo de la app:
    se lee una vez en la vida y explica por qué le estamos pidiendo datos antes
    de dejarle hacer nada. Pedir sin explicar es lo que hace que la gente
@@ -614,8 +646,32 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
            onchange="importar(event)">
   </div>
 
+  <button class="secundario" data-t="verAyuda"
+          onclick="irA('ayuda')">Cómo funciona la app</button>
+
   <button class="secundario riesgo" data-t="borrarTodo"
           onclick="borrarTodo()">Borrar todos los datos</button>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN K3 — Pantalla: AYUDA
+
+     Esto sustituye al tour guiado que se había pensado. Un tour se ancla a
+     elementos concretos de la pantalla, así que cada rediseño lo rompe en
+     silencio, y esta app va a seguir cambiando. Además dura más que aprender
+     sola una app de dos pantallas y una acción.
+
+     Texto plano que se relee cuando haga falta, no se rompe al mover un botón y
+     no estorba a quien no lo busca. Los globos (i) de cada métrica siguen
+     siendo la ayuda puntual; esto es el nivel de arriba.
+     ====================================================================== -->
+<section id="p-ayuda" class="oculto">
+  <div class="barra-titulo">
+    <span class="fecha" data-t="ayuda">Cómo funciona</span>
+    <button data-t="cerrar" onclick="irA('ajustes')">Cerrar</button>
+  </div>
+  <div class="tarjeta" id="ayuda-lista"></div>
 </section>
 
 
@@ -799,6 +855,33 @@ const TEXTOS = {
     sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
     tamanoLetra: 'Tamaño de la letra',
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
+
+    verAyuda: 'Cómo funciona la app',
+    ayuda: 'Cómo funciona',
+
+    ayudaRegistrarP: '¿Cómo registro un turno?',
+    ayudaRegistrarR: 'Toca el día en la fila de arriba, la de los siete cuadros. Se abre el formulario de ese día: pones la hora de entrada y la de salida, las ventas, y cuánto te dieron en efectivo y en tarjeta. Marcas qué ayudantes trabajaron y guardas. No hay que escribir la fecha en ningún sitio: la fecha es el día que tocaste.',
+
+    ayudaCorregirP: '¿Puedo corregir un turno ya guardado?',
+    ayudaCorregirR: 'Sí. Toca otra vez ese mismo día y se abre con lo que habías puesto. Cambias lo que haga falta y guardas. No se crea un turno nuevo: se corrige el que había. Ahí mismo está el botón para borrarlo, si lo registraste por error.',
+
+    ayudaTipoutP: '¿Cómo calcula la app el tip-out?',
+    ayudaTipoutR: 'Cada ayudante tiene un porcentaje fijo, y ese porcentaje se aplica sobre las VENTAS del turno, no sobre tus propinas. Si esa noche no hubo bakery, su porcentaje simplemente no se cuenta y los demás no reciben más por eso. Por eso hay que marcar quién trabajó: la app suma solo los porcentajes de los que marcaste. Los porcentajes se cambian en Ajustes.',
+
+    ayudaSueldoP: '¿Por qué el total no suma mi sueldo por hora?',
+    ayudaSueldoR: 'Porque el sueldo por hora no te lo llevas esa noche: llega en el cheque, más tarde y con las retenciones ya descontadas. Sumarlo al total del turno da un número que nunca ves entero. Igual se sigue mostrando, debajo del total y sin sumarse, para que sepas cuánto va al cheque. Si prefieres verlo sumado, se enciende en Ajustes.',
+
+    ayudaPorHoraP: '¿Qué significa "por hora"?',
+    ayudaPorHoraR: 'Lo que te dejó cada hora que estuviste ahí: el total dividido entre las horas trabajadas. Es el número que sirve para decidir qué turnos te convienen. Un turno de $150 en 4 horas te deja más que uno de $180 en 8, aunque el segundo suene mejor.',
+
+    ayudaFuturoP: '¿Por qué no puedo pasar a la semana que viene?',
+    ayudaFuturoR: 'Porque todavía no ha pasado y no hay nada que apuntar. La flecha se activa cuando llega. Hacia atrás sí puedes ir todo lo que quieras.',
+
+    ayudaCambioPctP: 'Me cambiaron los porcentajes del tip-out, ¿qué hago?',
+    ayudaCambioPctR: 'Cámbialos en Ajustes y listo. Los turnos que ya tienes guardados NO se recalculan: cada uno se queda con el porcentaje que se pagó ese día, que es lo correcto. Lo nuevo empieza a usar el porcentaje nuevo.',
+
+    ayudaDatosP: '¿Dónde están mis datos? ¿Y si cambio de teléfono?',
+    ayudaDatosR: 'Tus turnos están guardados solo en este teléfono, no en internet: nadie más los ve, pero tampoco hay copia en ningún lado. Por eso, cada cierto tiempo entra en Ajustes y toca Exportar: se descarga un archivo con todo. Guárdalo donde no lo pierdas. En el teléfono nuevo instalas la app y tocas Importar. Si no exportas y pierdes el teléfono, los turnos no se pueden recuperar.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control. Busca el que empieza por "tips-control-" y termina en .json, el que sale al tocar Exportar. Tus turnos no se han tocado.',
     datosIlegibles: 'No se pudieron leer los datos guardados en este teléfono. Se guardó una copia de lo que había por si se puede recuperar, así que NO borres la app ni sus datos. Manda una captura de esta pantalla antes de seguir usándola.',
     noSeGuardo: 'No se pudo guardar en este teléfono. Puede que no quede espacio, o que estés navegando en modo privado. Lo que escribiste sigue en pantalla: apúntalo en otro sitio antes de cerrar, o libera espacio y vuelve a intentarlo.',
@@ -874,6 +957,33 @@ const TEXTOS = {
     sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
     tamanoLetra: 'Text size',
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
+
+    verAyuda: 'How the app works',
+    ayuda: 'How it works',
+
+    ayudaRegistrarP: 'How do I log a shift?',
+    ayudaRegistrarR: 'Tap the day in the row of seven boxes at the top. That day’s form opens: enter your clock-in and clock-out times, the sales, and how much you got in cash and on cards. Mark which helpers worked and save. You never type a date anywhere: the date is the day you tapped.',
+
+    ayudaCorregirP: 'Can I fix a shift I already saved?',
+    ayudaCorregirR: 'Yes. Tap that same day again and it opens with what you entered. Change what you need and save. It does not create a second shift: it corrects the one that was there. The button to delete it is right there too, if you logged it by mistake.',
+
+    ayudaTipoutP: 'How does the app calculate tip-out?',
+    ayudaTipoutR: 'Each helper has a fixed percentage, and that percentage applies to the SALES of the shift, not to your tips. If there was no bakery that night, their percentage simply isn’t counted, and the others don’t get more because of it. That’s why you mark who worked: the app only adds up the percentages you marked. You change the percentages in Settings.',
+
+    ayudaSueldoP: 'Why doesn’t the total include my hourly wage?',
+    ayudaSueldoR: 'Because you don’t take the hourly wage home that night: it arrives in your paycheck, later and with withholdings already taken out. Adding it to the shift total gives you a number you never see whole. It’s still shown, below the total and not added in, so you know what goes to the check. If you prefer it added, you can turn that on in Settings.',
+
+    ayudaPorHoraP: 'What does "per hour" mean?',
+    ayudaPorHoraR: 'What each hour you were there left you: the total divided by hours worked. It’s the number that tells you which shifts are worth taking. A $150 shift in 4 hours leaves you more than a $180 one in 8, even though the second sounds better.',
+
+    ayudaFuturoP: 'Why can’t I move to next week?',
+    ayudaFuturoR: 'Because it hasn’t happened yet and there’s nothing to log. The arrow turns on when it arrives. You can go back as far as you like.',
+
+    ayudaCambioPctP: 'My tip-out percentages changed. What do I do?',
+    ayudaCambioPctR: 'Change them in Settings and that’s it. Shifts you already saved are NOT recalculated: each one keeps the percentage that was actually paid that day, which is the correct behavior. New shifts start using the new percentage.',
+
+    ayudaDatosP: 'Where is my data? What if I change phones?',
+    ayudaDatosR: 'Your shifts are saved only on this phone, not on the internet: nobody else sees them, but there’s no copy anywhere either. So every once in a while go to Settings and tap Export: it downloads a file with everything. Keep it somewhere safe. On the new phone you install the app and tap Import. If you don’t export and you lose the phone, the shifts cannot be recovered.',
     archivoMalo: 'That file doesn’t look like a Tips Control backup. Look for the one starting with "tips-control-" and ending in .json, the one you get from Export. Your shifts were not touched.',
     datosIlegibles: 'The data saved on this phone could not be read. A copy of what was there has been kept in case it can be recovered, so do NOT delete the app or its data. Send a screenshot of this message before you keep using it.',
     noSeGuardo: 'Could not save on this phone. You may be out of space, or browsing in private mode. What you typed is still on screen: write it down somewhere before closing, or free up space and try again.',
@@ -951,6 +1061,14 @@ const TEMAS = [
   { id: 'claro', clave: 'temaClaro' },
   { id: 'oscuro', clave: 'temaOscuro' }
 ];
+
+/* Las preguntas de la Ayuda, en orden de cuándo se hacen.
+   Las tres primeras son las de la primera semana ("¿cómo registro un turno?");
+   las últimas son las que aparecen meses después ("me cambiaron los
+   porcentajes", "cambié de teléfono"). Ordenarlas por antigüedad del usuario y
+   no por tema hace que casi nadie tenga que bajar hasta el final. */
+const AYUDA = ['registrar', 'corregir', 'tipout', 'sueldo',
+               'porHora', 'futuro', 'cambioPct', 'datos'];
 
 /* Tres tamaños, no un deslizador.
    Un deslizador tiene infinitas posiciones y no se pueden probar todas: alguna
@@ -1676,6 +1794,7 @@ function pintar() {
   document.getElementById('p-ajustes').classList.toggle('oculto', pantalla !== 'ajustes');
   document.getElementById('p-bienvenida').classList
     .toggle('oculto', pantalla !== 'bienvenida');
+  document.getElementById('p-ayuda').classList.toggle('oculto', pantalla !== 'ayuda');
 
   // Con el formulario abierto se esconden las pestañas: estás en medio de una
   // tarea y saltar a otra sección solo sirve para perder lo que escribiste.
@@ -1684,12 +1803,16 @@ function pintar() {
   document.getElementById('pestanas').classList
     .toggle('oculto', pantalla === 'turno' || pantalla === 'bienvenida');
   document.getElementById('tab-semana').classList.toggle('activa', pantalla === 'semana');
-  document.getElementById('tab-ajustes').classList.toggle('activa', pantalla === 'ajustes');
+  // La Ayuda cuelga de Ajustes, así que su pestaña sigue marcada mientras se
+  // lee. Dejarla apagada haría parecer que te fuiste de la app.
+  document.getElementById('tab-ajustes').classList
+    .toggle('activa', pantalla === 'ajustes' || pantalla === 'ayuda');
 
   if (pantalla === 'semana')     pintarSemana();
   if (pantalla === 'turno')      pintarTurno();
   if (pantalla === 'ajustes')    pintarAjustes();
   if (pantalla === 'bienvenida') pintarBienvenida();
+  if (pantalla === 'ayuda')      pintarAyuda();
 }
 
 /* --- La semana --- */
@@ -2052,6 +2175,56 @@ function pintarListaRoles(idLista, idTotal, apagada) {
 
   const suma = datos.roles.reduce((s, r) => s + (Number(r.porcentaje) || 0), 0);
   document.getElementById(idTotal).textContent = redondear(suma) + '%';
+}
+
+/* --- Ayuda --- */
+
+/* Qué pregunta está abierta. No se guarda: al volver a entrar se empieza con
+   todas cerradas, que es como se lee mejor. */
+let ayudaAbierta = '';
+
+function abrirAyuda(clave) {
+  // Tocar la que ya está abierta la cierra. Y solo una a la vez: con varias
+  // abiertas hay que desplazarse para encontrar la siguiente pregunta, que es
+  // justo lo que el plegado venía a evitar.
+  ayudaAbierta = (ayudaAbierta === clave) ? '' : clave;
+  pintar();
+}
+
+function pintarAyuda() {
+  const lista = document.getElementById('ayuda-lista');
+  lista.innerHTML = '';
+
+  AYUDA.forEach(clave => {
+    const mayus = clave.charAt(0).toUpperCase() + clave.slice(1);
+    const abierta = ayudaAbierta === clave;
+
+    const item = document.createElement('div');
+    item.className = 'ayuda-item' + (abierta ? ' abierta' : '');
+
+    const boton = document.createElement('button');
+    boton.className = 'ayuda-p';
+    boton.onclick = () => abrirAyuda(clave);
+
+    const texto = document.createElement('span');
+    texto.textContent = t('ayuda' + mayus + 'P');
+
+    const flecha = document.createElement('span');
+    flecha.className = 'flecha';
+    flecha.textContent = '›';
+
+    boton.append(texto, flecha);
+    item.appendChild(boton);
+
+    if (abierta) {
+      const respuesta = document.createElement('p');
+      respuesta.className = 'ayuda-r';
+      respuesta.textContent = t('ayuda' + mayus + 'R');
+      item.appendChild(respuesta);
+    }
+
+    lista.appendChild(item);
+  });
 }
 
 /* --- Bienvenida --- */

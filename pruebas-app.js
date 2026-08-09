@@ -600,6 +600,52 @@ ok('sin roles configurados avisa en vez de fallar', texto('chips').includes('Aju
    escribir está prohibido. Antes esto rompía la función a la mitad sin decir
    nada y el turno desaparecía. Es el fallo más caro que puede tener la app.
    ========================================================================== */
+grupo('La Ayuda');
+run("irA('ajustes')");
+run("irA('ayuda')");
+ok('se abre desde Ajustes', !d.getElementById('p-ayuda')._classes.has('oculto'));
+ok('la pestaña de Ajustes sigue marcada',
+   d.getElementById('tab-ajustes')._classes.has('activa'));
+ok('lista las ocho preguntas', d.querySelectorAll('#ayuda-lista .ayuda-item').length === 8);
+ok('todas empiezan cerradas',
+   d.querySelectorAll('#ayuda-lista .ayuda-r').length === 0);
+
+run("abrirAyuda('tipout')");
+ok('tocar una pregunta muestra su respuesta',
+   d.querySelectorAll('#ayuda-lista .ayuda-r').length === 1);
+ok('y es la que se tocó', texto('ayuda-lista').includes('VENTAS del turno'));
+
+/* Solo una abierta a la vez: con varias, hay que desplazarse para encontrar la
+   siguiente pregunta, que es justo lo que el plegado venía a evitar. */
+run("abrirAyuda('datos')");
+ok('abrir otra cierra la anterior',
+   d.querySelectorAll('#ayuda-lista .ayuda-r').length === 1);
+run("abrirAyuda('datos')");
+ok('tocar la abierta la cierra',
+   d.querySelectorAll('#ayuda-lista .ayuda-r').length === 0);
+
+/* Las claves se arman con texto ('ayuda' + Registrar + 'P'), así que una
+   pregunta mal escrita no da error: pinta "undefined" y nadie se entera hasta
+   que un compañero manda la captura. */
+const clavesAyuda = run('AYUDA');
+const faltantes = clavesAyuda.filter(c => {
+  const M = c.charAt(0).toUpperCase() + c.slice(1);
+  return !run(`t('ayuda${M}P')`) || !run(`t('ayuda${M}R')`);
+});
+ok('ninguna pregunta se quedó sin texto', faltantes.length === 0);
+
+run('cambiarIdioma("en")');
+const faltantesEn = clavesAyuda.filter(c => {
+  const M = c.charAt(0).toUpperCase() + c.slice(1);
+  return !run(`TEXTOS.en['ayuda${M}P']`) || !run(`TEXTOS.en['ayuda${M}R']`);
+});
+ok('ni en inglés', faltantesEn.length === 0);
+run('cambiarIdioma("es")');
+
+run("irA('ajustes')");
+ok('cerrar devuelve a Ajustes', !d.getElementById('p-ajustes')._classes.has('oculto'));
+
+
 grupo('El teléfono no deja guardar');
 
 run("datos.configurado = true; datos.turnos = []; irA('semana')");
