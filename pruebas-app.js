@@ -885,6 +885,28 @@ ok('cerrado el último, se cierra del todo', dlg()._classes.has('oculto'));
 ok('y no queda ninguno en la cola', run('colaDialogos').length === 0);
 
 
+/* La versión y el pie de Ajustes.
+
+   La versión está escrita en dos archivos —`VERSION` en sw.js y `VERSION_APP`
+   en index.html— porque no hay forma de que uno lea al otro. Esta prueba es lo
+   único que impide que se separen: si se separan, el pie de Ajustes le diría a
+   alguien que tiene la v17 cuando en realidad tiene la v19, y la primera
+   pregunta del soporte por WhatsApp pasaría a dar una respuesta falsa. Un dato
+   equivocado es peor que ningún dato, porque nadie lo vuelve a comprobar. */
+grupo('La versión y el pie de Ajustes');
+const versionSW = (fs.readFileSync(__dirname + '/sw.js', 'utf8')
+  .match(/const VERSION = '([^']+)'/) || [])[1];
+ok('sw.js declara su versión', !!versionSW);
+ok('y coincide con la que enseña la app', run('VERSION_APP') === versionSW);
+
+run('irA("ajustes")');
+ok('el pie enseña la versión', texto('pie-legal').includes(versionSW));
+ok('y el aviso de derechos', texto('pie-legal').includes('Kevin Rincón'));
+run("datos.prefs.idioma = 'en'; pintar()");
+ok('también en inglés', texto('pie-legal').includes('All rights reserved'));
+run("datos.prefs.idioma = 'es'; pintar()");
+
+
 /* La pantalla de instalación.
    Se prueba de última porque cambia el navegador de mentira por uno que dice
    ser un iPhone, y dejarlo así confundiría a cualquier prueba de más abajo. */

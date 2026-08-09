@@ -1,5 +1,6 @@
 /* ============================================================================
    SERVICE WORKER — Tips Control
+   Copyright (c) 2026 Kevin Rincón. Todos los derechos reservados. Ver LICENSE.
    ----------------------------------------------------------------------------
    Un service worker es un ayudante que se queda instalado en el teléfono y se
    mete en medio de cada petición de archivos. Sirve para dos cosas:
@@ -11,9 +12,14 @@
       súbele el número a VERSION antes de publicar.
       Si no lo haces, el iPhone puede seguir mostrando la versión vieja y vas a
       creer que tu cambio no se subió. Es el error número uno de este montaje.
+
+      Y súbelo TAMBIÉN en `VERSION_APP`, dentro de index.html, que es la que se
+      ve en Ajustes. No hay forma de que un archivo lea al otro, así que son dos
+      sitios. Para que no se queden distintos sin que nadie lo note, hay una
+      prueba en `pruebas-app.js` que los compara y falla si no coinciden.
    ========================================================================== */
 
-const VERSION = 'v17';
+const VERSION = 'v18';
 const CACHE = 'tips-control-' + VERSION;
 
 const ARCHIVOS = [

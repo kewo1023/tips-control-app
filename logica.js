@@ -1,5 +1,7 @@
 /* ============================================================================
    LÓGICA — Tips Control
+   Copyright (c) 2026 Kevin Rincón. Todos los derechos reservados.
+   Uso permitido de la app; copiar o modificar el código, no. Ver LICENSE.
    ----------------------------------------------------------------------------
    Aquí viven SOLO los cálculos. Ni una línea que toque la pantalla, ni una que
    guarde datos. ¿Por qué separado?

@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+  Tips Control — control de propinas por turno para meseros.
+  Copyright (c) 2026 Kevin Rincón. Todos los derechos reservados.
+
+  El código es visible porque una aplicación web tiene que enviarse al
+  navegador para funcionar, no porque sea de uso libre. Se puede leer y se
+  puede usar la app; copiarlo, modificarlo o volver a publicarlo, no.
+  Condiciones completas en el archivo LICENSE del repositorio.
+  Permisos: kevin.rincon1023@gmail.com
+-->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -530,7 +540,7 @@ button { font-family: inherit; }
 }
 
 /* ============================================================================
-   SECCIÓN A4 — La pantalla de instalación
+   SECCIÓN A3 — La pantalla de instalación
    ----------------------------------------------------------------------------
    Ocupa la pantalla entera y va ANTES que la bienvenida. El motivo no es
    estético: en iPhone, lo que se guarda en el navegador y lo que se guarda en
@@ -577,7 +587,7 @@ button { font-family: inherit; }
 }
 
 /* ============================================================================
-   SECCIÓN A3 — El diálogo propio
+   SECCIÓN A4 — El diálogo propio
    ----------------------------------------------------------------------------
    Sustituye a `alert()` y `confirm()` del navegador por dos motivos, y el
    segundo es el importante:
@@ -620,6 +630,14 @@ button { font-family: inherit; }
 .dialogo-cancelar {
   background: transparent; color: var(--tinta);
   border: 1px solid var(--linea-alta); font-weight: 500;
+}
+
+/* El pie de Ajustes. Deliberadamente discreto: es información que hay que poder
+   encontrar, no que haya que leer. */
+.pie {
+  margin: 30px 0 10px; text-align: center;
+  font-size: 0.75rem; line-height: 1.5; color: var(--tinta-3);
+  white-space: pre-line;
 }
 
 h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
@@ -814,6 +832,11 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
   <button class="secundario riesgo" data-t="borrarTodo"
           onclick="borrarTodo()">Borrar todos los datos</button>
+
+  <!-- El pie. Lleva la versión porque cuando alguien reporte un fallo por
+       WhatsApp, la primera pregunta va a ser si tiene la versión nueva, y hasta
+       ahora no había forma de que lo supiera ni él ni nadie. -->
+  <p class="pie" id="pie-legal"></p>
 </section>
 
 
@@ -1059,6 +1082,7 @@ const TEXTOS = {
     soloTelefono: 'Los datos viven solo en este teléfono. Exporta de vez en cuando.',
     exportar: 'Exportar', importar: 'Importar',
     borrarTodo: 'Borrar todos los datos',
+    pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. Todos los derechos reservados.',
     temaAuto: 'Automático', temaClaro: 'Claro', temaOscuro: 'Oscuro',
     miRestaurante: 'Mi restaurante', nuevoRol: 'Nuevo rol',
 
@@ -1186,6 +1210,7 @@ const TEXTOS = {
     soloTelefono: 'Your data lives only on this phone. Export it now and then.',
     exportar: 'Export', importar: 'Import',
     borrarTodo: 'Delete all data',
+    pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. All rights reserved.',
     temaAuto: 'Automatic', temaClaro: 'Light', temaOscuro: 'Dark',
     miRestaurante: 'My restaurant', nuevoRol: 'New role',
 
@@ -1278,6 +1303,12 @@ function rellenar(texto, ...valores) {
 }
 
 const CLAVE = 'tipsControl';
+
+/* La versión que se enseña en Ajustes. Tiene que ser la misma que la `VERSION`
+   de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
+   escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
+   prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
+const VERSION_APP = 'v18';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -2083,17 +2114,6 @@ function confirmarBorrado(cuantos) {
 
 
 /* ============================================================================
-   SECCIÓN T — Dibujar
-   ========================================================================== */
-
-/**
- * Traduce el texto que está escrito directamente en el HTML.
- *
- * Todo elemento con `data-t="clave"` recibe su texto, y todo elemento con
- * `data-ph="clave"` recibe su placeholder. Así no hay que ir elemento por
- * elemento desde el código: se marca en el HTML y esta función se encarga.
- */
-/* ============================================================================
    SECCIÓN S1 — El diálogo propio
    ----------------------------------------------------------------------------
    Dos funciones sustituyen a `alert()` y `confirm()`:
@@ -2421,6 +2441,17 @@ function pintarBanner() {
   copiar.classList.toggle('oculto', !paso.copiar);
 }
 
+/* ============================================================================
+   SECCIÓN T — Dibujar
+   ========================================================================== */
+
+/**
+ * Traduce el texto que está escrito directamente en el HTML.
+ *
+ * Todo elemento con `data-t="clave"` recibe su texto, y todo elemento con
+ * `data-ph="clave"` recibe su placeholder. Así no hay que ir elemento por
+ * elemento desde el código: se marca en el HTML y esta función se encarga.
+ */
 function traducirEstaticos() {
   document.querySelectorAll('[data-t]').forEach(el => {
     el.textContent = t(el.dataset.t);
@@ -2752,6 +2783,8 @@ function pintarRecibo() {
 
 /* --- Ajustes --- */
 function pintarAjustes() {
+  document.getElementById('pie-legal').textContent =
+    rellenar(t('pieDerechos'), VERSION_APP);
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
   document.getElementById('a-contar-sueldo').checked = !!datos.prefs.contarSueldo;
