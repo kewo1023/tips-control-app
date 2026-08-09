@@ -660,27 +660,6 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
 
 <!-- ==========================================================================
-     SECCIÓN K3 — Pantalla: AYUDA
-
-     Esto sustituye al tour guiado que se había pensado. Un tour se ancla a
-     elementos concretos de la pantalla, así que cada rediseño lo rompe en
-     silencio, y esta app va a seguir cambiando. Además dura más que aprender
-     sola una app de dos pantallas y una acción.
-
-     Texto plano que se relee cuando haga falta, no se rompe al mover un botón y
-     no estorba a quien no lo busca. Los globos (i) de cada métrica siguen
-     siendo la ayuda puntual; esto es el nivel de arriba.
-     ====================================================================== -->
-<section id="p-ayuda" class="oculto">
-  <div class="barra-titulo">
-    <span class="fecha" data-t="ayuda">Cómo funciona</span>
-    <button data-t="cerrar" onclick="irA('ajustes')">Cerrar</button>
-  </div>
-  <div class="tarjeta" id="ayuda-lista"></div>
-</section>
-
-
-<!-- ==========================================================================
      SECCIÓN K2 — Pantalla: BIENVENIDA
 
      Se ve una sola vez, la primera. Existe porque los valores por defecto de la
@@ -736,6 +715,27 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
   <button class="principal" data-t="empezar" style="margin-top:20px"
           onclick="terminarBienvenida()">Empezar</button>
+</section>
+
+
+<!-- ==========================================================================
+     SECCIÓN K3 — Pantalla: AYUDA
+
+     Esto sustituye al tour guiado que se había pensado. Un tour se ancla a
+     elementos concretos de la pantalla, así que cada rediseño lo rompe en
+     silencio, y esta app va a seguir cambiando. Además dura más que aprender
+     sola una app de dos pantallas y una acción.
+
+     Texto plano que se relee cuando haga falta, no se rompe al mover un botón y
+     no estorba a quien no lo busca. Los globos (i) de cada métrica siguen
+     siendo la ayuda puntual; esto es el nivel de arriba.
+     ====================================================================== -->
+<section id="p-ayuda" class="oculto">
+  <div class="barra-titulo">
+    <span class="fecha" data-t="ayuda">Cómo funciona</span>
+    <button data-t="cerrar" onclick="irA('ajustes')">Cerrar</button>
+  </div>
+  <div class="tarjeta" id="ayuda-lista"></div>
 </section>
 
 
