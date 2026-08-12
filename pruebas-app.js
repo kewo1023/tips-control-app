@@ -169,7 +169,12 @@ ok('sin nombre pone uno por defecto', D().trabajo.nombre.length > 0);
 /* Ahora el camino normal, que es el que deja el estado para el resto del
    archivo: se vuelve a la bienvenida y se configura con tip-out de verdad. */
 run(`datos.configurado = false;
-     datos.trabajo = { nombre: 'Mi restaurante', tarifaHora: 0 };
+     /* Se parte del objeto de fábrica, no de dos campos sueltos: montar a mano
+        un trabajo incompleto haría que las pruebas corrieran contra un estado
+        que la app de verdad nunca produce, y el código de los campos nuevos no
+        se ejecutaría nunca aquí. Ya pasó con tipOutEnEfectivo. */
+     datos.trabajo = { ...TRABAJO_POR_DEFECTO,
+                       nombre: 'Mi restaurante', tarifaHora: 0 };
      datos.roles = [
        { id: 'r1', nombre: 'Busser', porcentaje: 3 },
        { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
@@ -205,6 +210,17 @@ almacen.tipsControl = JSON.stringify({
 run('cargar()');
 ok('un usuario de antes no ve la bienvenida', D().configurado === true);
 
+/* El mismo perfil viejo sirve para vigilar la otra mitad del problema: su
+   `trabajo` guardado no trae `tipOutEnEfectivo`, porque el campo no existía
+   cuando lo guardó. `cargar()` mezcla superficialmente, así que ese `trabajo`
+   reemplaza al de fábrica ENTERO y el campo nuevo llegaría en `undefined` —que
+   se lee como "no"— dejando el descuento apagado para todo el que ya usa la
+   app, sin un solo error por ninguna parte. Es el mismo fallo que se comió
+   `comparar` el 9 de agosto. */
+ok('a un perfil viejo se le rellena el campo nuevo',
+   D().trabajo.tipOutEnEfectivo === true);
+ok('sin pisarle lo que ya tenía puesto', D().trabajo.nombre === 'De antes');
+
 almacen.tipsControl = JSON.stringify({
   turnos: [], trabajo: { nombre: '', tarifaHora: 12 }
 });
@@ -220,7 +236,12 @@ ok('quien no tiene ni turnos ni tarifa sí la ve', D().configurado === false);
 // Dejar el estado como lo esperan las pruebas siguientes.
 run(`datos.configurado = true;
      datos.turnos = [];
-     datos.trabajo = { nombre: 'Mi restaurante', tarifaHora: 0 };
+     /* Se parte del objeto de fábrica, no de dos campos sueltos: montar a mano
+        un trabajo incompleto haría que las pruebas corrieran contra un estado
+        que la app de verdad nunca produce, y el código de los campos nuevos no
+        se ejecutaría nunca aquí. Ya pasó con tipOutEnEfectivo. */
+     datos.trabajo = { ...TRABAJO_POR_DEFECTO,
+                       nombre: 'Mi restaurante', tarifaHora: 0 };
      datos.roles = [
        { id: 'r1', nombre: 'Busser', porcentaje: 3 },
        { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
@@ -239,6 +260,18 @@ ok('el rango es el de la semana del jueves 6', texto('rango') === '3 ago – 9 a
 ok('marca hoy una sola vez', dias().filter(x => x._classes.has('hoy')).length === 1);
 ok('hoy es el jueves (4ª casilla)', dias()[3]._classes.has('hoy'));
 ok('los 7 días empiezan vacíos', dias().filter(x => x._classes.has('vacio')).length === 7);
+
+/* El gris de día libre. Hoy es jueves 6, así que solo lunes, martes y miércoles
+   son días vacíos que YA pasaron. Los otros cuatro (hoy incluido) no se pintan:
+   un día que no ha llegado no es un día libre, y el gris lo afirmaría. */
+ok('solo los días vacíos ya pasados se pintan de hueco',
+   dias().filter(x => x._classes.has('pasado')).length === 3);
+ok('y son lunes, martes y miércoles',
+   [0, 1, 2].every(i => dias()[i]._classes.has('pasado')));
+ok('hoy no se pinta: todavía puede haber turno esta noche',
+   !dias()[3]._classes.has('pasado'));
+ok('ni los días que aún no han llegado',
+   [4, 5, 6].every(i => !dias()[i]._classes.has('pasado')));
 ok('no deja avanzar más allá de esta semana', d.getElementById('btn-siguiente').disabled);
 ok('el botón Hoy está oculto en la semana actual', d.getElementById('btn-hoy')._classes.has('oculto'));
 ok('muestra la pista de qué hacer', !d.getElementById('pista')._classes.has('oculto'));
@@ -260,6 +293,16 @@ grupo('Registrar el turno');
 set('f-entrada', '17:00'); set('f-salida', '23:00');
 set('f-ventas', '1200'); set('f-efectivo', '60'); set('f-tarjeta', '120');
 ok('el recibo descuenta el tip-out', texto('recibo').includes('$78.00'));
+
+/* La línea del efectivo neto, que es el dato que se necesita en este momento
+   exacto: estás cerrando el turno y decides si sacas billetes de la cartera.
+   A mano: efectivo 60 − tip-out 78 = −18. Esta noche pones $18 de tu bolsillo
+   aunque el turno cierre en $102 a favor, porque $120 se los llevó la tarjeta
+   y esos llegan en el cheque. */
+ok('el recibo dice cuánto efectivo queda de verdad',
+   texto('recibo').includes('Efectivo neto'));
+ok('y sale negativo cuando el tip-out se pasa',
+   texto('recibo').includes('-$18.00'));
 ok('el recibo muestra el sueldo de 6 h aparte', texto('recibo').includes('$60.00'));
 // 6 h · propinas 180 · tip-out 78 → 102. El sueldo (60) NO se suma.
 ok('el recibo cierra en las propinas netas', texto('recibo').includes('$102.00'));
@@ -313,10 +356,47 @@ ok('dice 2 turnos', texto('contra-semana').includes('2 turnos'));
 grupo('Estadísticas');
 ok('las esenciales son cuatro', cuantasMetricas('metricas') === 4);
 ok('incluye las horas de la semana', texto('metricas').includes('Horas'));
-ok('separa el efectivo', texto('metricas').includes('Efectivo'));
 ok('separa la tarjeta', texto('metricas').includes('Tarjeta'));
-ok('efectivo de la semana: $160', texto('metricas').includes('$160'));
 ok('tarjeta de la semana: $320', texto('metricas').includes('$320'));
+
+/* El efectivo, con el tip-out ya descontado.
+   A mano, con los dos turnos de esta semana:
+     jueves  efectivo  60 − tip-out 84.50 (6.5% de 1300) = −24.50
+     viernes efectivo 100 − tip-out 82.50 (5.5% de 1500) = +17.50
+                                                    neto =  −7
+   O sea: entre los dos días entregaste $167 de propina en billetes y solo
+   recibiste $160. Pusiste $7 de tu cartera. La cifra vieja decía "$160". */
+ok('la etiqueta avisa de que es el neto',
+   texto('metricas').includes('Efectivo neto'));
+ok('el efectivo de la semana ya lleva el tip-out descontado',
+   texto('metricas').includes('-$7'));
+ok('y no muestra el bruto', !texto('metricas').includes('$160'));
+
+/* Las partes tienen que seguir sumando el total, o el tip-out se estaría
+   restando dos veces: −7 + 320 = 313, que es el total de la semana. */
+ok('las partes siguen cuadrando con el total',
+   run('resumir(datos.turnos.filter(x => x.fecha >= "2026-08-03"))').efectivoNeto
+   + run('resumir(datos.turnos.filter(x => x.fecha >= "2026-08-03"))').tarjeta
+   === 313);
+
+/* El caso contrario, que es lo que hace que la casilla signifique algo: en un
+   restaurante donde el tip-out lo descuenta el cheque, el efectivo que te
+   llevaste esa noche fue el que recibiste, entero. Restarlo ahí sería un error
+   peor, porque los dos números seguirían sumando lo mismo y no se notaría. */
+d.getElementById('a-tipout-efectivo').checked = false;
+run("cambiarTipOutEnEfectivo(); irA('semana');");
+ok('apagada la casilla, vuelve el efectivo en bruto',
+   texto('metricas').includes('$160'));
+ok('y la etiqueta vuelve a ser Efectivo a secas',
+   !texto('metricas').includes('Efectivo neto'));
+ok('el total de la semana no se mueve en ningún caso',
+   texto('total-semana') === '$313.00');
+ok('queda guardado en el trabajo, no en las preferencias',
+   JSON.parse(almacen.tipsControl).trabajo.tipOutEnEfectivo === false);
+
+d.getElementById('a-tipout-efectivo').checked = true;
+run("cambiarTipOutEnEfectivo(); irA('semana');");
+ok('volver a encenderla devuelve el neto', texto('metricas').includes('-$7'));
 ok('las extras empiezan ocultas', d.getElementById('metricas-extras')._classes.has('oculto'));
 ok('el botón invita a abrirlas', texto('btn-mas') === 'Mostrar más estadísticas');
 run('alternarEstadisticas()');
@@ -954,6 +1034,127 @@ ok('quien ya salió sigue viendo el aviso en la semana',
 
 // Dejar el navegador de mentira como estaba.
 ctx.navigator.userAgent = '';
+
+
+/* ==========================================================================
+   Un día en que se perdió plata
+   --------------------------------------------------------------------------
+   El desastre que vigila este grupo no es una cuenta mal hecha: es un día de
+   trabajo que desaparece de la pantalla.
+
+   La celda decidía si había turno preguntando si el total daba cero. Cuando se
+   escribió eso, "no hay turno" y "el total es cero" eran la misma cosa. Dejaron
+   de serlo el día que un total pudo dar negativo: un turno con el tip-out por
+   encima de las propinas no da cero, pero tampoco da positivo, así que no
+   pintaba ni monto ni barra. Un día en que pusiste $30 de tu bolsillo se veía
+   igual que un día libre.
+   ========================================================================== */
+grupo('Un día con el total en negativo');
+
+const turnosAntes = run('JSON.stringify(datos.turnos)');
+
+/* Ventas altas y propinas flojas, que es como pasa de verdad: 6.5% de $2.000
+   son $130 de tip-out contra $100 de propinas. Neto: −$30. */
+run(`datos.turnos = [
+       { id: 'malanoche', fecha: '2026-08-06', ventas: 2000, efectivo: 50,
+         tarjeta: 50, entrada: '17:00', salida: '23:00', tarifaHora: 0,
+         tipOut: 130, tipoutDetalle: [] }
+     ];
+     guardar(); irAHoy(); irA('semana');`);
+
+ok('el día trabajado NO se marca como vacío', !dias()[3]._classes.has('vacio'));
+ok('pinta su monto en negativo', dias()[3].textContent.includes('-$30'));
+ok('y en rojo, que un −$30 en verde se lee al revés',
+   dias()[3].querySelectorAll('.monto.negativo').length === 1);
+ok('sin barra: no hubo nada que medir hacia arriba',
+   dias()[3].querySelectorAll('.barra').length === 0);
+ok('el total de la semana también va en negativo',
+   texto('total-semana') === '-$30.00');
+
+/* El caso contrario, sin el cual la prueba de arriba se podría engañar sola:
+   los días que de verdad están vacíos tienen que seguir vacíos y mudos. Si
+   alguien "arreglara" esto pintando el monto siempre, aquí saltaría. */
+ok('los otros seis días siguen vacíos',
+   dias().filter(x => x._classes.has('vacio')).length === 6);
+ok('y no muestran ninguna cifra', !dias()[0].textContent.includes('$'));
+
+/* El otro borde, y el más traicionero: un turno cuyo neto da exactamente $0.
+   Es justo el valor que devolvía un día sin turno, así que la condición vieja
+   no los podía distinguir ni en teoría. Trabajaste: tiene que verse. */
+run(`datos.turnos = [
+       { id: 'justito', fecha: '2026-08-06', ventas: 1000, efectivo: 0,
+         tarjeta: 65, entrada: '17:00', salida: '23:00', tarifaHora: 0,
+         tipOut: 65, tipoutDetalle: [] }
+     ];
+     guardar(); irA('semana');`);
+ok('un turno que cierra en $0 tampoco es un día vacío',
+   !dias()[3]._classes.has('vacio'));
+ok('y enseña el $0 en vez de callarse', dias()[3].textContent.includes('$0'));
+ok('el $0 no se pinta de rojo',
+   dias()[3].querySelectorAll('.monto.negativo').length === 0);
+
+/* Y el caso contrario del gris de día libre: un día pasado en el que SÍ se
+   trabajó no se hunde. Sin esta prueba, pintar de hueco los siete días pasaría
+   igual de verde que pintar solo los libres. */
+run(`datos.turnos = [
+       { id: 'lunes', fecha: '2026-08-03', ventas: 800, efectivo: 40,
+         tarjeta: 60, entrada: '17:00', salida: '23:00', tarifaHora: 0,
+         tipOut: 0, tipoutDetalle: [] }
+     ];
+     guardar(); irA('semana');`);
+ok('un día pasado con turno no se pinta de hueco',
+   !dias()[0]._classes.has('pasado'));
+ok('y tampoco de vacío', !dias()[0]._classes.has('vacio'));
+ok('los otros dos días pasados sí siguen huecos',
+   [1, 2].every(i => dias()[i]._classes.has('pasado')));
+
+/* Montos de cuatro cifras. La celda del día mide unos 48 puntos y recorta lo
+   que se sale, así que "$1,300" salía como "$1,30": no un número más pequeño,
+   un número distinto. Aquí no se puede comprobar que quepa —el mini-dom no
+   dibuja ni mide— pero sí que la app marque cuáles hay que encoger, que es la
+   decisión que se le puede escapar. Lo de que quepa se mira en el teléfono. */
+run(`datos.turnos = [
+       { id: 'gordo', fecha: '2026-08-03', ventas: 0, efectivo: 600,
+         tarjeta: 700, entrada: '17:00', salida: '23:00', tarifaHora: 0,
+         tipOut: 0, tipoutDetalle: [] },
+       { id: 'normal', fecha: '2026-08-04', ventas: 0, efectivo: 60,
+         tarjeta: 70, entrada: '17:00', salida: '23:00', tarifaHora: 0,
+         tipOut: 0, tipoutDetalle: [] }
+     ];
+     guardar(); irA('semana');`);
+ok('un monto de cuatro cifras se pinta entero', dias()[0].textContent.includes('$1,300'));
+ok('y se marca para encogerlo',
+   dias()[0].querySelectorAll('.monto.largo').length === 1);
+/* El contrario: si `largo` se pusiera siempre, la app entera se vería encogida
+   y la prueba de arriba pasaría igual. */
+ok('uno de tres cifras se deja en paz',
+   dias()[1].querySelectorAll('.monto.largo').length === 0);
+ok('y ese sí muestra $130', dias()[1].textContent.includes('$130'));
+
+/* Los dos contrarios de la línea del recibo. Sin uno de ellos, poner la línea
+   siempre pasaría igual de verde. */
+/* Este grupo monta también los roles: un grupo anterior los dejó vacíos, y sin
+   roles no puede haber tip-out, así que la prueba de abajo estaría comprobando
+   la ausencia de la línea por el motivo equivocado. */
+run(`datos.turnos = [];
+     datos.roles = [{ id: 'r1', nombre: 'Busser', porcentaje: 6.5 }];
+     guardar(); irAHoy(); irA('semana');`);
+dias()[3].click();
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '0'); set('f-efectivo', '80'); set('f-tarjeta', '20');
+ok('sin tip-out la línea no aparece: repetiría la de arriba',
+   !texto('recibo').includes('Efectivo neto'));
+
+set('f-ventas', '1000');   // ahora sí hay tip-out: 6.5% = $65
+ok('con tip-out vuelve a aparecer', texto('recibo').includes('Efectivo neto'));
+
+run('datos.trabajo.tipOutEnEfectivo = false; pintarRecibo();');
+ok('y desaparece donde el tip-out lo descuenta el cheque',
+   !texto('recibo').includes('Efectivo neto'));
+run("datos.trabajo.tipOutEnEfectivo = true; cerrarTurno();");
+
+// Devolver los turnos como estaban: este grupo los pisó.
+run(`datos.turnos = ${turnosAntes}; guardar(); irA('semana');`);
 
 
 /* ========================================================================== */

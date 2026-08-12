@@ -319,6 +319,73 @@ probar('contándolo, gana el turno largo',
 
 
 /* --------------------------------------------------------------------------
+   El efectivo neto
+   --------------------------------------------------------------------------
+   El desastre que vigila este grupo no es un número feo: es descontar el
+   tip-out DOS veces, una en el total y otra en el efectivo. Por separado los
+   dos números seguirían pareciendo razonables, y la app estaría restando de
+   más sin que nada se queje. Por eso la primera prueba no es "¿resta bien?"
+   sino "¿las partes siguen sumando el mismo total de siempre?".
+
+   Los dos ejemplos son los de Kev, tal cual los contó:
+     tarjeta 200, efectivo 100, tip-out  80 → en efectivo me quedan  20
+     tarjeta 200, efectivo 100, tip-out 140 → pongo 40 de mi cartera: −40
+   -------------------------------------------------------------------------- */
+grupo('El efectivo neto');
+
+const BUENA = L.calcularTurno({ fecha: '2026-08-05', entrada: '17:00',
+  salida: '23:00', ventas: 2000, efectivo: 100, tarjeta: 200, tipOut: 80 });
+const MALA = L.calcularTurno({ fecha: '2026-08-05', entrada: '17:00',
+  salida: '23:00', ventas: 2000, efectivo: 100, tarjeta: 200, tipOut: 140 });
+
+probar('las partes suman el neto, no lo restan dos veces',
+  [BUENA.efectivoNeto + BUENA.tarjeta, BUENA.netoPropinas], [220, 220]);
+
+probar('y siguen sumándolo cuando el efectivo queda negativo',
+  [MALA.efectivoNeto + MALA.tarjeta, MALA.netoPropinas], [160, 160]);
+
+probar('el tip-out sale del efectivo', BUENA.efectivoNeto, 20);
+
+probar('si el tip-out se pasa, el efectivo es negativo, no cero',
+  MALA.efectivoNeto, -40);
+
+probar('el efectivo en bruto se sigue calculando aparte',
+  [BUENA.efectivo, MALA.efectivo], [100, 100]);
+
+probar('y el total del turno no se mueve por nada de esto',
+  [BUENA.netoPropinas, MALA.netoPropinas], [220, 160]);
+
+/* La elección. Igual que con el sueldo, la lógica calcula las dos y la pantalla
+   escoge; aquí no se recalcula nada. */
+probar('donde el tip-out se paga en efectivo, se muestra el neto',
+  L.efectivoMostrado(MALA, true), -40);
+
+probar('donde lo descuenta el cheque, se muestra el bruto',
+  L.efectivoMostrado(MALA, false), 100);
+
+probar('sin argumentos no revienta', L.efectivoMostrado(null, true), 0);
+
+/* Y en la semana se acumula igual: dos noches malas dejan el efectivo en −80.
+   Si en vez de sumar los netos de cada turno se restara el tip-out del total al
+   final, este número saldría igual — pero dejaría de cuadrar con la suma de los
+   días a mano en cuanto hubiera centavos de por medio. */
+const SEMANA_MALA = L.resumir([
+  { fecha: '2026-08-05', entrada: '17:00', salida: '23:00', ventas: 2000,
+    efectivo: 100, tarjeta: 200, tipOut: 140 },
+  { fecha: '2026-08-06', entrada: '17:00', salida: '23:00', ventas: 2000,
+    efectivo: 100, tarjeta: 200, tipOut: 140 }
+]);
+
+probar('la semana acumula el efectivo neto', SEMANA_MALA.efectivoNeto, -80);
+
+probar('sin tocar el efectivo en bruto', SEMANA_MALA.efectivo, 200);
+
+probar('y las partes de la semana también suman su neto',
+  [SEMANA_MALA.efectivoNeto + SEMANA_MALA.tarjeta, SEMANA_MALA.netoPropinas],
+  [320, 320]);
+
+
+/* --------------------------------------------------------------------------
    Fusionar un respaldo con lo que ya hay
 
    Estas pruebas son las más importantes del archivo. Todas las demás

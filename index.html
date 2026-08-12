@@ -67,6 +67,12 @@
   --verde:      #15803d;
   --verde-suave:#dcf2e3;   /* solo para las barras de los días */
   --rojo:       #a52020;
+  /* El día libre que ya pasó. Va MÁS OSCURO que el papel a propósito: así se
+     lee como una casilla hundida, un hueco. Una celda vacía más clara que la
+     página (que es lo que era, blanca sobre hueso) parece una ficha levantada
+     esperando algo. Es el mismo gris con el que se sombrean las filas sin
+     datos de una tabla, y significa lo mismo: aquí no hay nada. */
+  --hueco:      #f0efeb;
 }
 /* El modo oscuro ya NO se activa con `prefers-color-scheme` desde el CSS, sino
    con el atributo `data-tema` en la etiqueta <html>. Quien decide el valor de
@@ -87,6 +93,9 @@
     --verde:      #5bd68b;
     --verde-suave:#1a3226;
     --rojo:       #f08c8c;
+    /* En oscuro la intuición se invierte pero la idea es la misma: el hueco es
+       lo más oscuro de la pantalla, por debajo incluso del papel. */
+    --hueco:      #0a0a09;
 }
 
 /* ============================================================================
@@ -127,7 +136,23 @@ html { font-size: 100%; }
 
 body {
   margin: 0;
-  padding: 0 14px calc(4.75rem + env(safe-area-inset-bottom));
+  /* El relleno de arriba NO es decorativo: es el hueco del reloj y la isla
+     dinámica.
+
+     Arriba del todo, en el <meta viewport>, está `viewport-fit=cover`. Eso le
+     dice a iOS "usa la pantalla entera", y se puso pensando en la barra de
+     pestañas de abajo. Pero abre los cuatro bordes a la vez, y el de arriba
+     nunca se compensó: en un iPhone con isla dinámica los primeros ~59 puntos
+     de la app quedaban DEBAJO de la barra de estado. El botón Cerrar del
+     formulario, que vive justo ahí, quedaba pisado por el reloj y la batería.
+
+     En un iPhone con botón de inicio la barra son 20 puntos y el relleno de la
+     barra de título casi la salvaba: por eso el fallo solo aparecía en los
+     teléfonos nuevos, que son los que no tenía a mano quien hizo la app.
+
+     En un ordenador y en Android `env(safe-area-inset-top)` vale 0, así que
+     esta línea no cambia nada fuera de donde hace falta. */
+  padding: env(safe-area-inset-top) 14px calc(4.75rem + env(safe-area-inset-bottom));
   background: var(--papel);
   color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -211,7 +236,18 @@ body {
 .dia .num   { font-size: 0.9375rem; font-weight: 500; margin-top: 1px; }
 .dia .monto { font-size: 0.6875rem; font-weight: 600; color: var(--verde);
               margin-top: auto; font-variant-numeric: tabular-nums; }
+/* Un día en que el tip-out se comió las propinas. Es raro, pero existe, y el
+   verde diría lo contrario de lo que pasó. */
+.dia .monto.negativo { color: var(--rojo); }
+/* Montos de cuatro cifras. Encogen en vez de cortarse: un "$1,23" no es un
+   número más pequeño, es un número equivocado. */
+.dia .monto.largo { font-size: 0.5625rem; letter-spacing: -0.03em; }
 .dia.vacio .num { color: var(--tinta-3); font-weight: 400; }
+/* Hundido solo el día vacío que YA pasó. Los que están por venir se quedan
+   neutros: hoy es miércoles y pintar de "libre" el jueves, viernes, sábado y
+   domingo sería afirmar algo de cuatro días que todavía no han ocurrido. El
+   gris vacío es neutro y no dice nada; en cuanto se pinta, empieza a decir. */
+.dia.vacio.pasado { background: var(--hueco); }
 .dia.hoy { border-color: var(--tinta); }
 .dia.hoy .letra { color: var(--tinta); }
 
@@ -388,6 +424,9 @@ input[type=time] {
    como una nota al pie y no como parte de la suma de arriba. */
 .recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
 .recibo .aparte span { color: var(--tinta-3) !important; }
+/* La excepción al gris de las líneas de abajo: un efectivo neto en negativo es
+   plata que sale de tu cartera esta noche. Ese sí tiene que verse. */
+.recibo .aparte .resta { color: var(--rojo) !important; }
 
 /* ============================================================================
    SECCIÓN G — Botones
@@ -785,6 +824,14 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
        data-t="sumarSueldoNota">
       Apagado, el total de cada turno son solo las propinas menos el tip-out.
       El sueldo se sigue viendo aparte.</p>
+
+    <label class="check" style="margin-top:15px">
+      <input type="checkbox" id="a-tipout-efectivo" onchange="cambiarTipOutEnEfectivo()">
+      <span data-t="tipOutEfectivo">El tip-out se paga en efectivo</span>
+    </label>
+    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
+       data-t="tipOutEfectivoNota">
+      Encendido, el tip-out se descuenta del efectivo, que es de donde sale.</p>
   </div>
 
   <h2 class="seccion" data-t="idioma">Idioma</h2>
@@ -1049,6 +1096,11 @@ const TEXTOS = {
     mHoras: 'Horas',        nHoras: 'Suma de la duración de cada turno.',
     mPorHora: 'Por hora',   nPorHora: 'Todo lo que te llevas ÷ horas trabajadas.',
     mEfectivo: 'Efectivo',  nEfectivo: 'Propina en billetes. Va a tu bolsillo esa noche.',
+    /* Nombre distinto porque es un número distinto. Si se hubiera quedado
+       llamándose "Efectivo" a secas, quien lleva semanas mirando esa cifra la
+       vería bajar de golpe y lo leería como que la app se rompió. */
+    mEfectivoNeto: 'Efectivo neto',
+    nEfectivoNeto: 'Los billetes que te quedan después de pagar el tip-out. Puede salir negativo: es la noche en que pusiste de tu cartera.',
     mTarjeta: 'Tarjeta',    nTarjeta: 'Propina en tarjeta. Llega en el cheque.',
     mPropinas: 'Propinas',  nPropinas: 'Efectivo + tarjeta, antes del tip-out.',
     mTipOut: 'Tip-out',     nTipOut: 'Lo que repartiste a los ayudantes.',
@@ -1106,6 +1158,10 @@ const TEXTOS = {
     faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
     sumarSueldo: 'Sumar el sueldo por hora al total',
     sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
+    /* Esta casilla no es un gusto: es un dato del restaurante, como el sueldo
+       por hora. Por eso vive en Trabajo y no en Apariencia. */
+    tipOutEfectivo: 'El tip-out se paga en efectivo',
+    tipOutEfectivoNota: 'Encendido, el tip-out se descuenta del efectivo, que es de donde sale: los billetes se entregan en la mano al terminar. Apágalo si en tu restaurante lo descuentan del cheque. El total del turno no cambia en ninguno de los dos casos.',
     verComparaciones: 'Comparar con la semana anterior',
     tamanoLetra: 'Tamaño de la letra',
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
@@ -1160,6 +1216,8 @@ const TEXTOS = {
     mHoras: 'Hours',       nHoras: 'Total length of every shift.',
     mPorHora: 'Per hour',  nPorHora: 'Everything you take home ÷ hours worked.',
     mEfectivo: 'Cash',     nEfectivo: 'Cash tips. Straight to your pocket that night.',
+    mEfectivoNeto: 'Net cash',
+    nEfectivoNeto: 'The bills you keep after paying tip-out. It can go negative: that is the night you paid out of your own pocket.',
     mTarjeta: 'Card',      nTarjeta: 'Credit card tips. They come on your paycheck.',
     mPropinas: 'Tips',     nPropinas: 'Cash + card, before tip-out.',
     mTipOut: 'Tip-out',    nTipOut: 'What you paid out to support staff.',
@@ -1233,6 +1291,8 @@ const TEXTOS = {
     faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
     sumarSueldo: 'Add hourly wage to the total',
     sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
+    tipOutEfectivo: 'Tip-out is paid in cash',
+    tipOutEfectivoNota: 'When on, tip-out comes out of your cash, which is where it actually comes from: the bills are handed over at the end of the shift. Turn it off if your restaurant deducts it from your paycheck. Either way, the shift total stays the same.',
     verComparaciones: 'Compare with last week',
     tamanoLetra: 'Text size',
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
@@ -1308,7 +1368,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v18';
+const VERSION_APP = 'v19';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -1339,6 +1399,29 @@ const PREFS_POR_DEFECTO = {
   comparar: true
 };
 
+/* Los valores de arranque del trabajo, en una constante y por el mismo motivo
+   que `PREFS_POR_DEFECTO`: para que exista un solo sitio donde estén escritos.
+
+   Hace falta ahora porque llega `tipOutEnEfectivo`, el primer campo nuevo que
+   se le añade a `trabajo` desde que la app vive en otros teléfonos. Y `cargar()`
+   mezcla superficialmente (`{ ...datos, ...guardado }`), o sea que el `trabajo`
+   guardado REEMPLAZA al de aquí entero, no campo por campo. Sin la mezcla
+   explícita de más abajo, a todo el que ya usa la app le llegaría el campo
+   nuevo en `undefined` —que se lee como "no"— y el efectivo no se le
+   descontaría nunca, sin que nada avisara. Es exactamente lo que pasó el 9 de
+   agosto con `comparar` al importar un respaldo. */
+const TRABAJO_POR_DEFECTO = {
+  nombre: '',
+  tarifaHora: 0,
+  /* Encendido de fábrica: en la mayoría de los restaurantes el tip-out se
+     entrega en billetes al terminar el turno. Quien trabaje donde lo descuenta
+     el sistema del cheque lo apaga en Ajustes.
+     NO se congela en cada turno como sí se congelan la tarifa y el tip-out.
+     Aquellos cambian cuánto dinero hubo; este solo cambia de qué bolsillo se
+     cuenta que salió, y el total es el mismo de todas formas. */
+  tipOutEnEfectivo: true
+};
+
 let datos = {
   // `configurado` marca si alguien ya pasó por la pantalla de bienvenida.
   // Sin esta bandera habría que adivinarlo mirando si la tarifa es 0, y eso es
@@ -1346,7 +1429,7 @@ let datos = {
   // verdad $0 por hora, la app le pediría configurarse cada vez que la abra.
   configurado: false,
 
-  trabajo: { nombre: '', tarifaHora: 0 },
+  trabajo: { ...TRABAJO_POR_DEFECTO },
 
   // Los nombres vienen puestos porque son casi los mismos en cualquier
   // restaurante de Estados Unidos. Los porcentajes vienen VACÍOS porque no lo
@@ -1488,6 +1571,12 @@ function cargar() {
     // valor por defecto, nunca al revés. Si se invirtiera el orden, cambiar un
     // default aquí le cambiaría el tema a todo el mundo sin avisar.
     datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
+
+    // Lo mismo para el trabajo, y por la misma razón: el `trabajo` guardado
+    // reemplaza al de por defecto entero, así que un campo añadido después
+    // llegaría vacío a quien ya tiene datos. Lo suyo va DESPUÉS, igual que
+    // arriba: su nombre de restaurante y su tarifa mandan sobre los de fábrica.
+    datos.trabajo = { ...TRABAJO_POR_DEFECTO, ...(datos.trabajo || {}) };
 
     // Quien ya venía usando la app tampoco trae `configurado`, y sin esto le
     // saldría la pantalla de bienvenida como si fuera nuevo: pedirle datos que
@@ -1681,6 +1770,18 @@ function cambiarComparar() {
 
 function cambiarContarSueldo() {
   datos.prefs.contarSueldo = !!document.getElementById('a-contar-sueldo').checked;
+  guardar();
+  pintar();
+}
+
+/* Va en `datos.trabajo` y no en `datos.prefs` porque no es una preferencia: es
+   un hecho del restaurante, como el sueldo por hora. La diferencia se nota el
+   día que alguien tenga dos trabajos —uno que paga el tip-out en billetes y
+   otro que lo descuenta del cheque—: entonces el dato tiene que viajar con el
+   trabajo, no con la persona. */
+function cambiarTipOutEnEfectivo() {
+  datos.trabajo.tipOutEnEfectivo =
+    !!document.getElementById('a-tipout-efectivo').checked;
   guardar();
   pintar();
 }
@@ -2050,7 +2151,12 @@ function hacerImportacion(leido) {
   try {
     const fusion = fusionarTurnos(datos.turnos, leido.turnos);
     datos = { ...datos, ...leido, turnos: fusion.turnos };
+    /* Las dos mezclas van también aquí, y este es el camino por el que ya se
+       coló el fallo una vez: un respaldo exportado con una versión vieja no
+       trae los campos que se añadieron después, y sin estas dos líneas
+       importarlo se los borraría a quien ya los tenía puestos. */
     datos.prefs = { ...PREFS_POR_DEFECTO, ...(datos.prefs || {}) };
+    datos.trabajo = { ...TRABAJO_POR_DEFECTO, ...(datos.trabajo || {}) };
     guardar();
     irA('semana');
 
@@ -2527,6 +2633,17 @@ function pintarSemana() {
   // la misma cifra que se muestra: unas barras que comparan una cosa mientras
   // los números dicen otra son peores que no tener barras.
   const conSueldo = !!datos.prefs.contarSueldo;
+
+  /* Dos listas y no una, a propósito. `hayTurno` dice si ese día se trabajó;
+     `totales` dice cuánto se sacó. Son preguntas distintas.
+
+     Antes solo existía la segunda, y "no hay turno" se deducía de que el total
+     diera cero. El día que se escribió eso las dos cosas eran lo mismo, así que
+     daba igual cuál se midiera. Dejaron de serlo en cuanto un total pudo dar
+     negativo: un día en que el tip-out se comió las propinas se pintaba
+     exactamente igual que un día libre, sin monto y sin barra. El código seguía
+     midiendo la pregunta que ya no servía, y sin quejarse. */
+  const hayTurno = fechas.map(f => turnosDelDia(datos.turnos, f).length > 0);
   const totales = fechas.map(f => {
     const turnoDelDia = turnosDelDia(datos.turnos, f)[0];
     return turnoDelDia
@@ -2539,8 +2656,19 @@ function pintarSemana() {
   fechas.forEach((fecha, i) => {
     const total = totales[i];
     const boton = document.createElement('button');
-    boton.className = 'dia' + (total === 0 ? ' vacio' : '')
-                    + (fecha === hoy() ? ' hoy' : '');
+    /* Las clases se arman en una lista en vez de concatenando, porque ya son
+       tres condiciones y una cadena de tres ternarios pegados no se lee. */
+    const clases = ['dia'];
+    if (!hayTurno[i]) {
+      clases.push('vacio');
+      // Un día libre de verdad es uno que ya pasó sin turno. Hoy no cuenta:
+      // todavía puede haber turno esta noche. La comparación funciona con el
+      // texto de la fecha tal cual, sin convertir a Date, porque el formato
+      // AAAA-MM-DD se ordena solo.
+      if (fecha < hoy()) clases.push('pasado');
+    }
+    if (fecha === hoy()) clases.push('hoy');
+    boton.className = clases.join(' ');
     boton.onclick = () => abrirDia(fecha);
 
     if (total > 0) {
@@ -2559,9 +2687,27 @@ function pintarSemana() {
     numero.className = 'num';
     numero.textContent = partes(fecha).getDate();
 
+    /* El monto se pinta siempre que haya turno, aunque sea $0 o negativo. Un
+       día en que se puso plata del bolsillo tiene que decirlo: dejarlo en
+       blanco lo volvería indistinguible de un día que no se trabajó. Y en rojo,
+       porque un "−$40" en verde es un número que se lee al revés. */
+    const montoTexto = hayTurno[i] ? $0(total) : '';
+
+    /* Y encoge cuando no cabe. La celda mide unos 48 puntos de ancho en un
+       iPhone normal, y "$1,234" a este tamaño de letra ocupa alrededor de 48:
+       se salía, y como la celda recorta lo que se sale, el número aparecía
+       cortado sin avisar. Con la letra en Mayor pasaba antes todavía.
+
+       Se cuenta el texto en vez de medir el ancho de verdad porque cuando esto
+       corre el navegador aún no ha dibujado nada, así que no hay ancho que
+       medir. Y contar sirve igual en los tres tamaños de letra: la celda crece
+       con la letra, así que lo que cabe es siempre más o menos lo mismo.
+
+       Cinco caracteres es el límite: "$102" y "−$30" caben, "$1,234" no. */
     const monto = document.createElement('span');
-    monto.className = 'monto';
-    monto.textContent = total > 0 ? $0(total) : '';
+    monto.className = 'monto' + (total < 0 ? ' negativo' : '')
+                    + (montoTexto.length > 5 ? ' largo' : '');
+    monto.textContent = montoTexto;
 
     boton.append(letra, numero, monto);
     caja.appendChild(boton);
@@ -2635,13 +2781,31 @@ function pintarSemana() {
   const horas = n => n + ' h';
   const pct   = n => n + '%';
 
+  /* El efectivo, con el tip-out ya descontado si en ese restaurante se paga en
+     billetes. Es el arreglo de una cifra que mentía: decir "efectivo $100" la
+     noche en que entregaste $80 de tip-out es falso, y con un tip-out de $140
+     lo honesto no es $0, es −$40, porque esa noche pusiste plata de tu cartera.
+
+     La etiqueta cambia con la cifra —"Efectivo neto" en vez de "Efectivo"—
+     porque son dos números distintos. Con el mismo nombre, a quien lleva
+     semanas mirando esa cifra le bajaría de golpe y lo leería como una avería.
+
+     El total de la semana NO se toca: el tip-out ya estaba descontado ahí una
+     sola vez y sigue estándolo. Lo único que cambia es de qué bolsillo se
+     cuenta que salió. */
+  const enEfectivo = !!datos.trabajo.tipOutEnEfectivo;
+  const efectivo   = efectivoMostrado(r, enEfectivo);
+  const efectivoAnterior = efectivoMostrado(rAnterior, enEfectivo);
+
   // Las cuatro de siempre. Horas porque hay que apuntarlas en la planilla del
   // restaurante; efectivo y tarjeta separados porque no son el mismo dinero:
   // la tarjeta llega en el cheque, el efectivo va al bolsillo esa noche.
   document.getElementById('metricas').innerHTML =
       metrica('mHoras',    r.horas + ' h',      r.horas,        rAnterior.horas,        horas, 'plano', 'nHoras')
     + metrica('mPorHora',  $(cifras.porHora),   cifras.porHora, cifrasAnterior.porHora, $,     'mas',   'nPorHora')
-    + metrica('mEfectivo', $0(r.efectivo),      r.efectivo,     rAnterior.efectivo,     $0,    'mas',   'nEfectivo')
+    + metrica(enEfectivo ? 'mEfectivoNeto' : 'mEfectivo',
+                           $0(efectivo),        efectivo,       efectivoAnterior,       $0,    'mas',
+              enEfectivo ? 'nEfectivoNeto' : 'nEfectivo')
     + metrica('mTarjeta',  $0(r.tarjeta),       r.tarjeta,      rAnterior.tarjeta,      $0,    'mas',   'nTarjeta');
 
   // Las demás viven detrás del botón: son útiles de vez en cuando, y una
@@ -2778,6 +2942,33 @@ function pintarRecibo() {
                  'tenue', 'aparte');
   }
 
+  /* El efectivo neto también va DEBAJO de la raya, y por la misma regla que
+     acaba de aplicarse al sueldo: no es un sumando, es información.
+
+     Primero se puso arriba, entre el tip-out y el total, y ahí se leía mal:
+
+         Propinas                 $100.00
+         Tip-out · 4 ayudantes   − $130.00
+         Efectivo neto            -$80.00
+         ──────────────────────
+         Te llevas                -$30.00
+
+     Quien hace la cuenta ve que 100 − 130 da −30 y se queda mirando qué pinta
+     el −80 en medio, porque está justo donde están los números que sí suman.
+     No es un paso de la cuenta: es el mismo −30 mirado desde otro lado, el de
+     qué parte sale de los billetes y qué parte llega en el cheque.
+
+     Va aquí y no solo en la métrica de la semana porque este es el momento en
+     que sirve: estás cerrando el turno con el teléfono en la mano y es cuando
+     decides si sacas plata de la cartera para pagarle al busser.
+
+     Y solo si hubo tip-out: sin él, el efectivo neto y el efectivo a secas son
+     el mismo número, y una línea que repite otra no informa, estorba. */
+  if (datos.trabajo.tipOutEnEfectivo && c.tipOut > 0) {
+    html += fila(t('mEfectivoNeto'), $(c.efectivoNeto),
+                 c.efectivoNeto < 0 ? 'resta' : 'tenue', 'aparte');
+  }
+
   document.getElementById('recibo').innerHTML = html;
 }
 
@@ -2788,6 +2979,8 @@ function pintarAjustes() {
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
   document.getElementById('a-contar-sueldo').checked = !!datos.prefs.contarSueldo;
+  document.getElementById('a-tipout-efectivo').checked =
+    !!datos.trabajo.tipOutEnEfectivo;
   document.getElementById('a-comparar').checked = !!datos.prefs.comparar;
 
   const idiomas = document.getElementById('idiomas');
@@ -3011,7 +3204,7 @@ const FUNCIONES_NECESARIAS = [
   'redondear', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
-  'turnoValido', 'fusionarTurnos', 'cifrasPrincipales'
+  'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la

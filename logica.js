@@ -133,6 +133,27 @@ function calcularTurno(turno) {
   // Lo que te queda de propinas después de repartir.
   const netoPropinas = redondear(propinas - tipOut);
 
+  /* El efectivo que de verdad se queda en el bolsillo.
+   *
+   * El tip-out se entrega casi siempre en billetes, al final del turno y en la
+   * mano. Así que decir "efectivo: $100" la noche en que entregaste $80 es
+   * falso: te quedaste con $20. Y si el tip-out fue de $140, no te quedaste con
+   * $0 — pusiste $40 de tu cartera, y la cifra tiene que decir −$40. Un cero
+   * ahí miente igual que el $100.
+   *
+   * Lo que esto NO es, y es la parte importante: no es una resta nueva. El
+   * tip-out ya se descuenta una sola vez, arriba, en `netoPropinas`, y sigue
+   * descontándose ahí. Esto solo reparte ese mismo neto entre los dos sitios de
+   * donde sale el dinero:
+   *
+   *     efectivoNeto + tarjeta = netoPropinas
+   *
+   * Esa igualdad es la garantía de que el tip-out no se está restando dos
+   * veces, que sería la forma de romper esto sin que se note. Hay una prueba
+   * dedicada a vigilarla.
+   */
+  const efectivoNeto = redondear(efectivo - tipOut);
+
   // El sueldo por hora del restaurante, aparte de las propinas.
   const sueldoBase = redondear(horas * tarifa);
 
@@ -142,6 +163,11 @@ function calcularTurno(turno) {
   return {
     horas,
     propinas,
+    // Efectivo y tarjeta se devuelven tal cual además del neto, para que quien
+    // pinte pueda comprobar la igualdad de arriba sin recalcular nada.
+    efectivo: redondear(efectivo),
+    tarjeta: redondear(tarjeta),
+    efectivoNeto,
     tipOut: redondear(tipOut),
     netoPropinas,
     sueldoBase,
@@ -184,19 +210,25 @@ function resumir(turnos) {
     // bolsillo. Sumadas son un número que no sirve para planear nada.
     a.efectivo     += Number(turno.efectivo) || 0;
     a.tarjeta      += Number(turno.tarjeta)  || 0;
+    // El efectivo ya sin el tip-out. Se suma turno a turno y no se calcula al
+    // final restando el tip-out del total: da lo mismo, pero sumar los netos ya
+    // redondeados es la única forma de que la cifra de la semana coincida
+    // exactamente con lo que se ve sumando los días a mano.
+    a.efectivoNeto += c.efectivoNeto;
     a.tipOut       += c.tipOut;
     a.netoPropinas += c.netoPropinas;
     a.sueldoBase   += c.sueldoBase;
     a.totalNeto    += c.totalNeto;
     return a;
   }, { turnos: 0, horas: 0, ventas: 0, propinas: 0, efectivo: 0, tarjeta: 0,
-       tipOut: 0, netoPropinas: 0, sueldoBase: 0, totalNeto: 0 });
+       efectivoNeto: 0, tipOut: 0, netoPropinas: 0, sueldoBase: 0, totalNeto: 0 });
 
   acc.horas        = redondear(acc.horas);
   acc.ventas       = redondear(acc.ventas);
   acc.propinas     = redondear(acc.propinas);
   acc.efectivo     = redondear(acc.efectivo);
   acc.tarjeta      = redondear(acc.tarjeta);
+  acc.efectivoNeto = redondear(acc.efectivoNeto);
   acc.tipOut       = redondear(acc.tipOut);
   acc.netoPropinas = redondear(acc.netoPropinas);
   acc.sueldoBase   = redondear(acc.sueldoBase);
@@ -297,6 +329,32 @@ function cifrasPrincipales(calculo, contarSueldo) {
   return contarSueldo
     ? { total: c.totalNeto     || 0, porHora: c.totalPorHora   || 0 }
     : { total: c.netoPropinas  || 0, porHora: c.propinaPorHora || 0 };
+}
+
+/**
+ * Cuál de las dos cifras de efectivo se enseña.
+ *
+ * Depende de un dato del restaurante, no de un gusto: **cómo se paga el
+ * tip-out**. Hay dos formas y las dos son normales en Estados Unidos:
+ *
+ *   - **En efectivo** (lo habitual, y el caso de Kev). Los billetes se entregan
+ *     en la mano al terminar el turno, así que salen del efectivo. Se muestra
+ *     `efectivoNeto`.
+ *   - **Descontado del cheque.** El sistema del restaurante lo retiene solo, y
+ *     el efectivo que te llevaste esa noche es el que recibiste, entero. Se
+ *     muestra `efectivo`.
+ *
+ * Restarlo en el segundo caso dejaría el efectivo bajo y la tarjeta alta, que
+ * es un error peor que el original porque no se nota: los dos números siguen
+ * sumando lo mismo.
+ *
+ * Igual que `cifrasPrincipales`, esta función **no calcula nada**: las dos
+ * cifras ya vienen hechas y aquí solo se elige. Y sirve igual para un turno que
+ * para una semana, porque los dos devuelven las mismas dos claves.
+ */
+function efectivoMostrado(calculo, tipOutEnEfectivo) {
+  const c = calculo || {};
+  return tipOutEnEfectivo ? (c.efectivoNeto || 0) : (c.efectivo || 0);
 }
 
 /**
@@ -404,7 +462,7 @@ if (typeof module !== 'undefined' && module.exports) {
     redondear, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasDeLaSemana, turnosDelDia,
-    horasFrecuentes, mejorTurno, cifrasPrincipales,
+    horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
     turnoValido, fusionarTurnos
   };
 }
