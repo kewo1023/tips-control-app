@@ -77,6 +77,13 @@
      era de unos 15 tonos sobre 255 y en el teléfono no se distinguía. */
   --hueco:      #e4e2da;
   --hueco-linea:#d5d2c8;   /* su borde, también más marcado */
+
+  /* El fondo de una celda del calendario, aparte de `--tarjeta`.
+     En claro son el mismo color y esta variable no cambia nada; existe porque
+     en oscuro el día trabajado necesita subir un escalón por encima del hueco
+     sin arrastrar consigo las tarjetas de estadísticas ni los formularios. */
+  --dia:        var(--tarjeta);
+  --dia-linea:  var(--linea);
 }
 /* El modo oscuro ya NO se activa con `prefers-color-scheme` desde el CSS, sino
    con el atributo `data-tema` en la etiqueta <html>. Quien decide el valor de
@@ -97,15 +104,22 @@
     --verde:      #5bd68b;
     --verde-suave:#1a3226;
     --rojo:       #f08c8c;
-    /* En oscuro no se puede "hundir" más: el papel ya está casi en negro y
-       bajar de ahí no da contraste, da nada — era el problema, el hueco y el
-       fondo se veían iguales. Así que aquí el hueco se marca al revés, con un
-       gris que se despega del papel por arriba sin llegar al nivel de una
-       tarjeta. Lo que distingue un día vacío de uno trabajado deja de ser
-       "más oscuro" y pasa a ser "sin cifra y apagado", que se lee igual de
-       bien en los dos temas. */
-    --hueco:      #232320;
-    --hueco-linea:#323230;
+    /* Tres escalones, y el orden importa tanto como el contraste.
+    
+       En oscuro no se puede "hundir" el hueco por debajo del fondo: el papel
+       ya está casi en negro y lo que va más abajo no se ve —ese era el
+       problema original—. Pero el primer arreglo lo subió por ENCIMA de la
+       tarjeta, y entonces el día que no trabajaste pasó a ser la celda más
+       clara de la fila: la vista se iba a los días vacíos.
+    
+       Así que sube el hueco lo justo para verse, y la celda del día trabajado
+       sube otro escalón para quedar por encima. Queda
+       fondo (#0e0e0d) < hueco (#161614) < día (#242422), que es el mismo orden
+       que en claro. El protagonismo vuelve a los días trabajados. */
+    --hueco:      #161614;
+    --hueco-linea:#282824;
+    --dia:        #242422;
+    --dia-linea:  #35352f;
 }
 
 /* ============================================================================
@@ -232,8 +246,8 @@ body {
   position: relative; overflow: hidden;
   height: 5.125rem; padding: 7px 2px 6px;
   display: flex; flex-direction: column; align-items: center;
-  border: 1px solid var(--linea); border-radius: 9px;
-  background: var(--tarjeta); color: var(--tinta);
+  border: 1px solid var(--dia-linea); border-radius: 9px;
+  background: var(--dia); color: var(--tinta);
   font-family: inherit; cursor: pointer;
 }
 .dia .barra {
@@ -257,7 +271,27 @@ body {
    neutros: hoy es miércoles y pintar de "libre" el jueves, viernes, sábado y
    domingo sería afirmar algo de cuatro días que todavía no han ocurrido. El
    gris vacío es neutro y no dice nada; en cuanto se pinta, empieza a decir. */
-.dia.vacio.pasado { background: var(--hueco); border-color: var(--hueco-linea); }
+/* El día libre que ya pasó: la caja se dibuja un poco más adentro, para que
+   se lea como algo que está al fondo y no al mismo nivel que los demás.
+
+   Se pinta con `::before` en vez de encoger la celda entera, y no es un
+   capricho técnico. Encogiéndola pasarían dos cosas: los números de los días
+   dejarían de estar alineados con los de al lado —y una fila de calendario con
+   los números bailando no parece profundidad, parece un error— y el sitio
+   donde hay que tocar para registrar ese turno se haría más pequeño, justo en
+   los días que se rellenan tarde y a destiempo. Así la celda mantiene su
+   tamaño y su posición; lo único que se mete hacia dentro es lo que se ve.
+
+   El margen es igual por los cuatro lados en vez de proporcional al alto y al
+   ancho: lo que el ojo percibe es el hueco alrededor, no la razón entre los
+   lados, y un margen constante se lee como intención mientras que uno desigual
+   se lee como un descuadre. */
+.dia.vacio.pasado { background: none; border-color: transparent; }
+.dia.vacio.pasado::before {
+  content: ''; position: absolute; inset: 3px;
+  background: var(--hueco); border: 1px solid var(--hueco-linea);
+  border-radius: 7px;
+}
 .dia.hoy { border-color: var(--tinta); }
 .dia.hoy .letra { color: var(--tinta); }
 
@@ -1499,7 +1533,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v23';
+const VERSION_APP = 'v24';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
