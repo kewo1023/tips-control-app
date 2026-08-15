@@ -59,7 +59,14 @@ class El {
   appendChild(c) { this.children.push(c); return c; }
   append(...cs) { cs.forEach(c => this.children.push(c)); }
   addEventListener(t, fn) { (this._lis[t] = this._lis[t] || []).push(fn); }
-  dispatchEvent(e) { (this._lis[e.type] || []).forEach(fn => fn(e)); }
+  /* El navegador le pone `target` a cada evento: el elemento donde ocurrió.
+     Aquí no se ponía, así que un manejador que leyera `e.target.value`
+     reventaba en las pruebas y funcionaba en el teléfono. Un doble que se
+     queda corto en silencio manda a buscar el fallo donde no está. */
+  dispatchEvent(e) {
+    const evento = { ...e, target: (e && e.target) || this };
+    (this._lis[evento.type] || []).forEach(fn => fn(evento));
+  }
   click() { if (this.onclick) this.onclick(); }
 
   descendientes() { return this.children.flatMap(c => [c, ...c.descendientes()]); }
@@ -136,6 +143,11 @@ function crearDocumento(html) {
     // simula la propagación de eventos: el abrir y cerrar se comprueba
     // llamando a las funciones directamente.
     addEventListener: () => {},
+    /* OJO: solo conoce los `id` escritos en el HTML. Un elemento fabricado con
+       `createElement` al que se le ponga un id NO entra aquí, y la búsqueda
+       devolverá null. En el navegador sí lo encontraría. Si hace falta un
+       elemento creado desde el código, guardarse la referencia en vez de
+       buscarlo por id: funciona en los dos sitios. */
     getElementById: id => porId[id] || null,
     createElement: t => new El(t),
     querySelector: sel => (sel.includes('theme-color') ? meta : null),

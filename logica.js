@@ -178,6 +178,103 @@ function calcularTipOut(ventas, roles) {
 }
 
 
+/**
+ * El tip-out de un turno en el que el equipo cambió a mitad.
+ *
+ * El caso real: de 3 a 6 pm hay dos ayudantes y se les paga el 2%; a las 6
+ * llegan tres más y a partir de ahí se paga el 5%. Pero el 5% NO es sobre todo
+ * el turno: es sobre lo que se vendió después del cambio. Lo de antes ya se
+ * pagó al 2% y no se vuelve a pagar.
+ *
+ * Cada tramo trae `hasta`: las ventas ACUMULADAS del turno en el momento del
+ * cambio, que es el número que sale impreso en el recibo del punto de venta.
+ * Se pide así, y no las ventas del tramo, porque el recibo dice "$500" y no
+ * "$500 desde el corte anterior": pedir otra cosa obligaría a restar a mano al
+ * final del turno, que es justo lo que la app viene a evitar.
+ *
+ * El último tramo lleva `hasta: null` y llega hasta las ventas del turno.
+ *
+ * Cada tramo se calcula con `calcularTipOut`, la misma función de siempre.
+ * Aquí no hay fórmula nueva: lo único que cambia es sobre qué base se aplica
+ * cada porcentaje.
+ *
+ * @param {number} ventasTotales  las ventas del turno entero
+ * @param {Array}  tramos  [{ hasta, roles: [{ nombre, porcentaje }] }, ...]
+ * @returns {{ total, detalle, tramos }}
+ *          detalle — una entrada por rol y tramo, con el número de tramo
+ *          tramos  — [{ tramo, ventas, porcentaje, monto }] para poder
+ *                    enseñar cada línea del recibo contra su papel del POS
+ */
+function calcularTipOutTramos(ventasTotales, tramos) {
+  const totalVentas = Number(ventasTotales) || 0;
+  const lista = Array.isArray(tramos) ? tramos : [];
+
+  let anterior = 0;
+  const detalle = [];
+  const resumen = [];
+  let total = 0;
+
+  lista.forEach((tramo, i) => {
+    const esUltimo = i === lista.length - 1;
+    const hasta = esUltimo ? totalVentas : (Number(tramo.hasta) || 0);
+    // Las ventas DE ESTE tramo: lo acumulado hasta aquí menos lo del anterior.
+    const base = redondear(hasta - anterior);
+    anterior = hasta;
+
+    const parcial = calcularTipOut(base, tramo.roles);
+    // El número de tramo viaja con cada monto. Sin él, un mismo rol presente
+    // en dos tramos daría dos entradas indistinguibles, y contar el desglose
+    // para decir "N ayudantes" saldría mal.
+    parcial.detalle.forEach(d => detalle.push({ ...d, tramo: i }));
+
+    const porcentaje = redondear(
+      (Array.isArray(tramo.roles) ? tramo.roles : [])
+        .reduce((suma, r) => suma + (Number(r.porcentaje) || 0), 0));
+
+    resumen.push({ tramo: i, ventas: base, porcentaje, monto: parcial.total });
+    total = redondear(total + parcial.total);
+  });
+
+  return { total, detalle, tramos: resumen };
+}
+
+/**
+ * ¿Se pueden usar estos cortes?
+ *
+ * Va aparte del cálculo a propósito. Si estuviera dentro, un corte imposible
+ * daría un tip-out raro en vez de un aviso, y el peor de los casos —un corte
+ * mayor que las ventas del turno— produce un tramo NEGATIVO: un tip-out que
+ * en vez de restar, suma. Un número que le da más dinero a quien lo lee no lo
+ * cuestiona nadie.
+ *
+ * `cortes` son solo los números, en orden. El último tramo no tiene corte.
+ *
+ * @returns {{ ok: boolean, motivo: string, corte: number }}
+ *          motivo — 'falta' | 'orden' | 'pasa'; `corte` es cuál de ellos falla
+ */
+function revisarCortes(ventasTotales, cortes) {
+  const totalVentas = Number(ventasTotales) || 0;
+  const lista = Array.isArray(cortes) ? cortes : [];
+  if (lista.length === 0) return { ok: true, motivo: '', corte: -1 };
+
+  let anterior = 0;
+
+  for (let i = 0; i < lista.length; i++) {
+    const c = lista[i];
+    if (c === null || c === undefined || c === '' || !isFinite(Number(c))) {
+      return { ok: false, motivo: 'falta', corte: i };
+    }
+    const n = Number(c);
+    // Mayor que el anterior, y el primero mayor que cero: un cambio de equipo
+    // sin nada vendido antes no es un tramo, es no haber empezado.
+    if (n <= anterior)   return { ok: false, motivo: 'orden', corte: i };
+    if (n > totalVentas) return { ok: false, motivo: 'pasa',  corte: i };
+    anterior = n;
+  }
+
+  return { ok: true, motivo: '', corte: -1 };
+}
+
 /* --- El turno completo --------------------------------------------------- */
 
 /**
@@ -532,6 +629,7 @@ function fusionarTurnos(actuales, importados) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     redondear, leerNumero, horaAMinutos, calcularHoras, calcularTipOut,
+    calcularTipOutTramos, revisarCortes,
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,

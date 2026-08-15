@@ -302,7 +302,7 @@ ok('cambia a la pantalla del turno', !d.getElementById('p-turno')._classes.has('
 ok('el título trae la fecha del día tocado', texto('turno-fecha').includes('Jueves'));
 ok('esconde las pestañas mientras editas', d.getElementById('pestanas')._classes.has('oculto'));
 ok('no ofrece borrar en un día vacío', d.getElementById('btn-borrar')._classes.has('oculto'));
-ok('precarga los 4 ayudantes', d.querySelectorAll('#chips .chip.activo').length === 4);
+ok('precarga los 4 ayudantes', d.querySelectorAll('#tramos .chip.activo').length === 4);
 ok('el formulario viene en blanco', d.getElementById('f-ventas').value === '');
 ok('la hora NO se rellena sola', d.getElementById('f-entrada').value === '');
 
@@ -345,7 +345,7 @@ dias()[3].click();
 ok('trae los datos guardados', d.getElementById('f-ventas').value === '1200');
 ok('el título cambia a editar', texto('turno-fecha').includes('Jueves'));
 ok('ahora sí ofrece borrar', !d.getElementById('btn-borrar')._classes.has('oculto'));
-ok('recupera sus ayudantes', d.querySelectorAll('#chips .chip.activo').length === 4);
+ok('recupera sus ayudantes', d.querySelectorAll('#tramos .chip.activo').length === 4);
 set('f-ventas', '1300');
 run('guardarTurno()');
 ok('editar no duplica el turno', D().turnos.length === 1);
@@ -772,7 +772,7 @@ ok('y los botones siguen funcionando después',
    run('datos.prefs').tema === 'auto');
 run("datos.roles = []; irA('semana');");
 dias()[2].click();
-ok('sin roles configurados avisa en vez de fallar', texto('chips').includes('Ajustes'));
+ok('sin roles configurados avisa en vez de fallar', texto('tramos').includes('Ajustes'));
 
 
 /* ==========================================================================
@@ -1316,6 +1316,195 @@ ok('ni ninguno puesto desde el código',
 run(`datos.turnos = ${antesDeLaComa}; datos.roles = ${rolesAntesDeLaComa};`
   + `datos.trabajo.tarifaHora = 8; datos.trabajo.nombre = 'Cafe Test';`
   + `guardar(); irA('semana');`);
+
+
+/* --------------------------------------------------------------------------
+   El equipo cambió a mitad de turno
+
+   El caso de Kev: de 3 a 6 pm dos ayudantes al 2% sobre $500, y después los
+   cuatro al 6.5% sobre lo que queda. Lo que se vigila aquí no es la fórmula
+   —eso está en pruebas.js— sino el formulario: que los tramos se guarden, que
+   vuelvan al reabrir el turno, y sobre todo que un corte imposible NO se pueda
+   guardar.
+
+   Este grupo pisa los turnos, así que los guarda al empezar y los devuelve.
+   -------------------------------------------------------------------------- */
+grupo('El equipo cambió a mitad de turno');
+
+const antesDeTramos = JSON.stringify(D().turnos);
+run(`datos.turnos = []; datos.roles = [
+       { id: 'r1', nombre: 'Busser', porcentaje: 3 },
+       { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
+       { id: 'r3', nombre: 'Runner', porcentaje: 1 },
+       { id: 'r4', nombre: 'Bakery', porcentaje: 1 }
+     ]; irA('semana');`);
+
+const corte = i => d.querySelectorAll('#tramos .tramo-cab')[i].children
+                    .find(e => e.tagName === 'INPUT');
+const chipsDe = i => d.querySelectorAll('#tramos .tramo')[i]
+                      .descendientes().filter(e => e._classes.has('chip'));
+const marcados = i => chipsDe(i).filter(e => e._classes.has('activo')).length;
+
+dias()[0].click();                       // lunes 3
+set('f-entrada', '15:00'); set('f-salida', '23:00');
+set('f-ventas', '1800');
+
+ok('de entrada hay un solo bloque de ayudantes',
+   d.querySelectorAll('#tramos .tramo').length === 1);
+ok('y ninguna cabecera de tramo: la pantalla queda como siempre',
+   d.querySelectorAll('#tramos .tramo-cab').length === 0);
+
+run('agregarCorte()');
+ok('al añadir un cambio salen dos bloques',
+   d.querySelectorAll('#tramos .tramo').length === 2);
+/* El tramo nuevo entra vacío. Precargarlo con todos obligaría a desmarcar más
+   de lo que se marca, y un ayudante de más ahí se paga de menos sin avisar. */
+ok('el tramo nuevo entra sin ningún ayudante', marcados(0) === 0);
+ok('y el último conserva los que ya estaban', marcados(1) === 4);
+
+// Los dos ayudantes de las 3 a las 6: Busser (3%) y Runner (1%) = 4%.
+chipsDe(0)[0].click();                   // Busser
+chipsDe(0)[2].click();                   // Runner
+ok('marcar en el primer tramo no toca el segundo', marcados(1) === 4);
+ok('y el primero queda con dos', marcados(0) === 2);
+
+corte(0).value = '500';
+corte(0).dispatchEvent({ type: 'input' });
+ok('el resto se calcula solo', d.querySelectorAll('#tramos .resto')[0].textContent === '$1,300.00');
+
+avisos.length = 0;
+run('guardarTurno()');
+ok('guarda', D().turnos.length === 1);
+/* 4% de $500 = $20, y 6.5% de $1300 = $84.50. Escrito a mano antes de correr
+   nada: si se apuntara lo que salió, la prueba no comprobaría nada. */
+ok('el tip-out es el de cada tramo sobre SU base', D().turnos[0].tipOut === 104.5);
+ok('y no el del equipo completo sobre todo el turno',
+   D().turnos[0].tipOut !== 117);
+ok('guarda los tramos escritos', (D().turnos[0].tipoutTramos || []).length === 2);
+ok('con el corte donde se puso', (D().turnos[0].tipoutTramos || [{}])[0].hasta === 500);
+ok('el último tramo no tiene corte: llega hasta el final',
+   (D().turnos[0].tipoutTramos || [{},{}])[1].hasta === null);
+ok('el desglose lleva las 6 entradas, con repetidos',
+   D().turnos[0].tipoutDetalle.length === 6);
+
+// --- Reabrir el turno ---
+run("irA('semana')");
+dias()[0].click();
+ok('al reabrirlo vuelven los dos tramos',
+   d.querySelectorAll('#tramos .tramo').length === 2);
+ok('con su corte escrito', corte(0).value === '500');
+ok('los ayudantes del primer tramo, como estaban', marcados(0) === 2);
+ok('y los del último también', marcados(1) === 4);
+ok('el recibo desglosa por tramo', texto('recibo').includes('$500.00 al 4%'));
+ok('y también el otro tramo', texto('recibo').includes('$1,300.00 al 6.5%'));
+ok('con el total del tip-out en una sola línea',
+   texto('recibo').includes('1 cambio'));
+
+// --- Lo que no se puede guardar ---
+avisos.length = 0;
+corte(0).value = '2000';                 // más que las ventas del turno
+corte(0).dispatchEvent({ type: 'input' });
+run('guardarTurno()');
+/* El fallo grande que esto evita: con el corte por encima de las ventas, el
+   último tramo sale negativo y el tip-out pasa a SUMAR dinero. */
+ok('un corte mayor que las ventas no se guarda', avisos.length === 1);
+ok('y el aviso dice cuáles son las ventas del turno',
+   avisos[0].includes('$1,800.00'));
+ok('el turno guardado sigue con el tip-out bueno', D().turnos[0].tipOut === 104.5);
+
+avisos.length = 0;
+corte(0).value = '';
+corte(0).dispatchEvent({ type: 'input' });
+run('guardarTurno()');
+ok('un cambio sin ventas escritas tampoco', avisos.length === 1);
+ok('y le dice cómo quitarlo', avisos[0].includes('✕'));
+
+avisos.length = 0;
+corte(0).value = '4oo';
+corte(0).dispatchEvent({ type: 'input' });
+run('guardarTurno()');
+ok('ni uno con un número ilegible', avisos.length === 1);
+ok('nombrando el campo', avisos[0].includes('cambio de equipo'));
+
+avisos.length = 0;
+corte(0).value = '0';
+corte(0).dispatchEvent({ type: 'input' });
+run('guardarTurno()');
+ok('ni un cambio en cero: sin ventas antes no hay tramo', avisos.length === 1);
+
+// --- Dos cambios, y el tope ---
+corte(0).value = '500';
+corte(0).dispatchEvent({ type: 'input' });
+run('agregarCorte()');
+corte(1).value = '1200';
+corte(1).dispatchEvent({ type: 'input' });
+chipsDe(1)[0].click();                   // Busser en el segundo tramo
+ok('tres bloques', d.querySelectorAll('#tramos .tramo').length === 3);
+ok('y el resto se recalcula con el último corte',
+   d.querySelectorAll('#tramos .resto')[0].textContent === '$600.00');
+
+avisos.length = 0;
+corte(1).value = '400';                  // hacia atrás
+corte(1).dispatchEvent({ type: 'input' });
+run('guardarTurno()');
+ok('un cambio que va hacia atrás no se guarda', avisos.length === 1);
+
+corte(1).value = '1200';
+corte(1).dispatchEvent({ type: 'input' });
+avisos.length = 0;
+run('guardarTurno()');
+// $500 al 4% = $20; $700 al 3% = $21; $600 al 6.5% = $39.
+ok('con dos cambios suma los tres tramos', D().turnos[0].tipOut === 80);
+ok('y guarda los tres', (D().turnos[0].tipoutTramos || []).length === 3);
+
+run("irA('semana')"); dias()[0].click(); run('agregarCorte()');
+ok('al tercer cambio el botón se apaga',
+   d.getElementById('btn-corte').disabled === true);
+ok('y no deja añadir un cuarto',
+   (run('agregarCorte(); cortes.length')) === 3);
+
+// --- Quitar un cambio ---
+run('quitarCorte(0); quitarCorte(0); quitarCorte(0);');
+ok('quitando los cambios vuelve a un solo bloque',
+   d.querySelectorAll('#tramos .tramo').length === 1);
+avisos.length = 0;
+run('guardarTurno()');
+ok('y al guardar el turno deja de llevar tramos',
+   D().turnos[0].tipoutTramos === undefined);
+ok('con el tip-out del equipo completo sobre todo el turno',
+   D().turnos[0].tipOut === 117);
+
+// --- Un turno de antes de que existieran los tramos ---
+run(`datos.turnos = [{ id: 'viejo', fecha: '2026-08-04', entrada: '17:00',
+       salida: '23:00', ventas: 1000, efectivo: 50, tarjeta: 100,
+       tarifaHora: 8, tipOut: 65,
+       tipoutDetalle: [{ rol: 'Busser', porcentaje: 3, monto: 30 },
+                       { rol: 'Barra', porcentaje: 1.5, monto: 15 }] }];
+     guardar(); irA('semana');`);
+dias()[1].click();
+ok('un turno guardado antes de los tramos abre con un solo bloque',
+   d.querySelectorAll('#tramos .tramo').length === 1);
+ok('y con sus ayudantes marcados', marcados(0) === 2);
+
+// --- Renombrar un rol con tramos puestos ---
+run('agregarCorte();');
+chipsDe(0)[0].click();                   // Busser en el primer tramo
+run(`cambiarRol('r1', 'nombre', 'Bus Boy')`);
+ok('renombrar un rol lo mantiene marcado también dentro de un tramo',
+   marcados(0) === 1);
+run(`cambiarRol('r1', 'nombre', 'Busser')`);
+
+// --- Borrar un rol con tramos puestos ---
+run(`borrarRol('r3')`);
+ok('borrar un rol lo saca de los tramos',
+   (run('cortes[0].roles.includes("Runner")')) === false);
+
+run(`datos.turnos = ${antesDeTramos}; datos.roles = [
+       { id: 'r1', nombre: 'Busser', porcentaje: 3 },
+       { id: 'r2', nombre: 'Barra',  porcentaje: 1.5 },
+       { id: 'r3', nombre: 'Runner', porcentaje: 1 },
+       { id: 'r4', nombre: 'Bakery', porcentaje: 1 }
+     ]; cortes = []; guardar(); irA('semana');`);
 
 
 /* ========================================================================== */

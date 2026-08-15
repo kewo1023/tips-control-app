@@ -211,6 +211,107 @@ probar('redondea a centavos, no deja fracciones de centavo',
 
 
 /* --------------------------------------------------------------------------
+   Tip-out por tramos: el equipo cambió a mitad de turno
+
+   El caso lo describió Kev así: de 3 a 6 pm hay dos ayudantes y se paga el 2%;
+   a las 6 llegan tres más y a partir de ahí se paga el 5%, pero solo sobre lo
+   vendido DESPUÉS, no sobre el turno entero.
+
+   Se empieza por el desastre: un corte mayor que las ventas del turno deja el
+   último tramo en negativo y convierte el tip-out en una SUMA. Un número que
+   le da más dinero a quien lo lee no lo cuestiona nadie.
+   -------------------------------------------------------------------------- */
+grupo('Tip-out por tramos');
+
+const DOS  = [{ nombre: 'Busser', porcentaje: 1 }, { nombre: 'Runner', porcentaje: 1 }];
+const CINCO = [...DOS,
+  { nombre: 'Barra',  porcentaje: 1.5 },
+  { nombre: 'Bakery', porcentaje: 1.5 }];
+
+probar('un corte por encima de las ventas del turno se rechaza',
+  L.revisarCortes(1800, [2000]).motivo, 'pasa');
+
+probar('un corte que no crece se rechaza',
+  L.revisarCortes(1800, [500, 400]).motivo, 'orden');
+
+probar('un primer corte en cero también: sin ventas antes no hay tramo',
+  L.revisarCortes(1800, [0]).motivo, 'orden');
+
+probar('un corte sin escribir se rechaza',
+  L.revisarCortes(1800, [null]).motivo, 'falta');
+
+probar('un corte con texto basura se rechaza',
+  L.revisarCortes(1800, ['x']).motivo, 'falta');
+
+probar('dos cortes en orden y dentro de las ventas valen',
+  L.revisarCortes(1800, [500, 1200]).ok, true);
+
+probar('un corte igual a las ventas vale: el último tramo no vendió nada',
+  L.revisarCortes(1800, [1800]).ok, true);
+
+probar('sin cortes no hay nada que revisar',
+  L.revisarCortes(1800, []).ok, true);
+
+/* El ejemplo de Kev, con sus números: $500 vendidos con dos ayudantes al 2%,
+   y $1300 más con los cinco al 5%. */
+const TRAMOS_KEV = L.calcularTipOutTramos(1800, [
+  { hasta: 500,  roles: DOS },
+  { hasta: null, roles: CINCO }
+]);
+
+probar('el primer tramo paga sobre lo vendido hasta el cambio',
+  TRAMOS_KEV.tramos[0], { tramo: 0, ventas: 500, porcentaje: 2, monto: 10 });
+
+probar('el segundo paga solo sobre lo vendido después, no sobre el turno',
+  TRAMOS_KEV.tramos[1], { tramo: 1, ventas: 1300, porcentaje: 5, monto: 65 });
+
+probar('y el total es la suma de los dos',
+  TRAMOS_KEV.total, 75);
+
+/* La comprobación que impide el error grande: si el segundo tramo se cobrara
+   sobre las ventas enteras darían $90, y nadie lo notaría mirando un solo
+   número. Por eso se compara contra el cálculo equivocado, no solo contra el
+   bueno. */
+probar('NO es el 5% del turno entero',
+  TRAMOS_KEV.total === L.calcularTipOut(1800, CINCO).total, false);
+
+probar('el desglose suma exactamente el total',
+  L.redondear(TRAMOS_KEV.detalle.reduce((s, d) => s + d.monto, 0)),
+  TRAMOS_KEV.total);
+
+probar('un rol presente en los dos tramos aparece en los dos',
+  TRAMOS_KEV.detalle.filter(d => d.rol === 'Busser').map(d => d.monto), [5, 13]);
+
+probar('y cada entrada sabe de qué tramo salió',
+  TRAMOS_KEV.detalle.filter(d => d.rol === 'Busser').map(d => d.tramo), [0, 1]);
+
+probar('el desglose entero tiene 6 entradas, no 4: dos roles cuentan dos veces',
+  TRAMOS_KEV.detalle.length, 6);
+
+probar('tres tramos encadenan igual',
+  L.calcularTipOutTramos(2000, [
+    { hasta: 500,  roles: DOS },
+    { hasta: 1200, roles: CINCO },
+    { hasta: null, roles: DOS }
+  ]).tramos.map(t => t.ventas), [500, 700, 800]);
+
+probar('un tramo sin nadie no paga nada',
+  L.calcularTipOutTramos(1000, [
+    { hasta: 400,  roles: [] },
+    { hasta: null, roles: DOS }
+  ]).total, 12);
+
+/* Un solo tramo tiene que dar exactamente lo mismo que la función de siempre.
+   Si no, un turno normal cambiaría de resultado según por qué camino pasó. */
+probar('con un solo tramo da lo mismo que el cálculo de toda la vida',
+  L.calcularTipOutTramos(1000, [{ hasta: null, roles: CINCO }]).total,
+  L.calcularTipOut(1000, CINCO).total);
+
+probar('sin argumentos no revienta',
+  L.calcularTipOutTramos(undefined, undefined), { total: 0, detalle: [], tramos: [] });
+
+
+/* --------------------------------------------------------------------------
    El turno completo
    -------------------------------------------------------------------------- */
 grupo('Turno completo');

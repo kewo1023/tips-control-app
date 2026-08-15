@@ -71,8 +71,12 @@
      lee como una casilla hundida, un hueco. Una celda vacía más clara que la
      página (que es lo que era, blanca sobre hueso) parece una ficha levantada
      esperando algo. Es el mismo gris con el que se sombrean las filas sin
-     datos de una tabla, y significa lo mismo: aquí no hay nada. */
-  --hueco:      #f0efeb;
+     datos de una tabla, y significa lo mismo: aquí no hay nada.
+
+     Bajado de #f0efeb: contra el blanco de una celda trabajada la diferencia
+     era de unos 15 tonos sobre 255 y en el teléfono no se distinguía. */
+  --hueco:      #e4e2da;
+  --hueco-linea:#d5d2c8;   /* su borde, también más marcado */
 }
 /* El modo oscuro ya NO se activa con `prefers-color-scheme` desde el CSS, sino
    con el atributo `data-tema` en la etiqueta <html>. Quien decide el valor de
@@ -93,9 +97,15 @@
     --verde:      #5bd68b;
     --verde-suave:#1a3226;
     --rojo:       #f08c8c;
-    /* En oscuro la intuición se invierte pero la idea es la misma: el hueco es
-       lo más oscuro de la pantalla, por debajo incluso del papel. */
-    --hueco:      #0a0a09;
+    /* En oscuro no se puede "hundir" más: el papel ya está casi en negro y
+       bajar de ahí no da contraste, da nada — era el problema, el hueco y el
+       fondo se veían iguales. Así que aquí el hueco se marca al revés, con un
+       gris que se despega del papel por arriba sin llegar al nivel de una
+       tarjeta. Lo que distingue un día vacío de uno trabajado deja de ser
+       "más oscuro" y pasa a ser "sin cifra y apagado", que se lee igual de
+       bien en los dos temas. */
+    --hueco:      #232320;
+    --hueco-linea:#323230;
 }
 
 /* ============================================================================
@@ -247,7 +257,7 @@ body {
    neutros: hoy es miércoles y pintar de "libre" el jueves, viernes, sábado y
    domingo sería afirmar algo de cuatro días que todavía no han ocurrido. El
    gris vacío es neutro y no dice nada; en cuanto se pinta, empieza a decir. */
-.dia.vacio.pasado { background: var(--hueco); }
+.dia.vacio.pasado { background: var(--hueco); border-color: var(--hueco-linea); }
 .dia.hoy { border-color: var(--tinta); }
 .dia.hoy .letra { color: var(--tinta); }
 
@@ -406,8 +416,28 @@ input[type=time] {
   background: var(--papel); color: var(--tinta-2);
   font-size: 0.8125rem; cursor: pointer; user-select: none;
 }
-.chip.activo { border-color: var(--verde); color: var(--verde); font-weight: 600; }
+/* El chip puesto se RELLENA, no solo se perfila. Con seis chips en dos filas,
+   un borde de un píxel obliga a mirar dos veces para saber cuáles están
+   marcados, y esa lista es la que decide cuánto tip-out se paga. */
+.chip.activo { border-color: var(--verde); background: var(--verde-suave);
+               color: var(--verde); font-weight: 600; }
 .chip small { opacity: .7; margin-left: 3px; }
+
+/* Un tramo del turno: la cabecera con sus ventas y debajo sus ayudantes.
+   Solo aparece cuando hubo algún cambio de equipo; con uno solo, aquí no hay
+   más que la fila de chips de siempre. */
+.tramo { margin-bottom: 13px; }
+.tramo:last-child { margin-bottom: 0; }
+.tramo-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tramo-cab .titulo { flex: 1; font-size: 0.625rem; font-weight: 600;
+                     letter-spacing: 0.08em; text-transform: uppercase;
+                     color: var(--tinta-2); }
+.tramo-cab input { width: 104px; padding: 8px 10px; }
+/* El resto se calcula, no se escribe: es el único número de este bloque que
+   la persona no teclea, y por eso se ve como un dato y no como un campo. */
+.tramo-cab .resto { font-size: 0.875rem; font-weight: 600; color: var(--tinta);
+                    font-variant-numeric: tabular-nums; }
+.tramo-cab .quitar { color: var(--rojo); padding: 6px 9px; line-height: 1; }
 
 /* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
    guía el ojo desde el concepto hasta la cifra. */
@@ -426,6 +456,12 @@ input[type=time] {
 /* El sueldo por hora cuando NO se suma al total: va debajo de la raya final,
    más pequeño y en gris. Se ve porque es dinero que sí cobras, pero se lee
    como una nota al pie y no como parte de la suma de arriba. */
+/* El desglose por tramo, debajo de su total. Va sin signo y en tinta apagada:
+   la resta ya la hizo la línea de arriba, y un segundo "−" haría pensar que se
+   descuenta dos veces. */
+.recibo .sub { padding: 2px 0; font-size: 0.8125rem; }
+.recibo .sub span { color: var(--tinta-3) !important; }
+.recibo .sub span:first-child { padding-left: 13px; }
 .recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
 .recibo .aparte span { color: var(--tinta-3) !important; }
 /* La excepción al gris de las líneas de abajo: un efectivo neto en negativo es
@@ -784,7 +820,13 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
     <div class="campo">
       <label class="etiqueta" data-t="ayudantes">Ayudantes del turno</label>
-      <div class="chips" id="chips"></div>
+      <!-- Lo de aquí dentro lo pinta `pintarTramos()`. Con un solo equipo es
+           una fila de chips y nada más, igual que siempre. Con cambios a mitad
+           de turno, un bloque por tramo. -->
+      <div id="tramos"></div>
+      <button class="chico" type="button" id="btn-corte" data-t="equipoCambio"
+              style="margin-top:10px" onclick="agregarCorte()">
+        + El equipo cambió durante el turno</button>
     </div>
 
     <div class="campo">
@@ -1151,6 +1193,16 @@ const TEXTOS = {
        que revisar los tres números para encontrar cuál es. */
     numeroIlegible: 'No se entendió lo que escribiste en “%1”, así que no se guardó. Lo demás está a salvo. Escribe solo números; para los centavos usa la coma o el punto, el que te dé tu teclado. Por ejemplo: 1234,50',
     campoPorcentaje: 'Porcentaje del ayudante',
+    ventasCambio: 'Ventas hasta el cambio de equipo',
+    // Los cambios de equipo a mitad de turno
+    equipoCambio: '+ El equipo cambió durante el turno',
+    tramoHasta: 'Hasta el cambio %1',
+    tramoResto: 'Lo que queda',
+    alPorciento: 'al',
+    cambioEquipo: 'cambio', cambiosEquipoPl: 'cambios',
+    corteFalta: 'Falta escribir las ventas de un cambio de equipo. Si al final no hubo cambio, quita la línea con la ✕.',
+    corteOrden: 'Las ventas de cada cambio tienen que ser mayores que las del cambio anterior, y mayores que cero. Son las ventas acumuladas del turno hasta ese momento, tal como salen en el recibo.',
+    cortePasa: 'Un cambio de equipo no puede tener más ventas que el turno entero (%1). Revisa las ventas del turno o el número del cambio.',
     faltaPlata: 'Escribe al menos las ventas o la propina del turno. Un turno sin ninguna cifra no se puede guardar.',
     confirmBorrarTurno: 'Se va a borrar el turno del',
     confirmBorrarTurno2: 'No se puede deshacer.',
@@ -1286,6 +1338,15 @@ const TEXTOS = {
     faltaHora: 'Clock-in or clock-out time is missing. Without both, hourly earnings can’t be calculated.',
     numeroIlegible: 'What you typed in “%1” wasn’t understood, so it wasn’t saved. Everything else is safe. Use numbers only; for cents use a comma or a period, whichever your keyboard gives you. For example: 1234.50',
     campoPorcentaje: 'Helper percentage',
+    ventasCambio: 'Sales up to the team change',
+    equipoCambio: '+ The team changed during the shift',
+    tramoHasta: 'Up to change %1',
+    tramoResto: 'What is left',
+    alPorciento: 'at',
+    cambioEquipo: 'change', cambiosEquipoPl: 'changes',
+    corteFalta: 'One team change is missing its sales figure. If there was no change after all, remove the line with the ✕.',
+    corteOrden: 'Each change must have higher sales than the previous one, and above zero. These are the shift sales accumulated up to that moment, as printed on the receipt.',
+    cortePasa: 'A team change cannot have more sales than the whole shift (%1). Check the shift sales or the change figure.',
     faltaPlata: 'Enter at least the sales or the tips for this shift. A shift with no figures can’t be saved.',
     confirmBorrarTurno: 'This will delete the shift from',
     confirmBorrarTurno2: 'It cannot be undone.',
@@ -1381,7 +1442,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v20';
+const VERSION_APP = 'v21';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -1511,6 +1572,24 @@ let pantalla = 'semana';
 let lunes = '';           // el lunes de la semana que se está viendo
 let fechaAbierta = '';    // el día que se está editando
 let rolesActivos = [];
+
+/* Los cambios de equipo a mitad de turno. Cada uno guarda las ventas
+   ACUMULADAS del turno en ese momento —el número impreso en el recibo del
+   punto de venta— y quién estaba a partir de ahí.
+
+   `texto` y no un número: mientras se escribe, "1000," todavía no es nada, y
+   convertirlo a número en cada tecla borraría lo que la persona lleva escrito.
+   Se convierte al guardar, que es cuando importa.
+
+   La lista vacía es el turno normal, el de un solo equipo, y entonces todo
+   funciona exactamente como antes de que esto existiera. */
+let cortes = [];
+
+/* Tope de cambios. Kev cuenta 4 o 5 turnos así de cada 300, y ninguno con más
+   de tres cambios. El tope no es por el cálculo —aguanta los que sean— sino
+   por la pantalla: una lista que crece sin final en el formulario que se
+   rellena de pie y cansado se convierte en otra cosa. */
+const MAX_CORTES = 3;
 
 
 /* ============================================================================
@@ -1845,9 +1924,29 @@ function abrirDia(fecha) {
 
   if (existente) {
     escribir(existente);
-    rolesActivos = (existente.tipoutDetalle || []).map(d => d.rol);
+    const guardados = existente.tipoutTramos;
+
+    if (Array.isArray(guardados) && guardados.length > 1) {
+      // Un turno con cambios de equipo: los tramos vuelven tal como se
+      // guardaron. El último es el del equipo completo y va en `rolesActivos`.
+      cortes = guardados.slice(0, -1).map(tr => ({
+        texto: tr.hasta === null || tr.hasta === undefined ? '' : String(tr.hasta),
+        roles: [...(tr.roles || [])]
+      }));
+      rolesActivos = [...(guardados[guardados.length - 1].roles || [])];
+    } else {
+      /* Un turno normal, y también todos los que se guardaron antes de que
+         existieran los tramos: el desglose es la única lista que hay y en él
+         cada rol aparece una sola vez. */
+      cortes = [];
+      rolesActivos = (existente.tipoutDetalle || []).map(d => d.rol);
+    }
   } else {
     escribir({});
+    /* Los ayudantes se precargan del último turno; los cambios de equipo NO.
+       Un ayudante de más se ve marcado en la pantalla y salta a la vista; un
+       corte de $500 heredado de ayer no se nota y falsea el tip-out entero. */
+    cortes = [];
     rolesActivos = rolesDelUltimoTurno();
   }
 
@@ -1869,8 +1968,17 @@ function rolesDelUltimoTurno() {
   // porque solo puede haber un turno por día.
   const ultimo = [...datos.turnos]
     .sort((a, b) => a.fecha.localeCompare(b.fecha)).pop();
-  return (ultimo.tipoutDetalle || []).map(d => d.rol)
-    .filter(n => datos.roles.some(r => r.nombre === n));
+
+  /* Si aquel turno tuvo cambios de equipo, el punto de partida es el ÚLTIMO
+     tramo, el del staff completo. Leer el desglose entero traería el mismo rol
+     repetido y, peor, mezclaría el equipo de las 3 de la tarde con el de las
+     nueve de la noche en una sola lista. */
+  const tramos = ultimo.tipoutTramos;
+  const nombres = Array.isArray(tramos) && tramos.length > 0
+    ? (tramos[tramos.length - 1].roles || [])
+    : (ultimo.tipoutDetalle || []).map(d => d.rol);
+
+  return nombres.filter(n => datos.roles.some(r => r.nombre === n));
 }
 
 
@@ -1908,11 +2016,39 @@ function avisarIlegible(claveEtiqueta) {
   avisar(rellenar(t('numeroIlegible'), t(claveEtiqueta)));
 }
 
+/** Los roles completos (con su porcentaje) a partir de una lista de nombres. */
+function rolesConNombre(nombres) {
+  return datos.roles.filter(r => nombres.includes(r.nombre));
+}
+
+/** Los tramos tal como los necesita el cálculo: el último llega hasta el final. */
+function tramosDelFormulario() {
+  return [
+    ...cortes.map(c => ({ hasta: leerNumero(c.texto).valor,
+                          roles: rolesConNombre(c.roles) })),
+    { hasta: null, roles: rolesConNombre(rolesActivos) }
+  ];
+}
+
+/** Las ventas del último tramo: lo que queda después del último cambio. */
+function ventasRestantes() {
+  const ultimo = cortes.length > 0
+    ? leerNumero(cortes[cortes.length - 1].texto).valor : 0;
+  return redondear(num('f-ventas') - ultimo);
+}
+
 function leer() {
   const ventas = num('f-ventas');
-  const rolesDelTurno = datos.roles.filter(r => rolesActivos.includes(r.nombre));
-  const tipout = calcularTipOut(ventas, rolesDelTurno);
   const existente = turnosDelDia(datos.turnos, fechaAbierta)[0];
+
+  /* Dos caminos a propósito, y el de siempre intacto. Sin cambios de equipo el
+     turno se guarda exactamente igual que antes —mismo `tipoutDetalle`, sin
+     campos nuevos—, así que los turnos viejos y los normales no cambian de
+     forma por una función que no usan. */
+  const conTramos = cortes.length > 0;
+  const tipout = conTramos
+    ? calcularTipOutTramos(ventas, tramosDelFormulario())
+    : calcularTipOut(ventas, rolesConNombre(rolesActivos));
 
   return {
     id: existente ? existente.id : nuevoId(),
@@ -1927,6 +2063,17 @@ function leer() {
     tarifaHora: Number(datos.trabajo.tarifaHora) || 0,
     tipOut: tipout.total,
     tipoutDetalle: tipout.detalle,
+    /* Los tramos se guardan además del desglose porque son lo que la persona
+       ESCRIBIÓ, y el desglose es el resultado. Sin ellos, al reabrir el turno
+       habría que adivinar de qué corte salió cada monto: el desglose lleva un
+       rol repetido en dos tramos y no dice dónde estaba el corte.
+       Solo se guarda si hubo cambios: un turno normal no carga con un campo
+       vacío que no significa nada. */
+    ...(conTramos ? { tipoutTramos: [
+      ...cortes.map(c => ({ hasta: leerNumero(c.texto).valor,
+                            roles: [...c.roles] })),
+      { hasta: null, roles: [...rolesActivos] }
+    ] } : {}),
     nota: val('f-nota').trim()
   };
 }
@@ -1954,6 +2101,27 @@ function guardarTurno() {
   const malo = primerNumeroIlegible(CAMPOS_NUMERO_TURNO);
   if (malo) {
     avisarIlegible(malo.clave);
+    return;
+  }
+
+  /* Los cortes, antes de calcular nada con ellos. El peligroso es un corte
+     mayor que las ventas del turno: deja el último tramo en negativo y el
+     tip-out pasa a SUMAR dinero en vez de restarlo. */
+  const corteIlegible = cortes.findIndex(c => !leerNumero(c.texto).ok);
+  if (corteIlegible >= 0) {
+    avisarIlegible('ventasCambio');
+    return;
+  }
+
+  const revision = revisarCortes(num('f-ventas'),
+    cortes.map(c => leerNumero(c.texto).vacio ? null : leerNumero(c.texto).valor));
+
+  if (!revision.ok) {
+    if (revision.motivo === 'pasa') {
+      avisar(rellenar(t('cortePasa'), $(num("f-ventas"))));
+    } else {
+      avisar(t(revision.motivo === 'falta' ? 'corteFalta' : 'corteOrden'));
+    }
     return;
   }
 
@@ -2016,6 +2184,24 @@ function guardarAjustes() {
 
   datos.trabajo.tarifaHora = leida.valor;
   guardar();
+  pintar();
+}
+
+/* --- Los cambios de equipo a mitad de turno --- */
+
+function agregarCorte() {
+  if (cortes.length >= MAX_CORTES) return;
+  /* El tramo nuevo entra SIN ayudantes, no copiando los que ya están puestos.
+     El equipo suele crecer durante el turno, así que los chips marcados
+     describen el tramo final; precargar el nuevo con todos obligaría a
+     desmarcar más de lo que se marca. Y un ayudante de más en el primer tramo
+     es plata que se paga de menos sin que nada lo diga. */
+  cortes.push({ texto: '', roles: [] });
+  pintar();
+}
+
+function quitarCorte(i) {
+  cortes.splice(i, 1);
   pintar();
 }
 
@@ -2138,9 +2324,15 @@ function cambiarRol(id, campo, valor) {
     const antes = rol.nombre;
     rol.nombre = String(valor).trim();
     // Si le cambiaste el nombre a un rol que estaba marcado, que siga marcado.
+    // También dentro de los tramos: si solo se arreglara la lista principal,
+    // renombrar un rol lo dejaría marcado en el último tramo y borrado de los
+    // anteriores, y el tip-out de esos tramos bajaría solo.
     if (rolesActivos.includes(antes)) {
       rolesActivos = rolesActivos.map(n => n === antes ? rol.nombre : n);
     }
+    cortes.forEach(c => {
+      c.roles = c.roles.map(n => n === antes ? rol.nombre : n);
+    });
   }
 
   guardar();
@@ -2153,6 +2345,7 @@ function borrarRol(id) {
   preguntar(t('confirmQuitarRol').replace('%s', rol.nombre), () => {
     datos.roles = datos.roles.filter(r => r.id !== id);
     rolesActivos = rolesActivos.filter(n => n !== rol.nombre);
+    cortes.forEach(c => { c.roles = c.roles.filter(n => n !== rol.nombre); });
     guardar();
     pintar();
   });
@@ -2942,14 +3135,110 @@ function pintarTurno() {
   pintarAtajosHora('entrada');
   pintarAtajosHora('salida');
 
-  const chips = document.getElementById('chips');
-  chips.innerHTML = '';
+  pintarTramos();
+  pintarRecibo();
+}
+
+/**
+ * Los ayudantes del turno, por tramos.
+ *
+ * Con un solo equipo esto pinta una fila de chips y nada más: exactamente lo
+ * que había antes de que existieran los tramos. La cabecera con las ventas del
+ * corte solo aparece cuando hay algún cambio, porque el 98% de los turnos no
+ * lo tiene y esa cabecera sería una línea de ruido diaria a cambio de nada.
+ */
+function pintarTramos() {
+  const caja = document.getElementById('tramos');
+  const boton = document.getElementById('btn-corte');
+  caja.innerHTML = '';
+  // Se olvida el de la vuelta anterior: ya no está en la pantalla, y
+  // escribirle encima sería pintar en un sitio que nadie ve.
+  restoVisible = null;
+
   if (datos.roles.length === 0) {
-    chips.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-3)">'
-                    + t('rolesEnAjustes') + '</span>';
+    caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-3)">'
+                   + t('rolesEnAjustes') + '</span>';
+    // Sin roles no hay nada que repartir, así que tampoco nada que partir en
+    // tramos. El botón sobra y ofrecerlo sería ofrecer un callejón.
+    boton.classList.add('oculto');
+    return;
   }
+
+  boton.classList.remove('oculto');
+  boton.disabled = cortes.length >= MAX_CORTES;
+
+  const cuantos = cortes.length + 1;
+  for (let i = 0; i < cuantos; i++) caja.appendChild(bloqueTramo(i, cuantos));
+}
+
+/** Un tramo: su cabecera (si hay más de uno) y sus chips. */
+function bloqueTramo(i, cuantos) {
+  const bloque = document.createElement('div');
+  bloque.className = 'tramo';
+  const esUltimo = i === cuantos - 1;
+
+  if (cuantos > 1) {
+    const cab = document.createElement('div');
+    cab.className = 'tramo-cab';
+
+    const titulo = document.createElement('span');
+    titulo.className = 'titulo';
+    titulo.textContent = esUltimo ? t('tramoResto')
+                                  : rellenar(t('tramoHasta'), i + 1);
+    cab.appendChild(titulo);
+
+    if (esUltimo) {
+      /* El último tramo no se escribe, se calcula: son las ventas del turno
+         menos el último corte. Pedirlo otra vez sería pedir una resta que la
+         app puede hacer, y dos números que tienen que cuadrar entre sí son dos
+         sitios donde equivocarse. */
+      const resto = document.createElement('span');
+      resto.className = 'resto';
+      resto.textContent = $(ventasRestantes());
+      /* Se guarda el elemento en vez de buscarlo luego por su id. Es más
+         directo, y evita depender de `getElementById` para algo que este
+         código acaba de crear: si el elemento cambiara de nombre, la búsqueda
+         devolvería null y el número se quedaría congelado sin que nada falle
+         a la vista. Con la referencia, o está o no está. */
+      restoVisible = resto;
+      cab.appendChild(resto);
+    } else {
+      const campo = document.createElement('input');
+      campo.type = 'text';
+      campo.inputMode = 'decimal';
+      campo.placeholder = '0.00';
+      campo.value = cortes[i].texto;
+      /* Al escribir se repintan solo el resto y el recibo, nunca la pantalla
+         entera: redibujar este bloque a media cifra le quitaría el foco al
+         campo y cerraría el teclado. Es la misma excepción que ya tienen los
+         campos de ventas y propinas. */
+      campo.addEventListener('input', () => {
+        // Se lee del campo directamente y no de `evento.target`: el campo ya
+        // está aquí al alcance, y depender del evento ata este código a que
+        // quien lo dispare arme un objeto completo.
+        cortes[i].texto = campo.value;
+        pintarResto();
+        pintarRecibo();
+      });
+      cab.appendChild(campo);
+
+      const quitar = document.createElement('button');
+      quitar.type = 'button';
+      quitar.className = 'chico quitar';
+      quitar.textContent = '\u2715';
+      quitar.onclick = () => quitarCorte(i);
+      cab.appendChild(quitar);
+    }
+
+    bloque.appendChild(cab);
+  }
+
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+
   datos.roles.forEach(rol => {
-    const activo = rolesActivos.includes(rol.nombre);
+    const lista = esUltimo ? rolesActivos : cortes[i].roles;
+    const activo = lista.includes(rol.nombre);
     const chip = document.createElement('div');
     chip.className = 'chip' + (activo ? ' activo' : '');
     // textContent y no innerHTML: si un rol tuviera un signo raro en el
@@ -2959,14 +3248,24 @@ function pintarTurno() {
     pct.textContent = rol.porcentaje + '%';
     chip.appendChild(pct);
     chip.onclick = () => {
-      rolesActivos = activo ? rolesActivos.filter(n => n !== rol.nombre)
-                            : [...rolesActivos, rol.nombre];
+      const nueva = activo ? lista.filter(n => n !== rol.nombre)
+                           : [...lista, rol.nombre];
+      if (esUltimo) rolesActivos = nueva; else cortes[i].roles = nueva;
       pintar();
     };
     chips.appendChild(chip);
   });
 
-  pintarRecibo();
+  bloque.appendChild(chips);
+  return bloque;
+}
+
+/* El <span> con las ventas del último tramo, mientras esté en pantalla. */
+let restoVisible = null;
+
+/** Solo ese número, sin tocar el resto de la pantalla. */
+function pintarResto() {
+  if (restoVisible) restoVisible.textContent = $(ventasRestantes());
 }
 
 /**
@@ -3012,12 +3311,35 @@ function pintarRecibo() {
   const conSueldo = !!datos.prefs.contarSueldo;
   const cifras = cifrasPrincipales(c, conSueldo);
 
-  const cuantos = turno.tipoutDetalle.length;
   let html = fila(t('mPropinas'), $(c.propinas));
+
   if (c.tipOut > 0) {
-    html += fila(`${t('mTipOut')} · ${cuantos} `
-               + `${plural(cuantos, 'ayudante', 'ayudantesPl')}`,
-                 '− ' + $(c.tipOut), 'resta');
+    if (cortes.length > 0) {
+      /* Con cambios de equipo, una línea de total y debajo el desglose por
+         tramo con sus ventas y su porcentaje. Esos dos números son justo los
+         que salen impresos en el recibo del punto de venta, así que la cifra
+         que se le entrega al manager se puede comprobar contra el papel sin
+         rehacer ninguna cuenta.
+
+         El desglose va SIN el signo menos y en tinta apagada: la resta la hizo
+         la línea de arriba, y un segundo "−" se leería como que se descuenta
+         dos veces. */
+      const n = cortes.length;
+      html += fila(`${t('mTipOut')} · ${n} `
+                 + `${plural(n, 'cambioEquipo', 'cambiosEquipoPl')}`,
+                   '− ' + $(c.tipOut), 'resta');
+
+      calcularTipOutTramos(turno.ventas, tramosDelFormulario()).tramos
+        .forEach(tr => {
+          html += fila(`${$(tr.ventas)} ${t('alPorciento')} ${tr.porcentaje}%`,
+                       $(tr.monto), '', 'sub');
+        });
+    } else {
+      const cuantos = turno.tipoutDetalle.length;
+      html += fila(`${t('mTipOut')} · ${cuantos} `
+                 + `${plural(cuantos, 'ayudante', 'ayudantesPl')}`,
+                   '− ' + $(c.tipOut), 'resta');
+    }
   }
   if (turno.ventas > 0) {
     html += fila(t('propinaSobreVentas'), c.porcentajeVentas + '%');
@@ -3299,6 +3621,7 @@ window.addEventListener('scroll', cerrarNota, { passive: true });
    -------------------------------------------------------------------------- */
 const FUNCIONES_NECESARIAS = [
   'redondear', 'leerNumero', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
+  'calcularTipOutTramos', 'revisarCortes',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado'
