@@ -146,6 +146,24 @@ run('terminarBienvenida()');
 ok('sin sueldo por hora no deja empezar', D().configurado === false);
 ok('y lo dice en vez de quedarse callada', avisos.length === 1);
 
+/* Una tarifa que el teclado del teléfono escribió con coma. Esta es LA
+   pantalla donde apareció el fallo: es lo primero que toca alguien que abre la
+   app por primera vez, y es donde un compañero se quedó sin poder poner
+   decimales. */
+avisos.length = 0;
+d.getElementById('b-tarifa').value = '8,50';
+run('guardarBienvenida()');
+ok('una tarifa con coma se guarda en la bienvenida', D().trabajo.tarifaHora === 8.5);
+ok('sin avisar de nada', avisos.length === 0);
+
+avisos.length = 0;
+d.getElementById('b-tarifa').value = 'ocho con cincuenta';
+run('terminarBienvenida()');
+ok('una tarifa ilegible no deja empezar', D().configurado === false);
+ok('y lo dice', avisos.length === 1);
+ok('nombrando el campo', avisos[0].includes('Sueldo por hora'));
+ok('y NO se guarda como 0', D().trabajo.tarifaHora === 8.5);
+
 // Con tarifa pero sin porcentajes, tampoco: un tip-out en cero infla el neto.
 avisos.length = 0;
 d.getElementById('b-tarifa').value = '8';
@@ -1155,6 +1173,149 @@ run("datos.trabajo.tipOutEnEfectivo = true; cerrarTurno();");
 
 // Devolver los turnos como estaban: este grupo los pisó.
 run(`datos.turnos = ${turnosAntes}; guardar(); irA('semana');`);
+
+
+/* --------------------------------------------------------------------------
+   El teclado con coma
+
+   Grupo escrito a partir de un fallo real en el iPhone de un compañero: su
+   teclado ofrecía "," donde el de Kev ofrece ".", y lo que escribía llegaba al
+   código como texto vacío. `Number('') || 0` lo convertía en 0 sin decir nada.
+
+   Se empieza por el desastre, no por el camino feliz: lo primero que se
+   comprueba es que un porcentaje ilegible NO se guarde como 0, porque ese cero
+   es el que infla el neto de todos los turnos siguientes.
+
+   Este grupo pisa turnos y roles, así que los guarda al empezar y los devuelve
+   al terminar. Sin eso reventaría un grupo veinte líneas más abajo, y ese día
+   nadie relaciona una cosa con la otra.
+   -------------------------------------------------------------------------- */
+grupo('El teclado con coma');
+
+const antesDeLaComa = JSON.stringify(D().turnos);
+const rolesAntesDeLaComa = JSON.stringify(D().roles);
+
+run("datos.configurado = true; datos.turnos = []; irA('ajustes')");
+
+// --- El porcentaje de un ayudante ---
+avisos.length = 0;
+run(`cambiarRol(datos.roles[0].id, 'porcentaje', '3,5')`);
+ok('un porcentaje con coma se guarda como 3.5', D().roles[0].porcentaje === 3.5);
+ok('y no avisa de nada: se entendió perfectamente', avisos.length === 0);
+
+avisos.length = 0;
+run(`cambiarRol(datos.roles[0].id, 'porcentaje', 'tres y medio')`);
+ok('un porcentaje ilegible NO se guarda como 0',
+   D().roles[0].porcentaje === 3.5);
+ok('y lo dice en vez de callarse', avisos.length === 1);
+ok('el aviso nombra el campo', avisos[0].includes('Porcentaje del ayudante'));
+ok('y aclara que lo demás está a salvo', avisos[0].includes('a salvo'));
+
+avisos.length = 0;
+run(`cambiarRol(datos.roles[0].id, 'porcentaje', '')`);
+ok('vaciar el campo lo deja en null, no en 0',
+   D().roles[0].porcentaje === null);
+
+run(`cambiarRol(datos.roles[0].id, 'porcentaje', 3)`);
+ok('un número de verdad sigue entrando igual', D().roles[0].porcentaje === 3);
+
+// --- El sueldo por hora ---
+avisos.length = 0;
+set('a-tarifa', '12,50');
+run('guardarAjustes()');
+ok('la tarifa con coma entra bien', D().trabajo.tarifaHora === 12.5);
+
+avisos.length = 0;
+set('a-nombre', 'El Sitio Nuevo');
+set('a-tarifa', 'doce cincuenta');
+run('guardarAjustes()');
+ok('una tarifa ilegible no pisa la que ya estaba', D().trabajo.tarifaHora === 12.5);
+ok('avisa', avisos.length === 1);
+/* El nombre está en la misma tarjeta y no tiene la culpa del campo de al
+   lado. Perderlo sería castigar dos cosas por un solo error. */
+ok('pero el nombre del restaurante sí se guardó',
+   D().trabajo.nombre === 'El Sitio Nuevo');
+ok('y el campo vuelve a enseñar la tarifa buena',
+   d.getElementById('a-tarifa').value === '12.5');
+
+// --- Los tres números del turno ---
+run("datos.roles.forEach(r => r.porcentaje = 2); irA('semana')");
+dias()[1].click();                       // martes 4
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+
+avisos.length = 0;
+set('f-ventas', '1000,50'); set('f-efectivo', '80'); set('f-tarjeta', '120');
+run('guardarTurno()');
+ok('unas ventas con coma se guardan enteras', D().turnos[0].ventas === 1000.5);
+
+run("borrarTurno(); irA('semana')");
+dias()[1].click();
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+
+avisos.length = 0;
+set('f-ventas', '1000x'); set('f-efectivo', '80'); set('f-tarjeta', '120');
+run('guardarTurno()');
+/* Lo que de verdad se está vigilando: con las ventas ilegibles leídas como 0,
+   el tip-out habría salido $0 y el neto del turno habría quedado inflado. Un
+   total de más nadie lo cuestiona. */
+ok('un turno con un número ilegible no se guarda', D().turnos.length === 0);
+ok('avisa', avisos.length === 1);
+ok('y nombra el campo que falla, no "hay un error"',
+   avisos[0].includes('Ventas del turno'));
+ok('no cierra el formulario',
+   !d.getElementById('p-turno')._classes.has('oculto'));
+ok('y lo escrito sigue en pantalla para poder corregirlo',
+   d.getElementById('f-ventas').value === '1000x');
+
+avisos.length = 0;
+set('f-ventas', '1000'); set('f-efectivo', '8o');
+run('guardarTurno()');
+ok('el efectivo ilegible también frena el guardado', D().turnos.length === 0);
+ok('y el aviso nombra el efectivo, no las ventas',
+   avisos[0].includes('Propina efectivo'));
+
+/* A medio escribir: la coma final no puede dar un aviso de error. Es el caso
+   que aparece solo si alguien teclea los centavos y toca Guardar antes de
+   escribirlos. */
+avisos.length = 0;
+set('f-efectivo', '80,');
+run('guardarTurno()');
+ok('una coma a medio escribir NO se trata como error', avisos.length === 0);
+ok('y se lee como el número entero', D().turnos[0].efectivo === 80);
+
+run("borrarTurno(); irA('semana')");
+dias()[1].click();
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '1000'); set('f-tarjeta', '120');
+
+avisos.length = 0;
+set('f-efectivo', '80,25');
+run('guardarTurno()');
+ok('corregido, guarda', D().turnos.length === 1);
+ok('con el efectivo bien leído', D().turnos[0].efectivo === 80.25);
+ok('y sin avisos', avisos.length === 0);
+
+// --- Los campos ya no son type=number ---
+/* La comprobación que evita que alguien "limpie" esto en seis meses sin saber
+   por qué estaba: si vuelven a ser `type=number`, el navegador vuelve a
+   decidir qué es un número válido y el fallo del compañero vuelve entero.
+
+   Se mira el elemento Y el texto del archivo. Lo segundo no es redundante: el
+   campo del porcentaje de cada rol no existe en el HTML, lo fabrica
+   `pintarListaRoles` desde el código, así que un `type = 'number'` ahí no lo
+   vería ninguna comprobación sobre elementos. */
+['f-ventas', 'f-efectivo', 'f-tarjeta', 'a-tarifa', 'b-tarifa'].forEach(id =>
+  ok(`${id} no es type=number`,
+     d.getElementById(id).getAttribute('type') === 'text'));
+
+ok('no queda ningún type="number" en el archivo',
+   !/type="number"/.test(html));
+ok('ni ninguno puesto desde el código',
+   !/\.type\s*=\s*'number'/.test(html));
+
+run(`datos.turnos = ${antesDeLaComa}; datos.roles = ${rolesAntesDeLaComa};`
+  + `datos.trabajo.tarifaHora = 8; datos.trabajo.nombre = 'Cafe Test';`
+  + `guardar(); irA('semana');`);
 
 
 /* ========================================================================== */

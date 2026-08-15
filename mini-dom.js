@@ -92,6 +92,23 @@ function crearDocumento(html) {
     const el = new El(m[1]);
     const cls = /class="([^"]*)"/.exec(atributos);
     if (cls) el.className = cls[1];
+
+    /* Los atributos tal como están escritos en el HTML, para que
+       `getAttribute` diga la verdad sobre ellos.
+    
+       Antes no se guardaban y `getAttribute('type')` devolvía `undefined`
+       para TODOS los campos. Eso no es "no lo sé": es una respuesta que se
+       parece a una válida. Una prueba escrita para comprobar que un campo ya
+       no es `type=number` pasaba en verde tanto si lo era como si no.
+    
+       Es el mismo fallo que tuvo `matchMedia` cuando contestaba lo mismo a
+       cualquier pregunta. La regla del mini-dom: mejor que no sepa algo a que
+       lo improvise. */
+    const reAttr = /([\w-]+)="([^"]*)"/g;
+    let a;
+    while ((a = reAttr.exec(atributos))) el.setAttribute(a[1], a[2]);
+    // `type` también como propiedad, que es como lo lee el código de la app.
+    if (el._attrs.type) el.type = el._attrs.type;
     if (dt)  el.dataset.t = dt[1];
     if (dph) el.dataset.ph = dph[1];
     if (id)  porId[id[1]] = el;

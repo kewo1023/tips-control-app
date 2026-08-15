@@ -344,7 +344,11 @@ body {
 .campo:last-child { margin-bottom: 0; }
 .campo label { display: block; margin-bottom: 5px; }
 
-input[type=text], input[type=number], input[type=time] {
+/* Los campos de dinero son `type=text`, no `type=number`. La razón está en
+   `leerNumero()` de logica.js: con `type=number` el navegador decide qué es un
+   número válido, y esa decisión cambia según el idioma del teléfono. En el de
+   un compañero, "3,5" llegaba al código como texto vacío. */
+input[type=text], input[type=time] {
   width: 100%; padding: 11px 12px;
   border: 1px solid var(--linea); border-radius: 9px;
   background: var(--papel); color: var(--tinta);
@@ -529,8 +533,11 @@ button { font-family: inherit; }
                accent-color: var(--verde); }
 
 .rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
-.rol-fila input[type=text] { flex: 1; }
-.rol-fila input[type=number] { width: 74px; }
+/* Por clase y no por `type`: desde que el porcentaje dejó de ser
+   `type=number`, los dos campos de la fila son texto y el selector viejo los
+   habría estirado a los dos por igual. */
+.rol-fila input.nombre { flex: 1; }
+.rol-fila input.pct    { width: 74px; }
 /* ============================================================================
    SECCIÓN A2 — El aviso de instalación
    ----------------------------------------------------------------------------
@@ -758,20 +765,20 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
     <div class="campo">
       <label class="etiqueta" data-t="ventasTurno" for="f-ventas">Ventas del turno</label>
-      <input type="number" id="f-ventas" inputmode="decimal" step="0.01" min="0"
+      <input type="text" id="f-ventas" inputmode="decimal"
              placeholder="0.00">
     </div>
 
     <div class="fila campo">
       <div>
         <label class="etiqueta" data-t="propEfectivo" for="f-efectivo">Propina efectivo</label>
-        <input type="number" id="f-efectivo" inputmode="decimal" step="0.01"
-               min="0" placeholder="0.00">
+        <input type="text" id="f-efectivo" inputmode="decimal"
+               placeholder="0.00">
       </div>
       <div>
         <label class="etiqueta" data-t="propTarjeta" for="f-tarjeta">Propina tarjeta</label>
-        <input type="number" id="f-tarjeta" inputmode="decimal" step="0.01"
-               min="0" placeholder="0.00">
+        <input type="text" id="f-tarjeta" inputmode="decimal"
+               placeholder="0.00">
       </div>
     </div>
 
@@ -812,7 +819,7 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
     </div>
     <div class="campo">
       <label class="etiqueta" data-t="sueldoHora" for="a-tarifa">Sueldo por hora</label>
-      <input type="number" id="a-tarifa" inputmode="decimal" step="0.01" min="0"
+      <input type="text" id="a-tarifa" inputmode="decimal"
              onchange="guardarAjustes()" placeholder="0.00">
     </div>
 
@@ -918,7 +925,7 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
     </div>
     <div class="campo">
       <label class="etiqueta" data-t="sueldoHora" for="b-tarifa">Sueldo por hora</label>
-      <input type="number" id="b-tarifa" inputmode="decimal" step="0.01" min="0"
+      <input type="text" id="b-tarifa" inputmode="decimal"
              placeholder="0.00" onchange="guardarBienvenida()">
     </div>
   </div>
@@ -1140,6 +1147,10 @@ const TEXTOS = {
 
     // Avisos
     faltaHora: 'Falta la hora de entrada o la de salida. Sin las dos no se puede calcular cuánto ganaste por hora.',
+    /* El nombre del campo va dentro del mensaje. Sin él, quien lo lea tiene
+       que revisar los tres números para encontrar cuál es. */
+    numeroIlegible: 'No se entendió lo que escribiste en “%1”, así que no se guardó. Lo demás está a salvo. Escribe solo números; para los centavos usa la coma o el punto, el que te dé tu teclado. Por ejemplo: 1234,50',
+    campoPorcentaje: 'Porcentaje del ayudante',
     faltaPlata: 'Escribe al menos las ventas o la propina del turno. Un turno sin ninguna cifra no se puede guardar.',
     confirmBorrarTurno: 'Se va a borrar el turno del',
     confirmBorrarTurno2: 'No se puede deshacer.',
@@ -1273,6 +1284,8 @@ const TEXTOS = {
     miRestaurante: 'My restaurant', nuevoRol: 'New role',
 
     faltaHora: 'Clock-in or clock-out time is missing. Without both, hourly earnings can’t be calculated.',
+    numeroIlegible: 'What you typed in “%1” wasn’t understood, so it wasn’t saved. Everything else is safe. Use numbers only; for cents use a comma or a period, whichever your keyboard gives you. For example: 1234.50',
+    campoPorcentaje: 'Helper percentage',
     faltaPlata: 'Enter at least the sales or the tips for this shift. A shift with no figures can’t be saved.',
     confirmBorrarTurno: 'This will delete the shift from',
     confirmBorrarTurno2: 'It cannot be undone.',
@@ -1368,7 +1381,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v19';
+const VERSION_APP = 'v20';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -1870,7 +1883,30 @@ function rolesDelUltimoTurno() {
    ========================================================================== */
 
 function val(id) { return document.getElementById(id).value; }
-function num(id) { return Number(val(id)) || 0; }
+
+/* Antes esto era `Number(val(id)) || 0`, y esa línea causó el fallo del
+   teclado con coma: lo ilegible se volvía 0 sin decir nada. `leerNumero`
+   distingue vacío de ilegible; aquí seguimos devolviendo el número porque
+   quien lo llama ya comprobó antes que se entendía. */
+function num(id) { return leerNumero(val(id)).valor; }
+
+/* Los campos numéricos del formulario con la clave de su etiqueta. El aviso
+   tiene que nombrar EL campo que falla: "hay un número mal" obliga a revisar
+   los tres, "no se entiende Ventas del turno" se arregla de un toque. */
+const CAMPOS_NUMERO_TURNO = [
+  { id: 'f-ventas',   clave: 'ventasTurno'  },
+  { id: 'f-efectivo', clave: 'propEfectivo' },
+  { id: 'f-tarjeta',  clave: 'propTarjeta'  }
+];
+
+function primerNumeroIlegible(campos) {
+  return campos.find(c => !leerNumero(val(c.id)).ok) || null;
+}
+
+/** El aviso de "esto no es un número", con el nombre del campo dentro. */
+function avisarIlegible(claveEtiqueta) {
+  avisar(rellenar(t('numeroIlegible'), t(claveEtiqueta)));
+}
 
 function leer() {
   const ventas = num('f-ventas');
@@ -1910,6 +1946,17 @@ function escribir(t) {
    ========================================================================== */
 
 function guardarTurno() {
+  /* Esta comprobación va ANTES de `leer()` y no después, y ahí está la gracia:
+     `leer()` convierte a 0 lo que no entiende, y a partir de ese momento el
+     turno parece perfectamente válido. Unas ventas ilegibles darían tip-out
+     $0 y un neto inflado, que es el error que este proyecto tiene prohibido.
+     Después de leer ya no hay nada que detectar. */
+  const malo = primerNumeroIlegible(CAMPOS_NUMERO_TURNO);
+  if (malo) {
+    avisarIlegible(malo.clave);
+    return;
+  }
+
   const turno = leer();
 
   if (!turno.entrada || !turno.salida) {
@@ -1955,8 +2002,19 @@ function borrarTurno() {
    ========================================================================== */
 
 function guardarAjustes() {
-  datos.trabajo.nombre     = val('a-nombre').trim() || t('miRestaurante');
-  datos.trabajo.tarifaHora = num('a-tarifa');
+  // El nombre se guarda pase lo que pase: es el otro campo de la tarjeta y no
+  // tiene la culpa de que la tarifa esté mal escrita.
+  datos.trabajo.nombre = val('a-nombre').trim() || t('miRestaurante');
+
+  const leida = leerNumero(val('a-tarifa'));
+  if (!leida.ok) {
+    guardar();
+    avisarIlegible('sueldoHora');
+    pintar();            // el campo vuelve a la tarifa que sí está guardada
+    return;
+  }
+
+  datos.trabajo.tarifaHora = leida.valor;
   guardar();
   pintar();
 }
@@ -1982,9 +2040,22 @@ function agregarRol() {
    ========================================================================== */
 
 function guardarBienvenida() {
-  datos.trabajo.nombre     = val('b-nombre').trim();
-  datos.trabajo.tarifaHora = num('b-tarifa');
+  datos.trabajo.nombre = val('b-nombre').trim();
+
+  const leida = leerNumero(val('b-tarifa'));
+  if (leida.ok) datos.trabajo.tarifaHora = leida.valor;
   guardar();
+
+  // El aviso, después de guardar lo que sí era válido. Si se avisara primero,
+  // el nombre recién escrito se perdería por culpa del campo de al lado.
+  if (!leida.ok) {
+    avisarIlegible('sueldoHora');
+    pintar();
+  }
+
+  // Devuelve si la tarifa se entendió, para que `terminarBienvenida` sepa si
+  // puede seguir sin tener que volver a comprobarlo ni volver a avisar.
+  return leida.ok;
 }
 
 /**
@@ -2001,7 +2072,14 @@ function guardarBienvenida() {
  * aplica". La app tiene que saber cuál de los dos es.
  */
 function terminarBienvenida() {
-  guardarBienvenida();
+  /* `guardarBienvenida` guarda lo que sea válido y avisa si la tarifa no se
+     entiende. Aquí solo hay que no seguir adelante.
+
+     Se aprovecha lo que devuelve en vez de volver a comprobarlo: hacer la
+     misma comprobación otra vez ponía DOS diálogos idénticos en la cola, y el
+     segundo obliga a cerrar dos veces un aviso que ya se leyó. Lo destapó una
+     prueba que contaba los avisos, no una que mirara si avisaba. */
+  if (!guardarBienvenida()) return;
 
   // Sin `.trim()` un campo con solo espacios pasaría la comprobación.
   if (val('b-tarifa').trim() === '') {
@@ -2040,12 +2118,31 @@ function terminarBienvenida() {
 function cambiarRol(id, campo, valor) {
   const rol = datos.roles.find(r => r.id === id);
   if (!rol) return;
-  const antes = rol.nombre;
-  rol[campo] = campo === 'porcentaje' ? (Number(valor) || 0) : String(valor).trim();
-  // Si le cambiaste el nombre a un rol que estaba marcado, que siga marcado.
-  if (campo === 'nombre' && rolesActivos.includes(antes)) {
-    rolesActivos = rolesActivos.map(n => n === antes ? rol.nombre : n);
+
+  if (campo === 'porcentaje') {
+    const leido = leerNumero(valor);
+    /* Un porcentaje que no se entiende NO se guarda como 0. De todos los
+       ceros silenciosos que tenía la app, este era el más caro: el tip-out
+       sale $0 y el neto de cada turno a partir de ahí queda inflado, sin que
+       nada en la pantalla lo diga. Es lo que le pasó al compañero que escribió
+       "3,5" con un teclado de coma. */
+    if (!leido.ok) {
+      avisarIlegible('campoPorcentaje');
+      pintar();          // el campo vuelve al porcentaje que sí está guardado
+      return;
+    }
+    // Vacío es `null`, no 0, igual que en `agregarRol`: "no lo he puesto" y
+    // "es cero" se ven igual en la pantalla y no significan lo mismo.
+    rol.porcentaje = leido.vacio ? null : leido.valor;
+  } else {
+    const antes = rol.nombre;
+    rol.nombre = String(valor).trim();
+    // Si le cambiaste el nombre a un rol que estaba marcado, que siga marcado.
+    if (rolesActivos.includes(antes)) {
+      rolesActivos = rolesActivos.map(n => n === antes ? rol.nombre : n);
+    }
   }
+
   guardar();
   pintar();
 }
@@ -3041,15 +3138,15 @@ function pintarListaRoles(idLista, idTotal, apagada) {
 
     const nombre = document.createElement('input');
     nombre.type = 'text';
+    nombre.className = 'nombre';
     nombre.value = rol.nombre;
     nombre.disabled = !!apagada;
     nombre.onchange = e => cambiarRol(rol.id, 'nombre', e.target.value);
 
     const pct = document.createElement('input');
-    pct.type = 'number';
+    pct.type = 'text';
+    pct.className = 'pct';
     pct.inputMode = 'decimal';
-    pct.step = '0.1';
-    pct.min = '0';
     // Un porcentaje sin poner vale `null`, y eso deja el campo en blanco. Un 0
     // se vería como una respuesta ya dada, que es justo lo que no queremos:
     // el campo tiene que pedir el número, no fingir que ya lo tiene.
@@ -3201,7 +3298,7 @@ window.addEventListener('scroll', cerrarNota, { passive: true });
    diez segundos y evita descubrir a los veinte minutos que juegas con diez.
    -------------------------------------------------------------------------- */
 const FUNCIONES_NECESARIAS = [
-  'redondear', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
+  'redondear', 'leerNumero', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado'

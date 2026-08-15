@@ -32,6 +32,78 @@ function redondear(n) {
 }
 
 
+
+/**
+ * Convierte lo que una persona escribió en un campo en un número de verdad.
+ *
+ * Esto existe por un fallo que apareció en el teléfono de un compañero: su
+ * teclado ofrecía una coma donde el de Kev ofrece un punto, escribió "3,5" en
+ * el porcentaje de un ayudante y la app lo guardó como **0**. Sin avisar. Su
+ * tip-out pasó a ser $0 y la app le dijo que se llevaba más dinero del que se
+ * llevaba, que es la peor dirección posible del error.
+ *
+ * La causa de fondo era `Number(campo.value) || 0`. Esa línea parece
+ * defensiva y no lo es: convierte tres situaciones distintas —vacío, ilegible
+ * y un cero de verdad— en la misma respuesta. Por eso aquí se devuelven las
+ * tres por separado y el que llama decide qué hacer con cada una.
+ *
+ * En Excel sería la diferencia entre una celda vacía, una celda con 0 y una
+ * celda con #¡VALOR!. Se parecen en que no suman, pero solo una es un error.
+ *
+ * Sobre los separadores: el teclado de un teléfono con `inputmode="decimal"`
+ * ofrece UNO solo, el del idioma del aparato. O coma, o punto, nunca los dos.
+ * Así que "1234,50" y "1234.50" son las dos formas reales de escribir lo
+ * mismo y las dos se aceptan. Lo que NO se hace es adivinar separadores de
+ * miles: "1.234" se lee como uno coma dos tres cuatro, porque en un teclado
+ * que ofrece coma no hay forma de teclear ese punto. Un texto pegado con los
+ * dos separadores sí se entiende (el de más a la derecha manda), que es el
+ * único caso donde pueden convivir.
+ *
+ * @param   {string} texto  lo que hay escrito en el campo
+ * @returns {{ ok: boolean, vacio: boolean, valor: number }}
+ *          ok    — se entendió (un campo vacío también se entiende)
+ *          vacio — no había nada escrito, que no es lo mismo que un 0
+ *          valor — el número, o 0 si no se entendió (no usarlo con ok en false)
+ */
+function leerNumero(texto) {
+  const crudo = String(texto === null || texto === undefined ? '' : texto).trim();
+  if (crudo === '') return { ok: true, vacio: true, valor: 0 };
+
+  // Solo dígitos, separadores, espacios y un signo delante. Cualquier letra
+  // que se cuele hace que el campo sea ilegible, no cero.
+  if (!/^-?[\d.,\s]+$/.test(crudo)) return { ok: false, vacio: false, valor: 0 };
+
+  /* Un separador suelto al final es alguien a medio escribir: "1000," es
+     mil, todavía sin decidir los centavos. Si eso contara como ilegible, el
+     recibo parpadearía mientras se teclea y, peor, guardar justo ahí daría un
+     aviso de error por un número que está bien. Dos separadores seguidos sí
+     son basura y siguen cayendo más abajo. */
+  let limpio = crudo.replace(/\s/g, '').replace(/[.,]$/, '');
+  if (limpio === '' || limpio === '-') return { ok: false, vacio: false, valor: 0 };
+
+  const punto = limpio.lastIndexOf('.');
+  const coma  = limpio.lastIndexOf(',');
+
+  if (punto >= 0 && coma >= 0) {
+    // Están los dos: el que va más a la derecha es el decimal y el otro
+    // separa los miles. Cubre "1.234,56" y "1,234.56" con la misma regla.
+    const decimal = punto > coma ? '.' : ',';
+    const miles   = decimal === '.' ? ',' : '.';
+    limpio = limpio.split(miles).join('').replace(decimal, '.');
+  } else if (coma >= 0) {
+    limpio = limpio.replace(',', '.');
+  }
+
+  // Después de normalizar puede quedar como mucho un separador. Si quedan dos
+  // ("1,2,3"), no era un número: es preferible decirlo a inventar uno.
+  if ((limpio.match(/\./g) || []).length > 1) return { ok: false, vacio: false, valor: 0 };
+
+  const n = Number(limpio);
+  if (!isFinite(n)) return { ok: false, vacio: false, valor: 0 };
+
+  return { ok: true, vacio: false, valor: n };
+}
+
 /* --- Tiempo -------------------------------------------------------------- */
 
 /**
@@ -459,7 +531,7 @@ function fusionarTurnos(actuales, importados) {
    invisible para el teléfono y necesaria para las pruebas. */
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    redondear, horaAMinutos, calcularHoras, calcularTipOut,
+    redondear, leerNumero, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,

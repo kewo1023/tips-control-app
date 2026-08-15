@@ -38,6 +38,108 @@ function grupo(titulo) {
 
 
 /* --------------------------------------------------------------------------
+   Leer lo que escribe una persona
+
+   Estas pruebas nacen de un fallo real: el teclado de un compañero ofrecía
+   coma donde el de Kev ofrece punto, y "3,5" acabó guardado como 0.
+
+   Se empieza por el desastre que se quiere evitar y no por el camino feliz:
+   la primera prueba no es "¿lee 3.5?", es "¿lo ilegible deja de valer 0?".
+   -------------------------------------------------------------------------- */
+grupo('Leer lo que escribe una persona');
+
+probar('lo que no se entiende NO vale cero (el fallo que motivó todo esto)',
+  L.leerNumero('abc').ok, false);
+
+probar('y vacío sí se entiende, no es lo mismo',
+  L.leerNumero('').ok, true);
+
+probar('vacío se marca como vacío, que no es un cero escrito',
+  L.leerNumero('').vacio, true);
+
+probar('un cero escrito no se marca como vacío',
+  L.leerNumero('0').vacio, false);
+
+probar('coma decimal, que es el caso del teclado del compañero',
+  L.leerNumero('3,5').valor, 3.5);
+
+probar('punto decimal sigue funcionando igual que siempre',
+  L.leerNumero('3.5').valor, 3.5);
+
+probar('una venta con coma',
+  L.leerNumero('1234,50').valor, 1234.5);
+
+probar('un número entero',
+  L.leerNumero('1234').valor, 1234);
+
+probar('espacios alrededor no molestan',
+  L.leerNumero('  12,75  ').valor, 12.75);
+
+probar('pegado a la europea: la coma manda, el punto es de miles',
+  L.leerNumero('1.234,56').valor, 1234.56);
+
+probar('pegado a la americana: al revés, y da lo mismo',
+  L.leerNumero('1,234.56').valor, 1234.56);
+
+/* En un teclado con coma no existe la tecla del punto, así que este texto no
+   se puede TECLEAR: solo llega pegado. Se lee como decimal en vez de adivinar
+   que el punto separaba miles. Adivinar aquí es lo que convertiría $1234 en
+   $1.23 sin que nadie lo note. */
+probar('un solo punto es decimal, no separador de miles',
+  L.leerNumero('1.234').valor, 1.234);
+
+probar('dos separadores del mismo tipo no son un número',
+  L.leerNumero('1,2,3').ok, false);
+
+/* Se acepta como 3.5: la coma del final se cae por la regla de "a medio
+   escribir" de un poco más abajo, y lo que queda es un número perfecto. La
+   basura de verdad son DOS separadores en medio, que es la prueba de arriba. */
+probar('un separador suelto al final se ignora, no invalida',
+  L.leerNumero('3,5,').valor, 3.5);
+
+/* A medio escribir. Sin esto, tocar Guardar justo después de teclear la coma
+   daría un aviso de error por un número que está perfectamente bien. */
+probar('una coma al final es alguien a medio escribir, no un error',
+  L.leerNumero('1000,').valor, 1000);
+
+probar('y un punto al final, igual',
+  L.leerNumero('1000.').valor, 1000);
+
+probar('pero una coma sola no es ningún número',
+  L.leerNumero(',').ok, false);
+
+probar('ni un signo menos suelto',
+  L.leerNumero('-').ok, false);
+
+probar('los centavos sin el cero delante también valen',
+  L.leerNumero(',50').valor, 0.5);
+
+probar('una letra colada invalida el campo entero',
+  L.leerNumero('12a').ok, false);
+
+probar('el signo de dólar no se acepta a la callada',
+  L.leerNumero('$12').ok, false);
+
+probar('negativo con coma (por si alguien ajusta algo a mano)',
+  L.leerNumero('-5,5').valor, -5.5);
+
+probar('un número de verdad, no un texto, también se entiende',
+  L.leerNumero(12.5).valor, 12.5);
+
+probar('sin argumento se comporta como vacío y no revienta',
+  L.leerNumero(undefined), { ok: true, vacio: true, valor: 0 });
+
+probar('null igual',
+  L.leerNumero(null).vacio, true);
+
+/* La comprobación que cierra el círculo: el porcentaje del compañero
+   entra bien y el tip-out deja de ser cero. */
+probar('el 3,5% de un busser ya no se convierte en $0 de tip-out',
+  L.calcularTipOut(1000, [{ nombre: 'Busser',
+                            porcentaje: L.leerNumero('3,5').valor }]).total, 35);
+
+
+/* --------------------------------------------------------------------------
    Horas trabajadas
    -------------------------------------------------------------------------- */
 grupo('Horas trabajadas');
