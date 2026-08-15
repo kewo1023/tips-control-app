@@ -19,7 +19,7 @@
       prueba en `pruebas-app.js` que los compara y falla si no coinciden.
    ========================================================================== */
 
-const VERSION = 'v24';
+const VERSION = 'v25';
 const CACHE = 'tips-control-' + VERSION;
 
 const ARCHIVOS = [

@@ -325,7 +325,29 @@ ok('el recibo muestra el sueldo de 6 h aparte', texto('recibo').includes('$60.00
 // 6 h · propinas 180 · tip-out 78 → 102. El sueldo (60) NO se suma.
 ok('el recibo cierra en las propinas netas', texto('recibo').includes('$102.00'));
 ok('y no en el total con sueldo', !texto('recibo').includes('$162.00'));
-ok('el por hora va sin sueldo: 102 / 6', texto('recibo').includes('$17.00/h'));
+ok('el por hora va sin sueldo: 102 / 6',
+   texto('recibo').includes('Por hora') && texto('recibo').includes('$17.00'));
+/* El contrario, y es el que vigila el cambio: antes el por hora iba pegado a
+   la etiqueta del total ("Te llevas · $17.00/h"). Era la única línea del recibo
+   con dos cifras, y la de la izquierda se leía como parte del nombre. */
+ok('y ya no cuelga de la etiqueta del total',
+   !texto('recibo').includes('$17.00/h'));
+
+/* Las tres etiquetas nuevas del recibo, con el sueldo apagado (el de fábrica).
+   Propinas: 60 + 120 = 180, la única cifra del recibo que no se tecleó.
+   Propina dejada: 180 / 1200 = 15%. */
+ok('Propinas dice de dónde sale', texto('recibo').includes('Efectivo + tarjeta'));
+ok('el porcentaje se lee como lo diría un mesero',
+   texto('recibo').includes('Te dejaron de propina')
+   && texto('recibo').includes('15%'));
+/* Y no la etiqueta vieja, que sonaba a contabilidad, ni "promedio", que en esta
+   app ya significa otra cosa: la métrica "Por turno" de la semana. */
+ok('y no la etiqueta contable de antes',
+   !texto('recibo').includes('sobre ventas')
+   && !texto('recibo').includes('promedio'));
+ok('con el sueldo fuera, el total NO se llama "total del turno"',
+   texto('recibo').includes('Total que te llevas')
+   && !texto('recibo').includes('Total del turno'));
 run('guardarTurno()');
 ok('guardó el turno', D().turnos.length === 1);
 ok('con la fecha del día tocado', D().turnos[0].fecha === '2026-08-06');
@@ -487,6 +509,12 @@ ok('ni su tip-out', D().turnos[1].tipOut === 82.5);
 // En el recibo, encendido el sueldo suma; apagado se ve pero aparte.
 dias()[3].click();
 ok('encendido el recibo cierra con sueldo', texto('recibo').includes('$155.50'));
+/* La etiqueta del total cambia con lo que el total contiene, igual que
+   "Efectivo" pasa a "Efectivo neto". Con el sueldo dentro, esa cifra SÍ es
+   todo lo que dio el turno y se puede llamar así. */
+ok('y con el sueldo dentro sí se llama "Total del turno"',
+   texto('recibo').includes('Total del turno')
+   && !texto('recibo').includes('Total que te llevas'));
 run("irA('semana')");
 
 d.getElementById('a-contar-sueldo').checked = false;
@@ -498,6 +526,9 @@ ok('la preferencia queda guardada en el teléfono',
 dias()[3].click();
 ok('apagado el recibo cierra sin sueldo', texto('recibo').includes('$95.50'));
 ok('pero el sueldo se sigue viendo', texto('recibo').includes('$60.00'));
+ok('y la etiqueta vuelve a la que no promete el sueldo',
+   texto('recibo').includes('Total que te llevas')
+   && !texto('recibo').includes('Total del turno'));
 run("irA('semana')");
 
 
@@ -711,7 +742,10 @@ const porClave = clave => d.querySelectorAll('[data-t]')
 ok('las etiquetas del formulario también',
    porClave('entrada').textContent === 'Clock in'
    && porClave('ayudantes').textContent === 'Support staff');
-ok('el recibo también', texto('recibo').includes('You take home'));
+ok('el recibo también', texto('recibo').includes('Your take-home'));
+/* Las etiquetas nuevas del recibo también viajan a inglés. Sin esto, un cambio
+   de texto se hace en español y se descubre en inglés seis semanas después. */
+ok('y las etiquetas nuevas del recibo', texto('recibo').includes('Cash + card'));
 ok('el placeholder de la nota también',
    d.getElementById('f-nota').getAttribute('placeholder').includes('private party'));
 run('cerrarTurno()');

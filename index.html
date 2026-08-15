@@ -505,6 +505,21 @@ input[type=time] {
 .recibo .resta { color: var(--rojo); }
 .recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
 
+/* De qué se compone una línea, debajo de su etiqueta y en el gris apagado de
+   las notas. Hoy solo lo usa "Propinas", que es la única línea del recibo cuyo
+   número NO se tecleó: sale de sumar efectivo y tarjeta, y sin decirlo hay que
+   adivinar de dónde salió esa cifra.
+
+   Va en <small> y no en <span> a propósito: `.recibo span:last-child` pinta de
+   tinta normal al último span de cada fila, y un span aquí dentro sería el
+   último de su etiqueta y saldría oscuro, justo lo contrario de lo que se
+   busca. */
+.recibo small { display: block; font-size: 0.75rem; color: var(--tinta-3);
+                margin-top: 1px; letter-spacing: 0; }
+/* Con la etiqueta en dos líneas, la cifra se alinea con la PRIMERA, no con el
+   centro del bloque: si no, el número queda flotando entre los dos renglones. */
+.recibo .con-detalle { align-items: baseline; }
+
 /* El sueldo por hora cuando NO se suma al total: va debajo de la raya final,
    más pequeño y en gris. Se ve porque es dinero que sí cobras, pero se lee
    como una nota al pie y no como parte de la suma de arriba. */
@@ -1244,8 +1259,23 @@ const TEXTOS = {
     notaEjemplo: 'Sección 3, evento privado…',
     guardarTurno: 'Guardar turno', borrarTurno: 'Borrar este turno',
     ayudante: 'ayudante', ayudantesPl: 'ayudantes',
-    sueldoRecibo: 'Sueldo', propinaSobreVentas: 'Propina sobre ventas',
-    teLlevas: 'Te llevas',
+    sueldoRecibo: 'Sueldo',
+    propinasDe: 'Efectivo + tarjeta',
+    /* Antes decía "Propina sobre ventas". Es exacto y suena a contabilidad.
+       No se puso "Propina promedio" porque ese 18% no es un promedio de nada
+       —es una división, propinas ÷ ventas— y porque "promedio" ya significa
+       otra cosa en esta app: la métrica "Por turno" de la semana sí es un
+       promedio, y sí está en dólares. Una palabra, un significado. */
+    propinaDejada: 'Te dejaron de propina',
+    /* Dos nombres para la misma línea, y la que se pinta depende de si el
+       sueldo entra en la cuenta. Es la misma regla que ya cambia "Efectivo"
+       por "Efectivo neto": la etiqueta cambia con la cifra.
+       Con el sueldo apagado, ese número NO es el total del turno —el sueldo
+       aparece debajo, fuera de la suma—, así que llamarlo "Total del turno"
+       se leería como una resta que no cuadra. */
+    totalTurno: 'Total del turno',
+    teLlevas: 'Total que te llevas',
+    porHoraRecibo: 'Por hora',
     /* Sirve para los dos casos que llevan a no tener roles: quien marcó en la
        bienvenida que en su restaurante no se reparte, y quien los borró todos
        sin querer. Al primero, "agrega tus roles en Ajustes" a secas lo dejaba
@@ -1381,8 +1411,12 @@ const TEXTOS = {
     notaEjemplo: 'Section 3, private party…',
     guardarTurno: 'Save shift', borrarTurno: 'Delete this shift',
     ayudante: 'person', ayudantesPl: 'people',
-    sueldoRecibo: 'Wages', propinaSobreVentas: 'Tip % of sales',
-    teLlevas: 'You take home',
+    sueldoRecibo: 'Wages',
+    propinasDe: 'Cash + card',
+    propinaDejada: 'Your guests tipped',
+    totalTurno: 'Shift total',
+    teLlevas: 'Your take-home',
+    porHoraRecibo: 'Per hour',
     rolesEnAjustes: 'This shift has no tip-out. If your restaurant does share tips, add the roles in Settings.',
 
     trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
@@ -1533,7 +1567,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v24';
+const VERSION_APP = 'v25';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -3489,7 +3523,10 @@ function pintarRecibo() {
   const conSueldo = !!datos.prefs.contarSueldo;
   const cifras = cifrasPrincipales(c, conSueldo);
 
-  let html = fila(t('mPropinas'), $(c.propinas));
+  /* "Efectivo + tarjeta" debajo de la etiqueta: es la única cifra del recibo
+     que no se tecleó, sale de sumar dos campos de arriba. */
+  let html = fila(`${t('mPropinas')}<small>${t('propinasDe')}</small>`,
+                  $(c.propinas), '', 'con-detalle');
 
   if (c.tipOut > 0) {
     if (cortes.length > 0) {
@@ -3520,14 +3557,27 @@ function pintarRecibo() {
     }
   }
   if (turno.ventas > 0) {
-    html += fila(t('propinaSobreVentas'), c.porcentajeVentas + '%');
+    html += fila(t('propinaDejada'), c.porcentajeVentas + '%');
   }
   if (c.sueldoBase > 0 && conSueldo) {
     html += fila(`${t('sueldoRecibo')} · ${c.horas} h`, '+ ' + $(c.sueldoBase));
   }
 
-  html += fila(`${t('teLlevas')}${c.horas > 0 ? ` · ${$(cifras.porHora)}/h` : ''}`,
+  /* La etiqueta del total cambia según lo que ese total contenga, igual que
+     "Efectivo" pasa a "Efectivo neto" cuando lleva el tip-out descontado.
+     Con el sueldo apagado no es el total del turno: el sueldo va debajo y
+     fuera de la suma, así que llamarlo "total" sería una resta que no cuadra
+     a la vista. */
+  html += fila(t(conSueldo ? 'totalTurno' : 'teLlevas'),
                $(cifras.total), '', 'final');
+
+  /* El por hora estaba pegado a la etiqueta del total ("Te llevas · $23.01/h"),
+     y era la única línea del recibo con dos cifras: la de la izquierda se leía
+     como parte del nombre. Aquí abajo es lo que es, un dato derivado del número
+     grande que tiene justo encima. */
+  if (c.horas > 0) {
+    html += fila(t('porHoraRecibo'), $(cifras.porHora), '', 'aparte');
+  }
 
   /* Con el sueldo fuera de la cuenta, la línea va DESPUÉS del total y sin
      signo. Es información, no un sumando.
