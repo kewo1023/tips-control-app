@@ -287,6 +287,20 @@ body {
                   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .metricas.extras .metrica { padding: 11px 10px; }
 .metricas.extras .valor { font-size: 1.0625rem; }
+
+/* La última tarjeta se estira hasta el final de su fila.
+ 
+   El fondo gris de `.metricas` no es decoración: es el truco que dibuja las
+   rayas de separación entre tarjetas, que se ven por el hueco de 1px que deja
+   el `gap`. Con seis tarjetas en tres columnas la rejilla queda exacta y no
+   sobra nada; con siete —al encender el incentivo— sobraban dos celdas vacías
+   y ese fondo aparecía como un bloque gris.
+ 
+   Estirando la última no queda ninguna celda vacía, así que el gris vuelve a
+   ser solo la raya que siempre fue. Y sirve para cualquier número de tarjetas
+   futuro sin volver a tocarlo. */
+.metricas.extras .metrica:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
+.metricas.extras .metrica:last-child:nth-child(3n+2) { grid-column: span 2; }
 /* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
    anotar: si están todos, repetir "en 6 de 6" sería ruido. */
 .metrica .cuantos { font-size: 0.625rem; color: var(--tinta-3); margin-top: 3px;
@@ -1485,7 +1499,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v22';
+const VERSION_APP = 'v23';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
