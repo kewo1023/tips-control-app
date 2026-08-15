@@ -388,9 +388,27 @@ function resumir(turnos) {
     a.netoPropinas += c.netoPropinas;
     a.sueldoBase   += c.sueldoBase;
     a.totalNeto    += c.totalNeto;
+
+    /* Los puntos del incentivo. Se suman dos cosas distintas a propósito: los
+       puntos y CUÁNTOS turnos los traen.
+
+       El campo es opcional y se rellena al final de un turno, cansado, así que
+       algunos se van a quedar sin anotar. Sin la segunda cuenta, la suma de la
+       semana sale por debajo y parece correcta: no hay nada en la pantalla que
+       delate el hueco. Con ella se puede decir "38, en 4 de 6 turnos", que es
+       verdad siempre.
+
+       Por eso se mira si la clave EXISTE en vez de si vale más que cero: un
+       cero escrito a mano es un turno anotado —vendiste nada— y un campo en
+       blanco es un turno sin anotar. Se ven igual y no significan lo mismo. */
+    a.incentivo += Number(turno.incentivo) || 0;
+    if (turno.incentivo !== undefined && turno.incentivo !== null) {
+      a.turnosConIncentivo += 1;
+    }
     return a;
   }, { turnos: 0, horas: 0, ventas: 0, propinas: 0, efectivo: 0, tarjeta: 0,
-       efectivoNeto: 0, tipOut: 0, netoPropinas: 0, sueldoBase: 0, totalNeto: 0 });
+       efectivoNeto: 0, tipOut: 0, netoPropinas: 0, sueldoBase: 0, totalNeto: 0,
+       incentivo: 0, turnosConIncentivo: 0 });
 
   acc.horas        = redondear(acc.horas);
   acc.ventas       = redondear(acc.ventas);
@@ -402,6 +420,7 @@ function resumir(turnos) {
   acc.netoPropinas = redondear(acc.netoPropinas);
   acc.sueldoBase   = redondear(acc.sueldoBase);
   acc.totalNeto    = redondear(acc.totalNeto);
+  acc.incentivo    = redondear(acc.incentivo);
 
   acc.propinaPorHora   = acc.horas  > 0 ? redondear(acc.netoPropinas / acc.horas) : 0;
   acc.totalPorHora     = acc.horas  > 0 ? redondear(acc.totalNeto / acc.horas)    : 0;

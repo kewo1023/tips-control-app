@@ -287,6 +287,10 @@ body {
                   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .metricas.extras .metrica { padding: 11px 10px; }
 .metricas.extras .valor { font-size: 1.0625rem; }
+/* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
+   anotar: si están todos, repetir "en 6 de 6" sería ruido. */
+.metrica .cuantos { font-size: 0.625rem; color: var(--tinta-3); margin-top: 3px;
+                    letter-spacing: 0.02em; }
 
 /* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
 .metrica .cabeza { display: flex; align-items: center;
@@ -829,6 +833,16 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
         + El equipo cambió durante el turno</button>
     </div>
 
+    <!-- El incentivo. Solo aparece si está encendido en Ajustes, y NUNCA es
+         obligatorio: un turno sin nada escrito aquí se guarda igual. Va
+         después de los ayudantes y antes de la nota, o sea el último de los
+         campos que sí importan: es el único opcional de la pantalla y no
+         puede estorbar el camino de siempre. -->
+    <div class="campo oculto" id="campo-incentivo">
+      <label class="etiqueta" id="lbl-incentivo" for="f-incentivo">Puntos</label>
+      <input type="text" id="f-incentivo" inputmode="decimal" placeholder="0">
+    </div>
+
     <div class="campo">
       <label class="etiqueta" data-t="nota" for="f-nota">Nota</label>
       <input type="text" id="f-nota" data-ph="notaEjemplo"
@@ -881,6 +895,22 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
     <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
        data-t="tipOutEfectivoNota">
       Encendido, el tip-out se descuenta del efectivo, que es de donde sale.</p>
+
+    <label class="check" style="margin-top:15px">
+      <input type="checkbox" id="a-incentivo" onchange="cambiarIncentivo()">
+      <span data-t="incentivoActivar">Llevar la cuenta de un incentivo</span>
+    </label>
+    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
+       data-t="incentivoNota">
+      Añade un campo opcional en cada turno y su total en la semana. Para los
+      puntos que dan por vender ciertos productos.</p>
+
+    <div class="campo oculto" id="campo-nombre-incentivo" style="margin-top:13px">
+      <label class="etiqueta" data-t="incentivoNombre"
+             for="a-incentivo-nombre">Cómo se llama</label>
+      <input type="text" id="a-incentivo-nombre"
+             onchange="guardarNombreIncentivo()">
+    </div>
   </div>
 
   <h2 class="seccion" data-t="idioma">Idioma</h2>
@@ -1203,6 +1233,13 @@ const TEXTOS = {
     corteFalta: 'Falta escribir las ventas de un cambio de equipo. Si al final no hubo cambio, quita la línea con la ✕.',
     corteOrden: 'Las ventas de cada cambio tienen que ser mayores que las del cambio anterior, y mayores que cero. Son las ventas acumuladas del turno hasta ese momento, tal como salen en el recibo.',
     cortePasa: 'Un cambio de equipo no puede tener más ventas que el turno entero (%1). Revisa las ventas del turno o el número del cambio.',
+    // El incentivo
+    incentivoActivar: 'Llevar la cuenta de un incentivo',
+    incentivoNota: 'Añade un campo opcional en cada turno y su total en la semana, dentro de más estadísticas. Para los puntos que dan por vender ciertos productos.',
+    incentivoNombre: 'Cómo se llama',
+    incentivoPorDefecto: 'Puntos',
+    incentivoEnTurnos: 'en %1 de %2 turnos',
+    nIncentivo: 'La suma de lo que anotaste en cada turno de la semana. El campo es opcional: los turnos donde no anotaste nada no suman, y por eso debajo dice en cuántos lo anotaste.',
     faltaPlata: 'Escribe al menos las ventas o la propina del turno. Un turno sin ninguna cifra no se puede guardar.',
     confirmBorrarTurno: 'Se va a borrar el turno del',
     confirmBorrarTurno2: 'No se puede deshacer.',
@@ -1347,6 +1384,12 @@ const TEXTOS = {
     corteFalta: 'One team change is missing its sales figure. If there was no change after all, remove the line with the ✕.',
     corteOrden: 'Each change must have higher sales than the previous one, and above zero. These are the shift sales accumulated up to that moment, as printed on the receipt.',
     cortePasa: 'A team change cannot have more sales than the whole shift (%1). Check the shift sales or the change figure.',
+    incentivoActivar: 'Track an incentive count',
+    incentivoNota: 'Adds an optional field on every shift and its weekly total, inside more stats. For the points earned by selling certain products.',
+    incentivoNombre: 'What to call it',
+    incentivoPorDefecto: 'Points',
+    incentivoEnTurnos: 'on %1 of %2 shifts',
+    nIncentivo: 'The sum of what you entered on each shift this week. The field is optional: shifts where you entered nothing do not add up, which is why it says how many you filled in.',
     faltaPlata: 'Enter at least the sales or the tips for this shift. A shift with no figures can’t be saved.',
     confirmBorrarTurno: 'This will delete the shift from',
     confirmBorrarTurno2: 'It cannot be undone.',
@@ -1442,7 +1485,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v21';
+const VERSION_APP = 'v22';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -1493,8 +1536,28 @@ const TRABAJO_POR_DEFECTO = {
      NO se congela en cada turno como sí se congelan la tarifa y el tip-out.
      Aquellos cambian cuánto dinero hubo; este solo cambia de qué bolsillo se
      cuenta que salió, y el total es el mismo de todas formas. */
-  tipOutEnEfectivo: true
+  tipOutEnEfectivo: true,
+
+  /* El incentivo por vender ciertos productos. Dos campos SUELTOS y no un
+     objeto `incentivo: { activo, nombre }`: `cargar()` mezcla por encima, así
+     que un objeto anidado se reemplazaría entero y el día que se le añada un
+     campo tercero, a todo el que ya usa la app le llegaría en `undefined`.
+     Planos, cada uno se rellena por su cuenta. Es la misma lección de los
+     valores por defecto duplicados, aplicada antes de que muerda.
+
+     El nombre arranca VACÍO y no en "Puntos": esta constante se evalúa antes
+     de saber en qué idioma está la app, así que el texto por defecto se
+     resuelve al pintarlo. Un nombre guardado en español no debe cambiar
+     porque alguien mire la app en inglés, pero uno que nadie ha escrito sí. */
+  incentivoActivo: false,
+  incentivoNombre: ''
 };
+
+/** Cómo se llama el contador del incentivo en esta app. */
+function nombreIncentivo() {
+  return String(datos.trabajo.incentivoNombre || '').trim()
+      || t('incentivoPorDefecto');
+}
 
 let datos = {
   // `configurado` marca si alguien ya pasó por la pantalla de bienvenida.
@@ -2011,9 +2074,11 @@ function primerNumeroIlegible(campos) {
   return campos.find(c => !leerNumero(val(c.id)).ok) || null;
 }
 
-/** El aviso de "esto no es un número", con el nombre del campo dentro. */
-function avisarIlegible(claveEtiqueta) {
-  avisar(rellenar(t('numeroIlegible'), t(claveEtiqueta)));
+/* El aviso de "esto no es un número", con el nombre del campo dentro. Recibe
+   el texto ya resuelto y no su clave, porque uno de los campos —el del
+   incentivo— se llama como cada quien haya decidido y no tiene clave. */
+function avisarIlegible(etiqueta) {
+  avisar(rellenar(t('numeroIlegible'), etiqueta));
 }
 
 /** Los roles completos (con su porcentaje) a partir de una lista de nombres. */
@@ -2074,6 +2139,12 @@ function leer() {
                             roles: [...c.roles] })),
       { hasta: null, roles: [...rolesActivos] }
     ] } : {}),
+    /* El incentivo solo viaja con el turno si se escribió algo, y un 0 escrito
+       CUENTA. Es lo que permite que la semana diga "en 4 de 6 turnos" en vez
+       de sumar por lo bajo y quedarse tan tranquila: sin la clave es un turno
+       sin anotar, con la clave en 0 es un turno donde no se vendió nada. */
+    ...(leerNumero(val('f-incentivo')).vacio
+          ? {} : { incentivo: num('f-incentivo') }),
     nota: val('f-nota').trim()
   };
 }
@@ -2085,6 +2156,11 @@ function escribir(t) {
   document.getElementById('f-efectivo').value = t.efectivo || '';
   document.getElementById('f-tarjeta').value  = t.tarjeta  || '';
   document.getElementById('f-nota').value     = t.nota     || '';
+  /* `?? ''` y no `|| ''`: un turno con 0 puntos anotados tiene que volver a
+     enseñar el 0, no un campo vacío, o al reabrirlo se convertiría en un turno
+     sin anotar. */
+  document.getElementById('f-incentivo').value =
+    t.incentivo === undefined || t.incentivo === null ? '' : t.incentivo;
 }
 
 
@@ -2100,7 +2176,13 @@ function guardarTurno() {
      Después de leer ya no hay nada que detectar. */
   const malo = primerNumeroIlegible(CAMPOS_NUMERO_TURNO);
   if (malo) {
-    avisarIlegible(malo.clave);
+    avisarIlegible(t(malo.clave));
+    return;
+  }
+
+  // El del incentivo va aparte porque su etiqueta no es un texto fijo.
+  if (datos.trabajo.incentivoActivo && !leerNumero(val('f-incentivo')).ok) {
+    avisarIlegible(nombreIncentivo());
     return;
   }
 
@@ -2109,7 +2191,7 @@ function guardarTurno() {
      tip-out pasa a SUMAR dinero en vez de restarlo. */
   const corteIlegible = cortes.findIndex(c => !leerNumero(c.texto).ok);
   if (corteIlegible >= 0) {
-    avisarIlegible('ventasCambio');
+    avisarIlegible(t('ventasCambio'));
     return;
   }
 
@@ -2177,7 +2259,7 @@ function guardarAjustes() {
   const leida = leerNumero(val('a-tarifa'));
   if (!leida.ok) {
     guardar();
-    avisarIlegible('sueldoHora');
+    avisarIlegible(t('sueldoHora'));
     pintar();            // el campo vuelve a la tarifa que sí está guardada
     return;
   }
@@ -2188,6 +2270,23 @@ function guardarAjustes() {
 }
 
 /* --- Los cambios de equipo a mitad de turno --- */
+
+function cambiarIncentivo() {
+  datos.trabajo.incentivoActivo =
+    document.getElementById('a-incentivo').checked;
+  guardar();
+  pintar();
+}
+
+function guardarNombreIncentivo() {
+  /* Sin `.trim()`, un nombre de solo espacios pasaría y dejaría la etiqueta
+     del campo en blanco. Vacío se guarda vacío y `nombreIncentivo()` pone el
+     de fábrica: así el campo nunca se queda sin nombre. */
+  datos.trabajo.incentivoNombre =
+    document.getElementById('a-incentivo-nombre').value.trim();
+  guardar();
+  pintar();
+}
 
 function agregarCorte() {
   if (cortes.length >= MAX_CORTES) return;
@@ -2235,7 +2334,7 @@ function guardarBienvenida() {
   // El aviso, después de guardar lo que sí era válido. Si se avisara primero,
   // el nombre recién escrito se perdería por culpa del campo de al lado.
   if (!leida.ok) {
-    avisarIlegible('sueldoHora');
+    avisarIlegible(t('sueldoHora'));
     pintar();
   }
 
@@ -2313,7 +2412,7 @@ function cambiarRol(id, campo, valor) {
        nada en la pantalla lo diga. Es lo que le pasó al compañero que escribió
        "3,5" con un teclado de coma. */
     if (!leido.ok) {
-      avisarIlegible('campoPorcentaje');
+      avisarIlegible(t('campoPorcentaje'));
       pintar();          // el campo vuelve al porcentaje que sí está guardado
       return;
     }
@@ -3050,8 +3149,11 @@ function pintarSemana() {
      vendes más, así que pintarlo de rojo sería regañarte por una buena noche.
      Un color que significa lo que no es hace más daño que no poner color.
      -------------------------------------------------------------------------- */
+  /* `etiqueta` y `pie` son opcionales y solo los usa el incentivo: su nombre
+     lo escribe cada quien, así que no tiene clave de texto, y es la única
+     métrica que puede estar incompleta y necesita decirlo. */
   const metrica = (claveEtiqueta, valor, actual, previo, formato,
-                   sentido, claveNota) => {
+                   sentido, claveNota, etiqueta, pie) => {
     let delta = '';
     if (mostrarComparacion) {
       const dif = redondear(actual - previo);
@@ -3061,11 +3163,13 @@ function pintarSemana() {
               + `${formato(Math.abs(dif))}</span>`;
       }
     }
+    const nombre = etiqueta !== undefined ? etiqueta : t(claveEtiqueta);
     return `<div class="metrica">`
-         + `<div class="cabeza"><span class="etiqueta">${t(claveEtiqueta)}</span>`
+         + `<div class="cabeza"><span class="etiqueta">${nombre}</span>`
          + `<button class="info" onclick="mostrarNota('${claveNota}', this)"`
-         + ` aria-label="${t(claveEtiqueta)}">i</button></div>`
-         + `<div class="valor">${valor}</div>${delta}</div>`;
+         + ` aria-label="${nombre}">i</button></div>`
+         + `<div class="valor">${valor}</div>${delta}`
+         + (pie ? `<div class="cuantos">${pie}</div>` : '') + `</div>`;
   };
 
   const horas = n => n + ' h';
@@ -3107,7 +3211,8 @@ function pintarSemana() {
     + metrica('mVentas',   $0(r.ventas),        r.ventas,          rAnterior.ventas,          $0,  'mas',   'nVentas')
     + metrica('mPropVtas', r.porcentajeVentas + '%', r.porcentajeVentas, rAnterior.porcentajeVentas, pct, 'mas', 'nPropVtas')
     + metrica('mSueldo',   $0(r.sueldoBase),    r.sueldoBase,      rAnterior.sueldoBase,      $0,  'plano', 'nSueldo')
-    + metrica('mPorTurno', $0(r.promedioPorTurno), r.promedioPorTurno, rAnterior.promedioPorTurno, $0, 'mas', 'nPorTurno');
+    + metrica('mPorTurno', $0(r.promedioPorTurno), r.promedioPorTurno, rAnterior.promedioPorTurno, $0, 'mas', 'nPorTurno')
+    + incentivoMetrica(r, rAnterior, metrica);
   document.getElementById('metricas-extras').classList.toggle('oculto', !abierto);
 
   const mejor = mejorTurno(deLaSemana, conSueldo);
@@ -3126,6 +3231,27 @@ function pintarSemana() {
   document.getElementById('pista').classList.toggle('oculto', datos.turnos.length > 0);
 }
 
+/**
+ * La métrica del incentivo, si está encendido.
+ *
+ * Va con su línea de "en 4 de 6 turnos" cuando algún turno de la semana se
+ * quedó sin anotar, y sin ella cuando están todos. La cifra sola sería cierta
+ * y engañosa a la vez: es la suma de lo apuntado, no la de lo vendido, y nada
+ * en la pantalla distinguiría un mal turno de un turno sin anotar.
+ */
+function incentivoMetrica(r, rAnterior, metrica) {
+  if (!datos.trabajo.incentivoActivo) return '';
+
+  const entero = n => String(redondear(n));
+  const faltan = r.turnos > r.turnosConIncentivo;
+  const pie = faltan
+    ? rellenar(t('incentivoEnTurnos'), r.turnosConIncentivo, r.turnos)
+    : '';
+
+  return metrica('', entero(r.incentivo), r.incentivo, rAnterior.incentivo,
+                 entero, 'mas', 'nIncentivo', nombreIncentivo(), pie);
+}
+
 /* --- El formulario --- */
 function pintarTurno() {
   document.getElementById('turno-fecha').textContent = fechaLarga(fechaAbierta);
@@ -3134,6 +3260,10 @@ function pintarTurno() {
 
   pintarAtajosHora('entrada');
   pintarAtajosHora('salida');
+
+  const activo = !!datos.trabajo.incentivoActivo;
+  document.getElementById('campo-incentivo').classList.toggle('oculto', !activo);
+  if (activo) document.getElementById('lbl-incentivo').textContent = nombreIncentivo();
 
   pintarTramos();
   pintarRecibo();
@@ -3401,6 +3531,15 @@ function pintarAjustes() {
   document.getElementById('a-tipout-efectivo').checked =
     !!datos.trabajo.tipOutEnEfectivo;
   document.getElementById('a-comparar').checked = !!datos.prefs.comparar;
+
+  const conIncentivo = !!datos.trabajo.incentivoActivo;
+  document.getElementById('a-incentivo').checked = conIncentivo;
+  document.getElementById('campo-nombre-incentivo')
+    .classList.toggle('oculto', !conIncentivo);
+  document.getElementById('a-incentivo-nombre').value =
+    datos.trabajo.incentivoNombre || '';
+  document.getElementById('a-incentivo-nombre').placeholder =
+    t('incentivoPorDefecto');
 
   const idiomas = document.getElementById('idiomas');
   idiomas.innerHTML = '';

@@ -395,6 +395,51 @@ probar('NO es el promedio de los promedios',
 
 
 /* --------------------------------------------------------------------------
+   El incentivo: la suma y, sobre todo, en cuántos turnos se anotó
+
+   El campo es opcional, así que la suma de la semana SIEMPRE puede estar
+   incompleta. Lo que se vigila aquí es que la app sepa distinguir un turno
+   donde no se vendió nada (un 0 escrito) de uno que se quedó sin anotar
+   (el campo en blanco). Se ven igual en la pantalla y no significan lo mismo.
+   -------------------------------------------------------------------------- */
+grupo('El incentivo');
+
+const CON_PUNTOS = [
+  { fecha: '2026-08-03', entrada: '17:00', salida: '23:00', incentivo: 12 },
+  { fecha: '2026-08-04', entrada: '17:00', salida: '23:00', incentivo: 8 },
+  { fecha: '2026-08-05', entrada: '17:00', salida: '23:00' }          // sin anotar
+];
+
+probar('suma solo lo anotado',
+  L.resumir(CON_PUNTOS).incentivo, 20);
+
+probar('y dice en cuántos turnos se anotó',
+  L.resumir(CON_PUNTOS).turnosConIncentivo, 2);
+
+probar('sobre un total de tres turnos',
+  L.resumir(CON_PUNTOS).turnos, 3);
+
+/* La distinción que sostiene toda la función: un cero escrito es un turno
+   anotado. Si contara como "sin anotar", la línea diría "en 2 de 3" cuando en
+   realidad se apuntaron los tres, y quien la lea saldría a buscar un turno
+   que no falta. */
+probar('un 0 escrito a mano cuenta como turno anotado',
+  L.resumir([{ fecha: '2026-08-03', incentivo: 0 }]).turnosConIncentivo, 1);
+
+probar('y suma cero, que es lo que vale',
+  L.resumir([{ fecha: '2026-08-03', incentivo: 0 }]).incentivo, 0);
+
+probar('un turno sin el campo no cuenta',
+  L.resumir([{ fecha: '2026-08-03' }]).turnosConIncentivo, 0);
+
+probar('turnos de antes de que existiera el incentivo suman cero, no rompen',
+  L.resumir([{ fecha: '2026-08-03', ventas: 900, efectivo: 50 }]).incentivo, 0);
+
+probar('sin turnos, cero y cero',
+  [L.resumir([]).incentivo, L.resumir([]).turnosConIncentivo], [0, 0]);
+
+
+/* --------------------------------------------------------------------------
    Fechas
    -------------------------------------------------------------------------- */
 grupo('Semanas');

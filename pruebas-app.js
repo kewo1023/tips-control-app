@@ -1507,6 +1507,146 @@ run(`datos.turnos = ${antesDeTramos}; datos.roles = [
      ]; cortes = []; guardar(); irA('semana');`);
 
 
+/* --------------------------------------------------------------------------
+   El incentivo
+
+   Un campo opcional en el turno y una métrica en la semana. Lo que más se
+   vigila no es que sume: es que un campo en blanco y un 0 escrito sigan
+   siendo cosas distintas de punta a punta —del formulario al guardado, del
+   guardado a la línea de "en 4 de 6 turnos" y de vuelta al formulario—.
+
+   Este grupo pisa turnos y el trabajo, así que los devuelve al terminar.
+   -------------------------------------------------------------------------- */
+grupo('El incentivo');
+
+const antesDeIncentivo = JSON.stringify(D().turnos);
+const trabajoAntes = JSON.stringify(D().trabajo);
+run("datos.turnos = []; irA('semana')");
+
+// --- Apagado, no existe ---
+dias()[0].click();
+ok('apagado, el campo no se ve en el turno',
+   d.getElementById('campo-incentivo')._classes.has('oculto'));
+run("cerrarTurno(); irA('ajustes')");
+ok('y el campo del nombre tampoco',
+   d.getElementById('campo-nombre-incentivo')._classes.has('oculto'));
+run("irA('semana')");
+ok('la métrica no está', cuantasMetricas('metricas-extras') === 6);
+run("irA('ajustes')");
+
+// --- Encenderlo ---
+d.getElementById('a-incentivo').checked = true;
+run('cambiarIncentivo()');
+ok('encendido, aparece el campo del nombre',
+   !d.getElementById('campo-nombre-incentivo')._classes.has('oculto'));
+/* `pintarSemana()` solo corre estando en la semana, así que hay que volver
+   allí antes de mirar las métricas. Leerlas desde Ajustes devuelve el HTML de
+   la última vez que se pintó, que es de antes de este cambio. */
+run("irA('semana')");
+ok('y la métrica se suma a las estadísticas',
+   cuantasMetricas('metricas-extras') === 7);
+ok('con el nombre de fábrica', texto('metricas-extras').includes('Puntos'));
+
+dias()[0].click();
+ok('el campo ya se ve en el turno',
+   !d.getElementById('campo-incentivo')._classes.has('oculto'));
+ok('con su etiqueta puesta',
+   texto('lbl-incentivo') === 'Puntos');
+
+// --- Un turno con puntos ---
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '900'); set('f-efectivo', '60'); set('f-tarjeta', '90');
+set('f-incentivo', '12');
+avisos.length = 0;
+run('guardarTurno()');
+ok('guarda los puntos con el turno', D().turnos[0].incentivo === 12);
+ok('sin avisos', avisos.length === 0);
+
+// --- Un turno sin anotar nada ---
+dias()[1].click();
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '800'); set('f-efectivo', '50'); set('f-tarjeta', '70');
+run('guardarTurno()');
+/* La clave NO existe, no vale 0. Es lo que separa "no vendí nada" de "no lo
+   apunté", y de eso depende que la línea de abajo diga la verdad. */
+ok('un turno sin anotar no guarda el campo',
+   D().turnos[1].incentivo === undefined);
+
+run("irA('semana')");
+ok('la semana suma solo lo anotado', texto('metricas-extras').includes('12'));
+ok('y avisa de que falta un turno por anotar',
+   texto('metricas-extras').includes('en 1 de 2 turnos'));
+
+// --- Un cero escrito a mano ---
+dias()[1].click();
+set('f-incentivo', '0');
+run('guardarTurno()');
+ok('un 0 escrito sí se guarda', D().turnos[1].incentivo === 0);
+run("irA('semana')");
+ok('y entonces ya no falta ninguno',
+   !texto('metricas-extras').includes('de 2 turnos'));
+
+dias()[1].click();
+ok('al reabrirlo, el 0 vuelve a verse en el campo',
+   d.getElementById('f-incentivo').value === '0');
+run('cerrarTurno()');
+
+// --- Lo que no se puede escribir ---
+dias()[0].click();
+avisos.length = 0;
+set('f-incentivo', 'doce');
+run('guardarTurno()');
+ok('un valor ilegible no se guarda', avisos.length === 1);
+ok('y el aviso lo llama por su nombre', avisos[0].includes('Puntos'));
+ok('el turno conserva lo que ya tenía', D().turnos[0].incentivo === 12);
+
+set('f-incentivo', '12,5');
+avisos.length = 0;
+run('guardarTurno()');
+ok('con coma decimal entra igual que en los demás campos',
+   D().turnos[0].incentivo === 12.5);
+
+// --- El nombre, que es lo que lo hace servir en otro restaurante ---
+run("irA('ajustes')");
+d.getElementById('a-incentivo-nombre').value = 'Botellas';
+run('guardarNombreIncentivo()');
+run("irA('semana')");
+ok('el nombre elegido manda en la métrica',
+   texto('metricas-extras').includes('Botellas'));
+dias()[0].click();
+ok('y también en el campo del turno', texto('lbl-incentivo') === 'Botellas');
+
+avisos.length = 0;
+set('f-incentivo', 'x');
+run('guardarTurno()');
+ok('y en el aviso de error', avisos[0].includes('Botellas'));
+
+run("irA('ajustes')");
+d.getElementById('a-incentivo-nombre').value = '   ';
+run('guardarNombreIncentivo()');
+run("irA('semana')");
+ok('un nombre de solo espacios cae al de fábrica, no deja la etiqueta en blanco',
+   texto('metricas-extras').includes('Puntos'));
+
+// --- Apagarlo no borra nada ---
+run("irA('ajustes')");
+d.getElementById('a-incentivo').checked = false;
+run('cambiarIncentivo()');
+run("irA('semana')");
+ok('apagado, la métrica se va', cuantasMetricas('metricas-extras') === 6);
+ok('pero los números siguen en los turnos', D().turnos[0].incentivo === 12.5);
+
+run("irA('ajustes')");
+d.getElementById('a-incentivo').checked = true;
+run('cambiarIncentivo()');
+run("irA('semana')");
+ok('y al volver a encenderlo están todos ahí',
+   texto('metricas-extras').includes('12.5'));
+
+run(`datos.turnos = ${antesDeIncentivo}; datos.trabajo = ${trabajoAntes};
+     guardar(); irA('semana');`);
+
+
 /* ========================================================================== */
 console.log('\n' + '-'.repeat(52));
 if (falladas === 0) {
