@@ -133,7 +133,7 @@ ok('propone los 4 roles más comunes',
    d.querySelectorAll('#b-roles .rol-fila').length === 4);
 
 /* La razón de ser de toda la pantalla: los porcentajes NO vienen puestos. Si
-   llegaran con los del restaurante de Kev, alguien podría quedárselos sin
+   llegaran con los de un restaurante concreto, alguien podría quedárselos sin
    enterarse y ver un neto que no es el suyo durante semanas. */
 ok('con los porcentajes en blanco',
    D().roles.every(r => r.porcentaje === null));
@@ -1355,8 +1355,8 @@ run(`datos.turnos = ${antesDeLaComa}; datos.roles = ${rolesAntesDeLaComa};`
 /* --------------------------------------------------------------------------
    El equipo cambió a mitad de turno
 
-   El caso de Kev: de 3 a 6 pm dos ayudantes al 2% sobre $500, y después los
-   cuatro al 6.5% sobre lo que queda. Lo que se vigila aquí no es la fórmula
+   Un caso típico: al principio del turno dos ayudantes al 2% sobre $500, y
+   después los cuatro al 6.5% sobre lo que queda. Lo que se vigila aquí no es la fórmula
    —eso está en pruebas.js— sino el formulario: que los tramos se guarden, que
    vuelvan al reabrir el turno, y sobre todo que un corte imposible NO se pueda
    guardar.

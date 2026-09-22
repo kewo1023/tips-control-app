@@ -181,8 +181,8 @@ function calcularTipOut(ventas, roles) {
 /**
  * El tip-out de un turno en el que el equipo cambió a mitad.
  *
- * El caso real: de 3 a 6 pm hay dos ayudantes y se les paga el 2%; a las 6
- * llegan tres más y a partir de ahí se paga el 5%. Pero el 5% NO es sobre todo
+ * El caso típico: al principio del turno hay dos ayudantes y se les paga el 2%;
+ * luego llegan tres más y a partir de ahí se paga el 5%. Pero el 5% NO es sobre todo
  * el turno: es sobre lo que se vendió después del cambio. Lo de antes ya se
  * pagó al 2% y no se vuelve a pagar.
  *

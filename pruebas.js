@@ -213,8 +213,8 @@ probar('redondea a centavos, no deja fracciones de centavo',
 /* --------------------------------------------------------------------------
    Tip-out por tramos: el equipo cambió a mitad de turno
 
-   El caso lo describió Kev así: de 3 a 6 pm hay dos ayudantes y se paga el 2%;
-   a las 6 llegan tres más y a partir de ahí se paga el 5%, pero solo sobre lo
+   El caso típico: al principio del turno hay dos ayudantes y se paga el 2%;
+   luego llegan tres más y a partir de ahí se paga el 5%, pero solo sobre lo
    vendido DESPUÉS, no sobre el turno entero.
 
    Se empieza por el desastre: un corte mayor que las ventas del turno deja el
@@ -252,41 +252,41 @@ probar('un corte igual a las ventas vale: el último tramo no vendió nada',
 probar('sin cortes no hay nada que revisar',
   L.revisarCortes(1800, []).ok, true);
 
-/* El ejemplo de Kev, con sus números: $500 vendidos con dos ayudantes al 2%,
+/* Un ejemplo con números redondos: $500 vendidos con dos ayudantes al 2%,
    y $1300 más con los cinco al 5%. */
-const TRAMOS_KEV = L.calcularTipOutTramos(1800, [
+const TRAMOS_EJEMPLO = L.calcularTipOutTramos(1800, [
   { hasta: 500,  roles: DOS },
   { hasta: null, roles: CINCO }
 ]);
 
 probar('el primer tramo paga sobre lo vendido hasta el cambio',
-  TRAMOS_KEV.tramos[0], { tramo: 0, ventas: 500, porcentaje: 2, monto: 10 });
+  TRAMOS_EJEMPLO.tramos[0], { tramo: 0, ventas: 500, porcentaje: 2, monto: 10 });
 
 probar('el segundo paga solo sobre lo vendido después, no sobre el turno',
-  TRAMOS_KEV.tramos[1], { tramo: 1, ventas: 1300, porcentaje: 5, monto: 65 });
+  TRAMOS_EJEMPLO.tramos[1], { tramo: 1, ventas: 1300, porcentaje: 5, monto: 65 });
 
 probar('y el total es la suma de los dos',
-  TRAMOS_KEV.total, 75);
+  TRAMOS_EJEMPLO.total, 75);
 
 /* La comprobación que impide el error grande: si el segundo tramo se cobrara
    sobre las ventas enteras darían $90, y nadie lo notaría mirando un solo
    número. Por eso se compara contra el cálculo equivocado, no solo contra el
    bueno. */
 probar('NO es el 5% del turno entero',
-  TRAMOS_KEV.total === L.calcularTipOut(1800, CINCO).total, false);
+  TRAMOS_EJEMPLO.total === L.calcularTipOut(1800, CINCO).total, false);
 
 probar('el desglose suma exactamente el total',
-  L.redondear(TRAMOS_KEV.detalle.reduce((s, d) => s + d.monto, 0)),
-  TRAMOS_KEV.total);
+  L.redondear(TRAMOS_EJEMPLO.detalle.reduce((s, d) => s + d.monto, 0)),
+  TRAMOS_EJEMPLO.total);
 
 probar('un rol presente en los dos tramos aparece en los dos',
-  TRAMOS_KEV.detalle.filter(d => d.rol === 'Busser').map(d => d.monto), [5, 13]);
+  TRAMOS_EJEMPLO.detalle.filter(d => d.rol === 'Busser').map(d => d.monto), [5, 13]);
 
 probar('y cada entrada sabe de qué tramo salió',
-  TRAMOS_KEV.detalle.filter(d => d.rol === 'Busser').map(d => d.tramo), [0, 1]);
+  TRAMOS_EJEMPLO.detalle.filter(d => d.rol === 'Busser').map(d => d.tramo), [0, 1]);
 
 probar('el desglose entero tiene 6 entradas, no 4: dos roles cuentan dos veces',
-  TRAMOS_KEV.detalle.length, 6);
+  TRAMOS_EJEMPLO.detalle.length, 6);
 
 probar('tres tramos encadenan igual',
   L.calcularTipOutTramos(2000, [
@@ -575,7 +575,7 @@ probar('contándolo, gana el turno largo',
    más sin que nada se queje. Por eso la primera prueba no es "¿resta bien?"
    sino "¿las partes siguen sumando el mismo total de siempre?".
 
-   Los dos ejemplos son los de Kev, tal cual los contó:
+   Dos ejemplos concretos:
      tarjeta 200, efectivo 100, tip-out  80 → en efectivo me quedan  20
      tarjeta 200, efectivo 100, tip-out 140 → pongo 40 de mi cartera: −40
    -------------------------------------------------------------------------- */
