@@ -19,8 +19,28 @@
 <link rel="apple-touch-icon" href="icono-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tips">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#123c26">
+<!-- La barra de estado va en `default`, NO en `black-translucent`.
+
+     Con `black-translucent` la app se dibuja debajo del reloj y la batería, y
+     en iOS 26 y 27 eso dispara un fallo de WebKit (bug 301108, abierto): el
+     sistema pinta la página desde el borde de arriba pero le dice a la app que
+     la pantalla mide lo mismo MENOS la barra de estado. Esa franja sobra abajo,
+     fuera del alcance de la app, y iOS la rellena con el color del fondo. En un
+     Pro Max son ~60 puntos: la barra de pestañas quedaba flotando a esa
+     distancia del borde, con `bottom: 0` y todo. En un teléfono más chico la
+     franja es menor y en versiones de iOS anteriores no aparece, por eso el
+     fallo solo se vio en uno de los dos teléfonos.
+
+     Con `default` la app empieza debajo de la barra de estado y la medida que
+     reporta el sistema es la real. El color de esa barra lo pone `theme-color`
+     (desde iOS 15), y `aplicarTema()` lo mantiene igual al papel del tema
+     activo. `viewport-fit=cover` se queda: sin él, `env(safe-area-inset-bottom)`
+     vale 0 y las pestañas se meterían debajo de la barra de inicio. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- Arranca en el papel del tema claro (el tema por defecto) y `aplicarTema()`
+     lo cambia al instante. Antes estaba en verde: con la barra translúcida no
+     se veía, con la opaca sería una franja verde sobre una app blanca. -->
+<meta name="theme-color" content="#faf9f7">
 
 <script>
 /* Este trocito va en la cabecera a propósito, antes de que se dibuje nada.
@@ -39,6 +59,11 @@
     const oscuro = elegido === 'oscuro' || (elegido === 'auto' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.tema = oscuro ? 'oscuro' : 'claro';
+    /* La barra de estado también, y por el mismo motivo: con la barra opaca,
+       un instante en papel claro sobre una app oscura es un fogonazo blanco
+       arriba. Mismos dos colores que en `aplicarTema()`. */
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', oscuro ? '#0e0e0d' : '#faf9f7');
   } catch (e) {
     document.documentElement.dataset.tema = 'claro';
   }
@@ -160,22 +185,16 @@ html { font-size: 100%; }
 
 body {
   margin: 0;
-  /* El relleno de arriba NO es decorativo: es el hueco del reloj y la isla
-     dinámica.
+  /* El relleno de arriba es el hueco del reloj y la isla dinámica, por si la
+     app se dibuja debajo de ellos.
 
-     Arriba del todo, en el <meta viewport>, está `viewport-fit=cover`. Eso le
-     dice a iOS "usa la pantalla entera", y se puso pensando en la barra de
-     pestañas de abajo. Pero abre los cuatro bordes a la vez, y el de arriba
-     nunca se compensó: en un iPhone con isla dinámica los primeros ~59 puntos
-     de la app quedaban DEBAJO de la barra de estado. El botón Cerrar del
-     formulario, que vive justo ahí, quedaba pisado por el reloj y la batería.
-
-     En un iPhone con botón de inicio la barra son 20 puntos y el relleno de la
-     barra de título casi la salvaba: por eso el fallo solo aparecía en los
-     teléfonos nuevos, que son los que no tenía a mano quien hizo la app.
-
-     En un ordenador y en Android `env(safe-area-inset-top)` vale 0, así que
-     esta línea no cambia nada fuera de donde hace falta. */
+     Hoy no se dibuja: la barra de estado está en `default` (ver el <meta> de
+     la cabecera y por qué se cambió) y la app empieza debajo de ella, así que
+     `env(safe-area-inset-top)` vale 0 en iPhone igual que en Android y en un
+     ordenador. La línea se queda porque no cuesta nada y porque protege el
+     botón Cerrar del formulario, que vive justo arriba, si algún día alguien
+     vuelve a poner la barra translúcida: sin este relleno quedaba pisado por
+     el reloj y la batería en los iPhone con isla dinámica. */
   padding: env(safe-area-inset-top) 14px calc(4.75rem + env(safe-area-inset-bottom));
   background: var(--papel);
   color: var(--tinta);
@@ -789,6 +808,35 @@ button { font-family: inherit; }
   white-space: pre-line;
 }
 
+/* ============================================================================
+   SECCIÓN A5 — La firma de quien hizo la app
+   ----------------------------------------------------------------------------
+   Es la marca de agua de Kev, no un elemento de Tips Control: el logo y sus
+   colores vienen del kit de marca y NO de los tokens de esta hoja. Por eso los
+   dos hex de abajo van sueltos a propósito, que es lo contrario de la regla
+   del resto del archivo. La paleta de la app (verde, papel, tinta) no cambia.
+
+   El kit la pide fija abajo a la izquierda. Aquí abajo a la izquierda está la
+   pestaña Semana, y la regla del propio kit es que nunca vaya sobre nada que
+   se toque. Así que va en el flujo de la pantalla, al final del contenido, y
+   sube con el scroll. El `pointer-events: none` es la red de seguridad, no el
+   permiso.
+
+   El dibujo (símbolo y nombre) vive en UNA constante, `MARCA_KEV`, en la
+   sección M, y se pinta en los dos sitios desde `pintarMarca()`. Todavía no
+   es la versión final del logo: cuando cambie, se cambia ahí y en ningún otro
+   lado.
+   ========================================================================== */
+.marca-kev {
+  display: flex; margin: 22px 0 0 2px; padding: 8px;   /* 8px de aire */
+  color: #475569; opacity: 0.40;                       /* claro, según el kit */
+  pointer-events: none; user-select: none; -webkit-user-select: none;
+}
+:root[data-tema="oscuro"] .marca-kev { color: #CBD5E1; opacity: 0.45; }
+.marca-kev svg { display: block; width: 45.5px; height: 16px; fill: currentColor; }
+/* En Ajustes va centrada, como el pie legal que tiene debajo. */
+.marca-kev.centrada { justify-content: center; margin: 30px 0 -20px; }
+
 h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
              text-transform: uppercase; color: var(--tinta-3);
              margin: 24px 0 9px 2px; }
@@ -840,6 +888,10 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
   <button class="mas" id="btn-mas" onclick="alternarEstadisticas()"></button>
 
   <p class="vacio" id="pista" data-t="pista">Toca un día para registrar el turno.</p>
+
+  <!-- La firma. Vacío a propósito: lo rellena `pintarMarca()` al arrancar.
+       `aria-hidden` porque no dice nada que un lector de pantalla necesite. -->
+  <div class="marca-kev" id="marca-semana" aria-hidden="true"></div>
 </section>
 
 
@@ -1025,6 +1077,7 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
   <!-- El pie. Lleva la versión porque cuando alguien reporte un fallo por
        WhatsApp, la primera pregunta va a ser si tiene la versión nueva, y hasta
        ahora no había forma de que lo supiera ni él ni nadie. -->
+  <div class="marca-kev centrada" id="marca-ajustes" aria-hidden="true"></div>
   <p class="pie" id="pie-legal"></p>
 </section>
 
@@ -1567,7 +1620,24 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v25';
+const VERSION_APP = 'v26';
+
+/* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
+   la obligatoria por debajo de 24 px) y el nombre al lado.
+
+   El nombre NO es texto: son los contornos de "Kev" en Space Grotesk 600,
+   convertidos a trazados una sola vez. La alternativa era cargar la fuente
+   desde Google Fonts, y esta app se abre al final del turno, muchas veces sin señal:
+   la fuente no llegaría y el nombre saldría en otra letra, que es justo lo que
+   el kit de marca prohíbe. Como trazado se ve igual en cualquier teléfono,
+   con o sin red.
+
+   Un solo dibujo para los dos sitios donde se pinta. Cuando el logo cambie
+   (todavía no es la versión final), se cambia aquí y en ningún otro lado. */
+const MARCA_KEV = '<svg viewBox="0 0 91 32" focusable="false">'
+  + '<path d="M5 4 H11 V10.6 L19.4 4 H27.5 L12.2 16 L27.5 28 H19.4 L11 21.4 V28 H5 Z"/>'
+  + '<path d="M51.5 24.4V7.6H54.38V14.43H54.79L60.64 7.6H64.37L57.07 15.88L64.62 24.4H60.79L54.79 17.42H54.38V24.4ZM71.55 24.74Q69.77 24.74 68.42 23.98Q67.06 23.22 66.31 21.85Q65.56 20.47 65.56 18.61V18.32Q65.56 16.47 66.3 15.09Q67.04 13.71 68.38 12.96Q69.72 12.2 71.48 12.2Q73.21 12.2 74.5 12.97Q75.79 13.73 76.51 15.09Q77.23 16.45 77.23 18.27V19.26H68.34Q68.39 20.65 69.33 21.49Q70.26 22.33 71.63 22.33Q72.96 22.33 73.61 21.75Q74.27 21.16 74.61 20.42L76.87 21.59Q76.53 22.24 75.9 22.98Q75.26 23.71 74.21 24.22Q73.17 24.74 71.55 24.74ZM68.37 17.18H74.44Q74.34 15.99 73.54 15.3Q72.74 14.61 71.46 14.61Q70.14 14.61 69.35 15.3Q68.55 15.99 68.37 17.18ZM82.31 24.4 78.41 12.54H81.33L84.28 22.39H84.69L87.64 12.54H90.56L86.67 24.4Z"/>'
+  + '</svg>';
 
 /* Las preferencias con las que arranca alguien que abre la app por primera vez.
    Estaban escritas a mano en tres sitios distintos y por eso una de las tres —la
@@ -3620,6 +3690,21 @@ function pintarRecibo() {
 }
 
 /* --- Ajustes --- */
+/**
+ * Pinta la firma de Kev en los dos sitios que la llevan (sección A5).
+ *
+ * Se llama UNA vez, al arrancar, y no desde `pintar()`: el dibujo no depende de
+ * ningún dato, así que repintarlo con cada cambio sería trabajo sin efecto.
+ * Si un día se le quita a una pantalla, basta con borrar su <div>: aquí no se
+ * da por hecho que existan los dos.
+ */
+function pintarMarca() {
+  ['marca-semana', 'marca-ajustes'].forEach(id => {
+    const sitio = document.getElementById(id);
+    if (sitio) sitio.innerHTML = MARCA_KEV;
+  });
+}
+
 function pintarAjustes() {
   document.getElementById('pie-legal').textContent =
     rellenar(t('pieDerechos'), VERSION_APP);
@@ -3872,6 +3957,7 @@ cargar();
 aplicarTema();
 aplicarEscala();
 document.documentElement.lang = (datos.prefs.idioma || 'es');
+pintarMarca();
 
 const faltan = FUNCIONES_NECESARIAS.filter(n => typeof window[n] !== 'function');
 

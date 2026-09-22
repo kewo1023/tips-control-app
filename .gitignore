@@ -10,3 +10,6 @@
 # Lo mismo, de Windows y de Linux, por si algún día alguien más colabora.
 Thumbs.db
 desktop.ini
+
+# Contexto local: datos de la persona, no del software. Nunca se versiona.
+CONTEXTO-LOCAL.md

@@ -1681,6 +1681,51 @@ run(`datos.turnos = ${antesDeIncentivo}; datos.trabajo = ${trabajoAntes};
      guardar(); irA('semana');`);
 
 
+/* La barra de estado y la firma de Kev (21 de septiembre de 2026).
+
+   La barra de estado NO puede volver a `black-translucent`: con ella, iOS 26 y
+   27 le dicen a la app que la pantalla mide menos de lo que mide (bug 301108
+   de WebKit) y la barra de pestañas queda flotando a ~60 puntos del borde en
+   un Pro Max. Estas comprobaciones miran el texto del archivo, no el DOM,
+   porque el mini-dom no sabe nada de barras de estado: lo que se vigila es
+   que nadie revierta la línea. */
+grupo('La barra de estado del iPhone');
+ok('la barra de estado va en default, no translúcida',
+   /name="apple-mobile-web-app-status-bar-style" content="default"/.test(html));
+ok('y no queda ningún content="black-translucent" en el archivo',
+   !html.includes('content="black-translucent"'));
+ok('viewport-fit=cover se queda, que es lo que da el hueco de la barra de inicio',
+   /viewport-fit=cover/.test(html));
+ok('theme-color arranca en el papel claro, no en verde',
+   /name="theme-color" content="#faf9f7"/.test(html));
+ok('y el script de cabecera también lo fija, para que no parpadee',
+   (html.match(/meta\.setAttribute\('content', oscuro \? '#0e0e0d' : '#faf9f7'\)/g) || []).length === 2);
+
+/* La firma: el dibujo vive en UNA constante y se pinta en dos sitios. Si
+   alguien la editara en uno solo, los dos dejarían de ser iguales, y eso es lo
+   que se cuenta aquí. Y no puede llevar texto de verdad: el nombre son
+   trazados, para que salga igual sin fuente y sin red. */
+grupo('La firma de Kev');
+const marcaSemana = d.getElementById('marca-semana');
+const marcaAjustes = d.getElementById('marca-ajustes');
+ok('está en la semana', !!marcaSemana && marcaSemana.innerHTML.includes('<svg'));
+ok('y en Ajustes', !!marcaAjustes && marcaAjustes.innerHTML.includes('<svg'));
+ok('el mismo dibujo en los dos sitios', marcaSemana.innerHTML === marcaAjustes.innerHTML);
+ok('sale de MARCA_KEV', marcaSemana.innerHTML === run('MARCA_KEV'));
+ok('son dos trazados: el símbolo y el nombre',
+   (marcaSemana.innerHTML.match(/<path /g) || []).length === 2);
+ok('el nombre no es texto', !/<text/.test(marcaSemana.innerHTML));
+ok('no lo leen los lectores de pantalla',
+   marcaSemana.getAttribute('aria-hidden') === 'true'
+   && marcaAjustes.getAttribute('aria-hidden') === 'true');
+ok('los colores de la marca de agua son los del kit, en los dos temas',
+   /\.marca-kev \{[^}]*color: #475569; opacity: 0\.40/.test(html)
+   && /\[data-tema="oscuro"\] \.marca-kev \{ color: #CBD5E1; opacity: 0\.45/.test(html));
+ok('y no pasan del tope de 0.60',
+   !/\.marca-kev[^}]*opacity: 0\.[6-9]/.test(html));
+ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(html));
+
+
 /* ========================================================================== */
 console.log('\n' + '-'.repeat(52));
 if (falladas === 0) {
