@@ -95,8 +95,8 @@ La primera versión se rechazó por demasiado color, aspecto genérico y mala
 jerarquía tipográfica. Lo que quedó:
 
 - **El color no rellena nada.** El verde va en la cifra principal, la barra de
-  cada día, la pestaña activa y el relleno de los chips marcados. Cuando todo
-  está resaltado, nada lo está.
+  cada día y en lo que está seleccionado (sección 17). Cuando todo está
+  resaltado, nada lo está.
 - **Contraste de tamaño fuerte** entre la cifra y su etiqueta. Una jerarquía
   tímida se lee como desorden.
 - Etiquetas en versalitas espaciadas (`.etiqueta`); cifras tabulares.
@@ -662,3 +662,44 @@ abajo, mañana contra tarde.
 - **El mini-dom cambia cada etiqueta por un espacio** al leer `textContent`
   ("Los viernes , en 3 turnos"). Las pruebas de la frase con negrita quitan
   las etiquetas a mano para comparar lo que se ve en el teléfono.
+
+---
+
+## 17. Diseño: jerarquía, selecciones, marca de agua y franja de iOS (23 de septiembre de 2026)
+
+Propuestas revisadas antes en una vista previa; el autor eligió.
+
+**Tres niveles de texto, sin colores nuevos.**
+- Título: tinta, negrita, grande. El nombre del restaurante y "Reportes" pasan
+  a tener el mismo peso que el título de Ajustes o del turno.
+- Leyenda (`.etiqueta`, `h2.seccion`): tinta-2, mayúsculas espaciadas.
+- Comentario: tinta-2, letra normal, minúsculas.
+- **tinta-3 dejó de usarse para texto que hay que leer**: da 2.7:1 en claro
+  (mínimo 4.5:1) y era el color de todas las leyendas y las pestañas; por eso
+  la app se veía lavada y los niveles se confundían. Queda para guiones, días
+  vacíos, placeholders e íconos. Una prueba cuenta sus usos.
+
+**Toda selección se ve como el chip** (fondo verde suave, borde verde, texto
+verde en negrita): chips, control segmentado, casillas y pestaña activa.
+- Las casillas siguen siendo `<input type="checkbox">`; solo cambia el dibujo
+  (`appearance: none` + `:has(input:checked)`). El lector de pantalla y el
+  código no cambian.
+- La píldora de la pestaña activa se dibuja con `::before`: la zona táctil
+  sigue siendo el tercio entero de la barra.
+- **Pendiente:** verde sobre verde suave da 4.26:1 en claro. Subir la letra no
+  lo arregla (haría falta ~19 px en negrita); lo arreglaría un verde un poco
+  más oscuro, que es cambiar la paleta.
+
+**La marca de agua va solo en Ajustes**, junto a la versión. En la Semana y en
+Reportes flotaba en medio del espacio vacío. Es una excepción de esta app: la
+regla general del kit de marca (marca en la pantalla principal) se deja como
+está, por decisión del autor.
+
+**La franja bajo las pestañas es un fallo de iOS 26** (WebKit 301108, abierto):
+en las apps instaladas el sistema entrega una pantalla más corta que la real.
+Otros proyectos probaron todos los arreglos por CSS y JS sin recuperarla. Lo
+que sí es de la app: el margen de `safe-area-inset-bottom` de la barra puede
+estar sumándose encima. **Antes de tocar el CSS se mide**: tocar el pie de
+Ajustes muestra las medidas del teléfono (`mostrarDiagnostico`). Con ellas se
+decide el arreglo: quitar el margen doble cuando se detecte el fallo y pintar
+la franja del color de la barra.

@@ -1820,24 +1820,62 @@ ok('y el script de cabecera también lo fija, para que no parpadee',
    que se cuenta aquí. Y no puede llevar texto de verdad: el nombre son
    trazados, para que salga igual sin fuente y sin red. */
 grupo('La firma de Kev');
-const marcaSemana = d.getElementById('marca-semana');
+/* Desde el 23 de septiembre de 2026 va solo en Ajustes, junto a la versión.
+   En la Semana y en Reportes flotaba en medio del espacio vacío. */
 const marcaAjustes = d.getElementById('marca-ajustes');
-ok('está en la semana', !!marcaSemana && marcaSemana.innerHTML.includes('<svg'));
-ok('y en Ajustes', !!marcaAjustes && marcaAjustes.innerHTML.includes('<svg'));
-ok('el mismo dibujo en los dos sitios', marcaSemana.innerHTML === marcaAjustes.innerHTML);
-ok('sale de MARCA_KEV', marcaSemana.innerHTML === run('MARCA_KEV'));
+ok('ya no está en la semana ni en reportes',
+   !d.getElementById('marca-semana') && !d.getElementById('marca-reportes'));
+ok('está en Ajustes', !!marcaAjustes && marcaAjustes.innerHTML.includes('<svg'));
+ok('sale de MARCA_KEV', marcaAjustes.innerHTML === run('MARCA_KEV'));
 ok('son dos trazados: el símbolo y el nombre',
-   (marcaSemana.innerHTML.match(/<path /g) || []).length === 2);
-ok('el nombre no es texto', !/<text/.test(marcaSemana.innerHTML));
-ok('no lo leen los lectores de pantalla',
-   marcaSemana.getAttribute('aria-hidden') === 'true'
-   && marcaAjustes.getAttribute('aria-hidden') === 'true');
+   (marcaAjustes.innerHTML.match(/<path /g) || []).length === 2);
+ok('el nombre no es texto', !/<text/.test(marcaAjustes.innerHTML));
+ok('no lo leen los lectores de pantalla', marcaAjustes.getAttribute('aria-hidden') === 'true');
 ok('los colores de la marca de agua son los del kit, en los dos temas',
    /\.marca-kev \{[^}]*color: #475569; opacity: 0\.40/.test(html)
    && /\[data-tema="oscuro"\] \.marca-kev \{ color: #CBD5E1; opacity: 0\.45/.test(html));
 ok('y no pasan del tope de 0.60',
    !/\.marca-kev[^}]*opacity: 0\.[6-9]/.test(html));
 ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(html));
+
+
+/* El diagnóstico de la pantalla. En el mini-dom no existen `screen`,
+   `getComputedStyle` ni `getBoundingClientRect`, así que casi todas las
+   medidas salen "?": justo lo que se quiere probar, que una medida que falla
+   no se lleve por delante a las demás ni reviente el aviso. */
+grupo('Diagnóstico de la pantalla');
+run("irA('ajustes')");
+avisos.length = 0;
+// Dentro de un intento: si una medida revienta, esto tiene que salir como un
+// ✗ con su nombre, no tumbar el archivo entero sin decir qué pasó.
+let diagnosticoReviento = null;
+try { d.getElementById('pie-legal').click(); } catch (e) { diagnosticoReviento = e.message; }
+ok('el diagnóstico no revienta aunque falten medidas', diagnosticoReviento === null);
+ok('tocar el pie muestra un solo aviso', avisos.length === 1);
+const avisoDiag = avisos[0] || '';
+ok('empieza por la explicación', avisoDiag.startsWith(run("t('diagnostico')")));
+ok('dice la versión', avisoDiag.includes(run('VERSION_APP')));
+ok('una medida que no se puede leer sale "?" en vez de romper el resto',
+   avisoDiag.includes('screen: ?') && avisoDiag.includes('innerHeight:'));
+avisos.length = 0;
+run("irA('semana')");
+
+/* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
+   que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */
+grupo('Diseño: jerarquía y selecciones');
+const regla = sel => (html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{[^}]*\\}')) || [''])[0];
+ok('las leyendas ya no usan el gris que no cumple contraste',
+   /color: var\(--tinta-2\)/.test(regla('.etiqueta')) && /color: var\(--tinta-2\)/.test(regla('h2.seccion')));
+ok('el título de la pantalla va en tinta y negrita',
+   /color: var\(--tinta\)/.test(regla('.cabecera .lugar')) && /font-weight: 600/.test(regla('.cabecera .lugar')));
+ok('el segmentado activo se rellena como el chip',
+   /background: var\(--verde-suave\)/.test(regla('.segmentado button.activo')));
+ok('las casillas se rellenan como el chip',
+   /background: var\(--verde-suave\)/.test(regla('.check:has(input:checked)')));
+ok('y dejan de ser la casilla azul del sistema', /appearance: none/.test(regla('.check input')));
+ok('la pestaña activa lleva la píldora', /background: var\(--verde-suave\)/.test(regla('.pestanas button.activa::before')));
+ok('el gris claro ya solo queda en lo que no hay que leer',
+   (html.match(/color: var\(--tinta-3\)/g) || []).length === 4);
 
 
 /* ==========================================================================

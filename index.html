@@ -205,12 +205,21 @@ body {
 }
 
 /* Versalitas: la etiqueta de todo dato numérico */
+/* Tres niveles de texto, y el color de cada uno es parte de la regla:
+     título     → tinta, negrita, grande
+     leyenda    → tinta-2, MAYÚSCULAS espaciadas, pequeña (esta clase)
+     comentario → tinta-2, letra normal, minúsculas
+   La leyenda estaba en tinta-3, que da 2.7:1 sobre el papel (el mínimo para
+   texto es 4.5:1): las etiquetas de toda la app se leían lavadas y los tres
+   niveles se confundían. tinta-3 queda para lo que no hay que leer: guiones,
+   días vacíos, bordes, placeholders. Leyenda y comentario comparten color y
+   se distinguen por las mayúsculas, el peso y el espaciado. */
 .etiqueta {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--tinta-3);
+  color: var(--tinta-2);
 }
 
 /* Las cifras van en fuente tabular para que se alineen en columna, y con las
@@ -233,7 +242,10 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 2px 12px;
 }
-.cabecera .lugar { font-size: 0.8125rem; color: var(--tinta-2); }
+/* El título de la pantalla, al mismo nivel que el de Ajustes o el del turno
+   (`.barra-titulo .fecha`). Era pequeño y gris, y se leía como un comentario. */
+.cabecera .lugar { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em;
+                   color: var(--tinta); }
 .cabecera .hoy {
   font-size: 0.75rem; color: var(--verde); font-weight: 600;
   padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
@@ -275,7 +287,7 @@ body {
 }
 .dia .letra, .dia .num, .dia .monto { position: relative; }
 .dia .letra { font-size: 0.5625rem; font-weight: 600; letter-spacing: 0.06em;
-              color: var(--tinta-3); text-transform: uppercase; }
+              color: var(--tinta-2); text-transform: uppercase; }
 .dia .num   { font-size: 0.9375rem; font-weight: 500; margin-top: 1px; }
 .dia .monto { font-size: 0.6875rem; font-weight: 600; color: var(--verde);
               margin-top: auto; font-variant-numeric: tabular-nums; }
@@ -356,7 +368,7 @@ body {
 .metricas.extras .metrica:last-child:nth-child(3n+2) { grid-column: span 2; }
 /* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
    anotar: si están todos, repetir "en 6 de 6" sería ruido. */
-.metrica .cuantos { font-size: 0.625rem; color: var(--tinta-3); margin-top: 3px;
+.metrica .cuantos { font-size: 0.6875rem; color: var(--tinta-2); margin-top: 3px;
                     letter-spacing: 0.02em; }
 
 /* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
@@ -380,7 +392,7 @@ body {
 .delta.sube   { color: var(--verde); }
 .delta.baja   { color: var(--rojo); }
 /* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
-.delta.plano  { color: var(--tinta-3); }
+.delta.plano  { color: var(--tinta-2); }
 
 /* ----------------------------------------------------------------------------
    El globo de ayuda.
@@ -433,11 +445,11 @@ body {
 .rep-fila.mejor .rep-dia, .rep-fila.mejor .rep-hora { color: var(--verde); }
 /* Pocos datos (o ninguno) se apaga, no se esconde: la fila sigue ahí para que
    la tabla tenga siempre sus siete días en el mismo sitio. */
-.rep-fila.poco > * { color: var(--tinta-3); font-weight: 400; }
+.rep-fila.poco > * { color: var(--tinta-2); font-weight: 400; }
 .rep-fila .nota { font-size: 0.6875rem; }
 .metrica.mejor .valor { color: var(--verde); }
-.metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-3); }
-.rep-aclara { font-size: 0.75rem; color: var(--tinta-3); margin: 8px 2px 0;
+.metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-2); }
+.rep-aclara { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0;
               line-height: 1.4; }
 
 /* ============================================================================
@@ -519,7 +531,18 @@ input[type=time] {
   background: var(--papel); color: var(--tinta-2);
   font-size: 0.8125rem; cursor: pointer; user-select: none;
 }
-/* El chip puesto se RELLENA, no solo se perfila. Con seis chips en dos filas,
+/* ESTA es la apariencia de toda selección de la app: los chips, el control
+   segmentado (idioma, tema, tamaño), las casillas de Ajustes y la pestaña
+   activa. Antes cada pantalla tenía la suya —borde verde sin relleno, casilla
+   azul del sistema, solo texto verde— y la misma idea ("esto está elegido") se
+   decía de cuatro maneras.
+
+   Aviso de contraste: verde sobre verde-suave da 4.26:1 en claro, un poco por
+   debajo del 4.5:1 para texto de este tamaño. Subir la letra NO lo arregla
+   (hace falta ~19 px en negrita para contar como texto grande); lo arreglaría
+   un verde algo más oscuro, que es cambiar la paleta. Decisión pendiente.
+
+   El chip puesto se RELLENA, no solo se perfila. Con seis chips en dos filas,
    un borde de un píxel obliga a mirar dos veces para saber cuáles están
    marcados, y esa lista es la que decide cuánto tip-out se paga. */
 .chip.activo { border-color: var(--verde); background: var(--verde-suave);
@@ -565,7 +588,7 @@ input[type=time] {
    tinta normal al último span de cada fila, y un span aquí dentro sería el
    último de su etiqueta y saldría oscuro, justo lo contrario de lo que se
    busca. */
-.recibo small { display: block; font-size: 0.75rem; color: var(--tinta-3);
+.recibo small { display: block; font-size: 0.75rem; color: var(--tinta-2);
                 margin-top: 1px; letter-spacing: 0; }
 /* Con la etiqueta en dos líneas, la cifra se alinea con la PRIMERA, no con el
    centro del bloque: si no, el número queda flotando entre los dos renglones. */
@@ -578,10 +601,10 @@ input[type=time] {
    la resta ya la hizo la línea de arriba, y un segundo "−" haría pensar que se
    descuenta dos veces. */
 .recibo .sub { padding: 2px 0; font-size: 0.8125rem; }
-.recibo .sub span { color: var(--tinta-3) !important; }
+.recibo .sub span { color: var(--tinta-2) !important; }
 .recibo .sub span:first-child { padding-left: 13px; }
 .recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
-.recibo .aparte span { color: var(--tinta-3) !important; }
+.recibo .aparte span { color: var(--tinta-2) !important; }
 /* La excepción al gris de las líneas de abajo: un efectivo neto en negativo es
    plata que sale de tu cartera esta noche. Ese sí tiene que verse. */
 .recibo .aparte .resta { color: var(--rojo) !important; }
@@ -617,14 +640,23 @@ button { font-family: inherit; }
   padding-bottom: env(safe-area-inset-bottom); z-index: 10;
 }
 .pestanas button {
+  position: relative; isolation: isolate;
   flex: 1; border: none; background: none; padding: 11px 0 13px;
   font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--tinta-3); cursor: pointer;
+  text-transform: uppercase; color: var(--tinta-2); cursor: pointer;
 }
 .pestanas button.activa { color: var(--verde); }
+/* La pestaña activa lleva la píldora del chip. Se dibuja con `::before` y no
+   encogiendo el botón: la zona que recibe el dedo sigue siendo un tercio
+   entero de la barra, como antes. Es la misma idea que los días libres de la
+   semana: la caja que se ve y la caja que se toca van por separado. */
+.pestanas button.activa::before {
+  content: ''; position: absolute; inset: 6px 14px 8px; z-index: -1;
+  border: 1px solid var(--verde); border-radius: 999px; background: var(--verde-suave);
+}
 
 .oculto { display: none !important; }
-.vacio { text-align: center; color: var(--tinta-3); padding: 30px 20px;
+.vacio { text-align: center; color: var(--tinta-2); padding: 30px 20px;
          font-size: 0.875rem; }
 /* Control segmentado: tres opciones donde solo una puede estar activa. Se usa
    en vez de un menú desplegable porque las tres caben a la vista: elegir es un
@@ -632,12 +664,13 @@ button { font-family: inherit; }
 .segmentado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
               gap: 6px; }
 .segmentado button {
-  padding: 11px 6px; border: 1px solid var(--linea); border-radius: 9px;
+  padding: 11px 6px; border: 1px solid var(--linea); border-radius: 999px;
   background: var(--papel); color: var(--tinta-2);
   font-size: 0.8125rem; cursor: pointer;
 }
-.segmentado button.activo { border-color: var(--verde); color: var(--verde);
-                            font-weight: 600; }
+/* Igual que `.chip.activo`: la misma selección se ve igual en toda la app. */
+.segmentado button.activo { border-color: var(--verde); background: var(--verde-suave);
+                            color: var(--verde); font-weight: 600; }
 
 /* ----------------------------------------------------------------------------
    La Ayuda: preguntas que se despliegan.
@@ -681,10 +714,29 @@ button { font-family: inherit; }
 /* La casilla y su texto van dentro de la misma etiqueta para que se pueda
    tocar el texto además del cuadrito: en un teléfono, acertarle a un cuadro de
    16 px con el pulgar es pedir demasiado. */
-.check { display: flex; gap: 9px; align-items: flex-start; margin-top: 13px;
-         font-size: 0.8125rem; color: var(--tinta-2); cursor: pointer; }
-.check input { width: 18px; height: 18px; margin: 1px 0 0; flex: none;
-               accent-color: var(--verde); }
+/* Las casillas, con la apariencia del chip. Por dentro siguen siendo un
+   <input type="checkbox"> de verdad: se toca igual, el lector de pantalla
+   del iPhone la sigue anunciando como marcada o no, y ningún código cambia.
+   Solo se le quita el dibujo del sistema (`appearance: none`) y se le pone
+   el nuestro: un círculo que se rellena, a la derecha del texto.
+
+   El relleno de toda la píldora sale de `:has(input:checked)`, que Safari
+   entiende desde iOS 15.4. En un navegador más viejo se pierde el relleno
+   de la píldora pero el círculo sigue marcando: se degrada, no se rompe. */
+.check { display: flex; align-items: center; justify-content: space-between;
+         gap: 10px; margin-top: 13px; padding: 10px 14px;
+         border: 1px solid var(--linea); border-radius: 999px;
+         background: var(--papel); font-size: 0.8125rem; color: var(--tinta-2);
+         cursor: pointer; }
+.check:has(input:checked) { border-color: var(--verde); background: var(--verde-suave);
+                            color: var(--verde); font-weight: 600; }
+.check input { order: 2; -webkit-appearance: none; appearance: none;
+               width: 18px; height: 18px; margin: 0; flex: none;
+               border: 1.5px solid var(--linea-alta); border-radius: 50%;
+               background: var(--tarjeta); cursor: pointer; }
+.check input:checked { border-color: var(--verde); background: var(--verde);
+                       box-shadow: inset 0 0 0 3px var(--verde-suave); }
+.check input:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
 
 .rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
 /* Por clase y no por `type`: desde que el porcentaje dejó de ser
@@ -719,7 +771,7 @@ button { font-family: inherit; }
 /* El aviso de por qué importa. Es la única parte que no se puede resumir: sin
    ella, "instálala" suena a capricho del que hizo la app. */
 .instalar .aviso {
-  margin-top: 10px; font-size: 0.8125rem; color: var(--tinta-3); line-height: 1.4;
+  margin-top: 10px; font-size: 0.8125rem; color: var(--tinta-2); line-height: 1.4;
 }
 .instalar-botones {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
@@ -735,7 +787,7 @@ button { font-family: inherit; }
   border-radius: 9px; padding: 10px 14px; font-size: 0.875rem; font-family: inherit;
 }
 .instalar-luego {
-  background: transparent; border: 0; color: var(--tinta-3);
+  background: transparent; border: 0; color: var(--tinta-2);
   font-size: 0.8125rem; font-family: inherit; padding: 10px 4px; margin-left: auto;
 }
 
@@ -781,7 +833,7 @@ button { font-family: inherit; }
    que queremos que se haga: existe solo para que un fallo de detección en algún
    teléfono raro no deje a esa persona encerrada fuera de su propia app. */
 .inst-salida {
-  background: transparent; border: 0; color: var(--tinta-3);
+  background: transparent; border: 0; color: var(--tinta-2);
   font-family: inherit; font-size: 0.8125rem; text-decoration: underline;
   margin-top: 26px; padding: 10px 0; align-self: center;
 }
@@ -836,7 +888,7 @@ button { font-family: inherit; }
    encontrar, no que haya que leer. */
 .pie {
   margin: 30px 0 10px; text-align: center;
-  font-size: 0.75rem; line-height: 1.5; color: var(--tinta-3);
+  font-size: 0.75rem; line-height: 1.5; color: var(--tinta-2);
   white-space: pre-line;
 }
 
@@ -854,8 +906,14 @@ button { font-family: inherit; }
    sube con el scroll. El `pointer-events: none` es la red de seguridad, no el
    permiso.
 
+   Solo va en Ajustes, junto a la versión y el copyright (23 de septiembre de
+   2026). En la Semana y en Reportes, con poco contenido, quedaba flotando en
+   medio del espacio vacío y se leía como un elemento suelto de la interfaz,
+   no como una firma. Es una excepción de esta app, decidida por su autor: la
+   regla general del kit (marca en la pantalla principal) no se cambió.
+
    El dibujo (símbolo y nombre) vive en UNA constante, `MARCA_KEV`, en la
-   sección M, y se pinta en los dos sitios desde `pintarMarca()`. Todavía no
+   sección M, y se pinta desde `pintarMarca()`. Todavía no
    es la versión final del logo: cuando cambie, se cambia ahí y en ningún otro
    lado.
    ========================================================================== */
@@ -869,8 +927,8 @@ button { font-family: inherit; }
 /* En Ajustes va centrada, como el pie legal que tiene debajo. */
 .marca-kev.centrada { justify-content: center; margin: 30px 0 -20px; }
 
-h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
-             text-transform: uppercase; color: var(--tinta-3);
+h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+             text-transform: uppercase; color: var(--tinta-2);
              margin: 24px 0 9px 2px; }
 </style>
 </head>
@@ -921,9 +979,6 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
   <p class="vacio" id="pista" data-t="pista">Toca un día para registrar el turno.</p>
 
-  <!-- La firma. Vacío a propósito: lo rellena `pintarMarca()` al arrancar.
-       `aria-hidden` porque no dice nada que un lector de pantalla necesite. -->
-  <div class="marca-kev" id="marca-semana" aria-hidden="true"></div>
 </section>
 
 
@@ -951,7 +1006,6 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
     <p class="rep-aclara" id="rep-aclara"></p>
   </div>
 
-  <div class="marca-kev" id="marca-reportes" aria-hidden="true"></div>
 </section>
 
 
@@ -1321,6 +1375,7 @@ const TEXTOS = {
     semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
     letrasDias: ['L','M','X','J','V','S','D'],
     reportes: 'Reportes',
+    diagnostico: 'Medidas de la pantalla. Mándale una captura de esto a quien te pasó la app:',
     repPorDia: 'Por día de la semana', repFranjas: 'Mañana o tarde',
     rep30: '30 días', rep90: '90 días', repAno: '1 año', repTodo: 'Todo',
     repDia: 'Día', repPorHora: 'Por hora', repTurnos: 'Turnos', repPorTurno: 'Por turno',
@@ -1531,6 +1586,7 @@ const TEXTOS = {
     semanaAnterior: 'Previous week', semanaSiguiente: 'Next week',
     letrasDias: ['M','T','W','T','F','S','S'],
     reportes: 'Reports',
+    diagnostico: 'Screen measurements. Send a screenshot of this to whoever shared the app with you:',
     repPorDia: 'By day of the week', repFranjas: 'Morning or evening',
     rep30: '30 days', rep90: '90 days', repAno: '1 year', repTodo: 'All',
     repDia: 'Day', repPorHora: 'Per hour', repTurnos: 'Shifts', repPorTurno: 'Per shift',
@@ -1731,7 +1787,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v29';
+const VERSION_APP = 'v30';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3768,7 +3824,7 @@ function pintarTramos() {
   restoVisible = null;
 
   if (datos.roles.length === 0) {
-    caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-3)">'
+    caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-2)">'
                    + t('rolesEnAjustes') + '</span>';
     // Sin roles no hay nada que repartir, así que tampoco nada que partir en
     // tramos. El botón sobra y ofrecerlo sería ofrecer un callejón.
@@ -4029,10 +4085,68 @@ function pintarRecibo() {
  * da por hecho que existan los dos.
  */
 function pintarMarca() {
-  ['marca-semana', 'marca-reportes', 'marca-ajustes'].forEach(id => {
+  ['marca-ajustes'].forEach(id => {
     const sitio = document.getElementById(id);
     if (sitio) sitio.innerHTML = MARCA_KEV;
   });
+}
+
+/* --- Diagnóstico de la pantalla (tocando el pie de Ajustes) ---
+   Existe por un fallo de iOS 26 en las apps instaladas (WebKit 301108, abierto
+   al 23 de septiembre de 2026): el sistema le entrega a la app una pantalla más
+   corta que la real y deja una franja muerta abajo, debajo de las pestañas.
+   Desde el Mac no se puede ver, y antes de tocar el CSS hay que saber qué mide
+   el teléfono de verdad: cuánto falta, si el margen de la rayita de inicio
+   (`safe-area-inset-bottom`) se suma encima, y si la altura cambia al hacer
+   scroll (que explicaría por qué el hueco se achica con la página larga).
+
+   Escondido en el pie porque es para soporte, no para el uso diario. Cada
+   medida va en su propio intento: si una falla en un navegador raro, sale "?"
+   y las demás se siguen viendo. */
+const alturasVistas = [];
+function apuntarAltura() {
+  const h = Math.round(window.innerHeight);
+  if (Number.isFinite(h) && !alturasVistas.includes(h)) alturasVistas.push(h);
+}
+window.addEventListener('resize', apuntarAltura);
+window.addEventListener('scroll', apuntarAltura);
+
+function medida(nombre, leer) {
+  try {
+    const v = leer();
+    return `${nombre}: ${v === undefined || v === null || v === '' ? '?' : v}`;
+  } catch (e) {
+    return `${nombre}: ?`;
+  }
+}
+
+function insetSistema(lado) {
+  const sonda = document.createElement('div');
+  sonda.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;'
+    + 'visibility:hidden;padding-' + lado + ':env(safe-area-inset-' + lado + ')';
+  document.body.appendChild(sonda);
+  const valor = getComputedStyle(sonda)['padding' + lado.charAt(0).toUpperCase() + lado.slice(1)];
+  document.body.removeChild(sonda);
+  return valor;
+}
+
+function mostrarDiagnostico() {
+  apuntarAltura();
+  const barra = () => document.getElementById('pestanas').getBoundingClientRect();
+  const lineas = [
+    medida('app', () => VERSION_APP + (estaInstalada() ? ' · instalada' : ' · navegador')),
+    medida('iOS', () => (/OS (\d+[_\d]*)/.exec(navigator.userAgent) || [])[1]),
+    medida('screen', () => `${screen.width} × ${screen.height}`),
+    medida('innerHeight', () => window.innerHeight),
+    medida('visualViewport', () => window.visualViewport && Math.round(window.visualViewport.height)),
+    medida('clientHeight', () => document.documentElement.clientHeight),
+    medida('inset abajo', () => insetSistema('bottom')),
+    medida('inset arriba', () => insetSistema('top')),
+    medida('pestañas', () => `alto ${Math.round(barra().height)}, borde inferior ${Math.round(barra().bottom)}`),
+    medida('scroll', () => `${Math.round(window.scrollY)} de ${document.documentElement.scrollHeight}`),
+    medida('alturas vistas', () => alturasVistas.join(', '))
+  ];
+  avisar(t('diagnostico') + '\n\n' + lineas.join('\n'));
 }
 
 /* "Último respaldo: hace 23 días". El respaldo depende de que la persona se
@@ -4056,8 +4170,9 @@ function pintarUltimoRespaldo() {
 }
 
 function pintarAjustes() {
-  document.getElementById('pie-legal').textContent =
-    rellenar(t('pieDerechos'), VERSION_APP);
+  const pie = document.getElementById('pie-legal');
+  pie.textContent = rellenar(t('pieDerechos'), VERSION_APP);
+  pie.onclick = mostrarDiagnostico;
   pintarUltimoRespaldo();
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
