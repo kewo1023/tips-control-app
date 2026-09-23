@@ -970,6 +970,107 @@ ok('y no borra todavía', D().turnos.length === 1);
 ok('el aviso explica que hay que volver a tocar', avisos[1].includes('vuelve a tocar'));
 
 
+/* El último respaldo.
+   El desastre que vigila este grupo: alguien pierde el teléfono y descubre
+   ese día que su último respaldo era de hace cuatro meses. La línea de
+   Ajustes existe para que lo sepa antes. Y el segundo desastre, más sutil:
+   que la línea diga "hoy" sin que exista ningún archivo.
+
+   Cada prueba monta su estado y al final se devuelve el que había. */
+grupo('El último respaldo');
+const estadoAntesRespaldo = JSON.stringify(D());
+const almacenAntesRespaldo = almacen.tipsControl;
+const pantallaAntesRespaldo = run('pantalla');
+const lineaRespaldo = () => d.getElementById('ultimo-respaldo');
+
+run(`datos.turnos = [{ id: 'r1', fecha: '2026-08-04', ventas: 100, efectivo: 20,
+      tarjeta: 30, entrada: '17:00', salida: '23:00', tarifaHora: 8, tipOut: 0 }];
+     delete datos.ultimoRespaldo;
+     irA('ajustes')`);
+ok('con turnos y sin respaldo, se ve la línea', !lineaRespaldo()._classes.has('oculto'));
+ok('y dice que nunca se hizo', texto('ultimo-respaldo') === run("t('ultimoRespaldoNunca')"));
+
+// Escrito a mano antes de correrlo: del 14 de julio al 6 de agosto son
+// 17 días que le quedan a julio más 6 de agosto.
+run("datos.ultimoRespaldo = '2026-07-14'; pintar()");
+ok('cuenta los días desde el último', texto('ultimo-respaldo').includes('23'));
+run("datos.ultimoRespaldo = '2026-08-05'; pintar()");
+ok('y dice "ayer", no "hace 1 días"', texto('ultimo-respaldo') === run("t('ultimoRespaldoAyer')"));
+run("datos.ultimoRespaldo = '2026-08-20'; pintar()");
+ok('una fecha en el futuro (reloj movido) no dice "hace -14 días"',
+   texto('ultimo-respaldo') === run("t('ultimoRespaldoHoy')"));
+
+run("delete datos.ultimoRespaldo");
+let contenidoExportado = null;
+const BlobAntes = ctx.Blob;
+ctx.Blob = function (partes) { contenidoExportado = partes.join(''); };
+avisos.length = 0;
+run('exportar()');
+ctx.Blob = BlobAntes;
+ok('exportar apunta la fecha de hoy', D().ultimoRespaldo === '2026-08-06');
+ok('y la guarda en el teléfono',
+   JSON.parse(almacen.tipsControl).ultimoRespaldo === '2026-08-06');
+ok('la línea pasa a "hoy"', texto('ultimo-respaldo') === run("t('ultimoRespaldoHoy')"));
+ok('el archivo lleva los turnos', JSON.parse(contenidoExportado).turnos.length === 1);
+ok('y su propia fecha dentro', JSON.parse(contenidoExportado).ultimoRespaldo === '2026-08-06');
+ok('sin ningún aviso de por medio', avisos.length === 0);
+
+/* Si el respaldo falla, se dice, y la fecha NO se apunta. Lo contrario sería
+   la línea diciendo "hoy" encima de un archivo que no existe. */
+run("datos.ultimoRespaldo = '2026-07-01'");
+const crearURLAntes = ctx.URL.createObjectURL;
+ctx.URL.createObjectURL = () => { throw new Error('sin memoria'); };
+avisos.length = 0;
+run('exportar()');
+ctx.URL.createObjectURL = crearURLAntes;
+ok('un respaldo que falla avisa una vez', avisos.length === 1);
+ok('con el mensaje de respaldo, no otro', avisos[0].startsWith(run("t('errorExportar')")));
+ok('y con el detalle técnico detrás', avisos[0].includes('sin memoria'));
+ok('y no apunta la fecha', D().ultimoRespaldo === '2026-07-01');
+
+/* Importar se queda con la fecha más reciente de las dos. */
+const importarCon = (enTelefono, enArchivo) => {
+  run(enTelefono ? `datos.ultimoRespaldo = '${enTelefono}'` : 'delete datos.ultimoRespaldo');
+  const archivo = { turnos: [] };
+  if (enArchivo !== undefined) archivo.ultimoRespaldo = enArchivo;
+  run(`hacerImportacion(${JSON.stringify(archivo)})`);
+  return D().ultimoRespaldo;
+};
+ok('un archivo viejo no hace retroceder la fecha',
+   importarCon('2026-08-01', '2026-06-01') === '2026-08-01');
+ok('uno más nuevo sí la adelanta',
+   importarCon('2026-08-01', '2026-08-04') === '2026-08-04');
+ok('en un teléfono nuevo, el archivo importado cuenta como respaldo',
+   importarCon(null, '2026-07-01') === '2026-07-01');
+ok('un archivo sin fecha no borra la del teléfono',
+   importarCon('2026-08-01', undefined) === '2026-08-01');
+ok('y una fecha que no se entiende se ignora',
+   importarCon(null, 'ayer') === undefined);
+
+run("datos.turnos = []; irA('ajustes')");
+ok('sin turnos la línea no sale: no hay nada que respaldar',
+   lineaRespaldo()._classes.has('oculto'));
+
+/* Pedirle al teléfono que no borre los datos. Solo en la app instalada. */
+let pedidosPersistir = 0;
+ctx.navigator.storage = { persist: () => { pedidosPersistir++; return Promise.resolve(true); } };
+run('pedirPersistencia()');
+ok('en el navegador no se pide', pedidosPersistir === 0);
+modoStandalone = true;
+run('pedirPersistencia()');
+ok('en la app instalada se pide una vez', pedidosPersistir === 1);
+modoStandalone = false;
+delete ctx.navigator.storage;
+ok('y sin la función en el navegador no revienta',
+   (() => { try { modoStandalone = true; run('pedirPersistencia()'); return true; }
+            catch (e) { return false; } finally { modoStandalone = false; } })());
+
+run('datos = ' + estadoAntesRespaldo);
+almacen.tipsControl = almacenAntesRespaldo;
+run(`irA('${pantallaAntesRespaldo}')`);
+avisos.length = 0;
+
+
 /* El diálogo de verdad, no el de mentira que usan las pruebas de arriba.
    Se llama a `cerrarDialogo()` en vez de tocar los botones porque el mini-dom
    solo dispara los `onclick` que se asignan desde el código, y los de este
@@ -1726,11 +1827,121 @@ ok('y no pasan del tope de 0.60',
 ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(html));
 
 
-/* ========================================================================== */
-console.log('\n' + '-'.repeat(52));
-if (falladas === 0) {
-  console.log(`Todo bien: ${pasadas} comprobaciones pasaron.`);
-} else {
-  console.log(`${pasadas} pasaron, ${falladas} FALLARON.`);
-  process.exit(1);
+/* ==========================================================================
+   Respaldo desde la app instalada en el iPhone
+   --------------------------------------------------------------------------
+   Va de último, y es el único grupo que espera: el menú de compartir contesta
+   más tarde, igual que en el teléfono. Se podría fingir un "compartir" que
+   contesta al instante, pero sería otro doble de pruebas que miente, y con
+   eso se escondería justo el fallo que importa: marcar "hoy" antes de saber si
+   la persona guardó el archivo.
+
+   Lo que NO se prueba aquí: que el menú de compartir del iPhone aparezca y
+   guarde el archivo de verdad. Eso solo se ve en el teléfono.
+   ========================================================================== */
+const esperar = () => new Promise(r => setImmediate(r));
+
+async function pruebasCompartir() {
+  grupo('Respaldo desde la app instalada en el iPhone');
+  const estadoAntes = JSON.stringify(D());
+
+  ctx.navigator.userAgent = IPHONE;
+  modoStandalone = true;
+  ctx.File = class { constructor(partes, nombre) { this.name = nombre; this.contenido = partes.join(''); } };
+  let respuesta = () => Promise.resolve();
+  const compartidos = [];
+  ctx.navigator.canShare = () => true;
+  ctx.navigator.share = ({ files }) => { compartidos.push(files[0]); return respuesta(); };
+  let descargas = 0;
+  const crearURLAntes = ctx.URL.createObjectURL;
+  ctx.URL.createObjectURL = () => { descargas++; return 'blob:x'; };
+
+  const conTurno = () => run(`datos.turnos = [{ id: 'c1', fecha: '2026-08-04', ventas: 100,
+    efectivo: 20, tarjeta: 30, entrada: '17:00', salida: '23:00', tarifaHora: 8, tipOut: 0 }];
+    delete datos.ultimoRespaldo`);
+  const abortar = () => { const e = new Error('cancelado'); e.name = 'AbortError'; return Promise.reject(e); };
+
+  // Compartir sale bien.
+  conTurno(); avisos.length = 0;
+  run('exportar()');
+  ok('abre el menú de compartir, no la descarga', compartidos.length === 1 && descargas === 0);
+  ok('con el archivo de siempre', compartidos[0].name === 'tips-control-2026-08-06.json'
+     && JSON.parse(compartidos[0].contenido).turnos.length === 1);
+  ok('y no apunta la fecha antes de que conteste', D().ultimoRespaldo === undefined);
+  await esperar();
+  ok('cuando contesta que sí, apunta la fecha', D().ultimoRespaldo === '2026-08-06');
+  ok('sin avisos', avisos.length === 0);
+
+  // La persona cierra el menú sin guardar.
+  conTurno(); avisos.length = 0; respuesta = abortar;
+  run('exportar()');
+  await esperar();
+  ok('cerrar el menú no apunta la fecha', D().ultimoRespaldo === undefined);
+  ok('ni regaña con un aviso', avisos.length === 0);
+
+  // Falla por otra razón.
+  conTurno(); avisos.length = 0; descargas = 0;
+  respuesta = () => Promise.reject(new Error('NotAllowedError de mentira'));
+  run('exportar()');
+  await esperar();
+  ok('un fallo de verdad avisa una vez', avisos.length === 1
+     && avisos[0].startsWith(run("t('errorExportar')")));
+  ok('no apunta la fecha', D().ultimoRespaldo === undefined);
+  ok('y no intenta una descarga que el iPhone podría tragarse en silencio', descargas === 0);
+
+  // Borrar todo y cerrar el menú sin guardar: no puede decir "listo".
+  conTurno(); avisos.length = 0; respuesta = abortar;
+  run('borrarTodo()');
+  await esperar();
+  ok('al borrar, si no se guardó el respaldo, no dice que se hizo',
+     avisos.length === 1 && !avisos.some(a => a.includes('vuelve a tocar')));
+  ok('y no borra nada', D().turnos.length === 1);
+
+  // Borrar todo y guardar el respaldo: ahora sí.
+  conTurno(); avisos.length = 0; respuesta = () => Promise.resolve();
+  run('borrarTodo()');
+  await esperar();
+  ok('y si se guardó, lo dice', avisos.length === 2 && avisos[1].includes('vuelve a tocar'));
+
+  // Un navegador que no sabe compartir archivos descarga como siempre.
+  conTurno(); descargas = 0; compartidos.length = 0;
+  ctx.navigator.canShare = () => false;
+  run('exportar()');
+  ok('sin poder compartir archivos, descarga', descargas === 1 && compartidos.length === 0);
+  ok('y apunta la fecha en el acto', D().ultimoRespaldo === '2026-08-06');
+  ctx.navigator.canShare = () => true;
+
+  // En Safari sin instalar la descarga funciona: no se le cambia.
+  conTurno(); descargas = 0; compartidos.length = 0;
+  modoStandalone = false;
+  run('exportar()');
+  ok('en Safari sin instalar, descarga como siempre', descargas === 1 && compartidos.length === 0);
+
+  // Dejar el navegador de mentira como estaba.
+  ctx.navigator.userAgent = '';
+  modoStandalone = false;
+  delete ctx.File;
+  delete ctx.navigator.canShare;
+  delete ctx.navigator.share;
+  ctx.URL.createObjectURL = crearURLAntes;
+  run('datos = ' + estadoAntes);
+  avisos.length = 0;
 }
+
+
+/* ========================================================================== */
+function resultado() {
+  console.log('\n' + '-'.repeat(52));
+  if (falladas === 0) {
+    console.log(`Todo bien: ${pasadas} comprobaciones pasaron.`);
+  } else {
+    console.log(`${pasadas} pasaron, ${falladas} FALLARON.`);
+    process.exit(1);
+  }
+}
+
+// Si el grupo que espera revienta, se cuenta como fallo y se dice: sin esto,
+// un error ahí dentro terminaría el archivo sin imprimir el resultado.
+pruebasCompartir()
+  .catch(err => { falladas++; console.log('  ✗ el grupo de compartir reventó: ' + err.message); })
+  .then(resultado);

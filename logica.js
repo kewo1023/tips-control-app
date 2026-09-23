@@ -465,6 +465,27 @@ function sumarDias(fechaTexto, dias) {
   return `${fecha.getFullYear()}-${mm}-${dd}`;
 }
 
+/**
+ * Cuántos días van de una fecha a otra, en texto "AAAA-MM-DD".
+ * `diasEntre('2026-08-01', '2026-08-06')` → 5. Si alguna fecha no se entiende,
+ * devuelve `null`: la usa la línea del último respaldo, y un "hace NaN días"
+ * en pantalla es peor que no decir nada.
+ *
+ * Las dos fechas se pasan a UTC antes de restar. Con la hora local, el día en
+ * que se adelanta el reloj en marzo dura 23 horas, y dividir entre 24 daba un
+ * día de menos. Es la misma trampa que restar dos fechas con hora en Excel y
+ * quedarse con la parte entera: la cuenta sale bien casi siempre y falla
+ * justo dos veces al año.
+ */
+function diasEntre(desde, hasta) {
+  const aUTC = texto => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(texto));
+    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : NaN;
+  };
+  const dias = (aUTC(hasta) - aUTC(desde)) / 86400000;
+  return Number.isFinite(dias) ? dias : null;
+}
+
 /** Las 7 fechas de la semana que empieza ese lunes. */
 function diasDeLaSemana(lunes) {
   return [0, 1, 2, 3, 4, 5, 6].map(i => sumarDias(lunes, i));
@@ -650,7 +671,7 @@ if (typeof module !== 'undefined' && module.exports) {
     redondear, leerNumero, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTipOutTramos, revisarCortes,
     calcularTurno, resumir, lunesDeLaSemana,
-    sumarDias, diasDeLaSemana, turnosDelDia,
+    sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
     turnoValido, fusionarTurnos
   };

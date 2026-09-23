@@ -462,6 +462,26 @@ probar('sumar días cruzando el fin de año',
 probar('febrero de un año bisiesto',
   L.sumarDias('2028-02-28', 1), '2028-02-29');
 
+/* Los días desde el último respaldo. La prueba importante es la del cambio de
+   hora: el 8 de marzo de 2026 el reloj se adelanta en Estados Unidos, así que
+   del 7 al 9 pasan 47 horas, no 48. Restar con la hora local y quedarse con la
+   parte entera daba 1. */
+probar('días entre dos fechas', L.diasEntre('2026-08-01', '2026-08-06'), 5);
+probar('la misma fecha es cero', L.diasEntre('2026-08-06', '2026-08-06'), 0);
+probar('cruzando el cambio de hora de marzo',
+  L.diasEntre('2026-03-07', '2026-03-09'), 2);
+probar('y no el día de menos de restar con la hora local',
+  L.diasEntre('2026-03-07', '2026-03-09') !== 1, true);
+probar('cruzando el fin de año', L.diasEntre('2026-12-30', '2027-01-02'), 3);
+probar('al revés sale negativo', L.diasEntre('2026-08-06', '2026-08-01'), -5);
+/* Con `=== null` y no comparando contra null a secas: `probar` compara con
+   JSON.stringify, que convierte NaN en null, y la prueba pasaba en verde
+   devolviera la función lo que devolviera. Lo destapó romperla a propósito. */
+probar('una fecha que no se entiende da null, no NaN',
+  L.diasEntre('ayer', '2026-08-06') === null, true);
+probar('y una que falta, también',
+  L.diasEntre(undefined, '2026-08-06') === null, true);
+
 probar('los 7 días de una semana',
   L.diasDeLaSemana('2026-08-03'),
   ['2026-08-03','2026-08-04','2026-08-05','2026-08-06',

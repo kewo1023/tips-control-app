@@ -1059,6 +1059,8 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
     <p data-t="soloTelefono"
        style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)">
       Los datos viven solo en este teléfono. Exporta de vez en cuando.</p>
+    <p id="ultimo-respaldo" class="oculto"
+       style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)"></p>
     <div class="fila">
       <button class="chico" data-t="exportar" onclick="exportar()">Exportar</button>
       <button class="chico" data-t="importar"
@@ -1342,6 +1344,11 @@ const TEXTOS = {
     sobreVentas: 'Porcentaje sobre las ventas del turno. Con todos:',
     respaldo: 'Respaldo',
     soloTelefono: 'Los datos viven solo en este teléfono. Exporta de vez en cuando.',
+    ultimoRespaldoNunca: 'Todavía no has hecho ningún respaldo en este teléfono.',
+    ultimoRespaldoHoy: 'Último respaldo: hoy.',
+    ultimoRespaldoAyer: 'Último respaldo: ayer.',
+    ultimoRespaldoDias: 'Último respaldo: hace %1 días.',
+    errorExportar: 'No se pudo hacer el respaldo. Tus turnos siguen guardados en el teléfono; vuelve a intentarlo. Si se repite, manda esta pantalla por WhatsApp:',
     exportar: 'Exportar', importar: 'Importar',
     borrarTodo: 'Borrar todos los datos',
     pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. Todos los derechos reservados.',
@@ -1427,7 +1434,7 @@ const TEXTOS = {
     datosIlegibles: 'No se pudieron leer los datos guardados en este teléfono. Se guardó una copia de lo que había por si se puede recuperar, así que NO borres la app ni sus datos. Manda una captura de esta pantalla antes de seguir usándola.',
     noSeGuardo: 'No se pudo guardar en este teléfono. Puede que no quede espacio, o que estés navegando en modo privado. Lo que escribiste sigue en pantalla: apúntalo en otro sitio antes de cerrar, o libera espacio y vuelve a intentarlo.',
     ofrecerRespaldo: 'Tienes %1 turnos guardados. ¿Quieres descargar un respaldo antes de borrarlos?',
-    respaldoAntesDeBorrar: 'Se descargó el respaldo. Guárdalo donde lo puedas encontrar y vuelve a tocar Borrar todos los datos cuando quieras seguir.',
+    respaldoAntesDeBorrar: 'Listo el respaldo. Guárdalo donde lo puedas encontrar y vuelve a tocar Borrar todos los datos cuando quieras seguir.',
     confirmBorrarTodo: 'Se van a borrar %1 turnos de este teléfono. ¿Seguro?',
     confirmBorrarTodo2: 'No se puede deshacer y no hay forma de recuperarlos. ¿De verdad?'
   },
@@ -1501,6 +1508,11 @@ const TEXTOS = {
     sobreVentas: 'Percentage of shift sales. With everyone:',
     respaldo: 'Backup',
     soloTelefono: 'Your data lives only on this phone. Export it now and then.',
+    ultimoRespaldoNunca: 'You have not made a backup on this phone yet.',
+    ultimoRespaldoHoy: 'Last backup: today.',
+    ultimoRespaldoAyer: 'Last backup: yesterday.',
+    ultimoRespaldoDias: 'Last backup: %1 days ago.',
+    errorExportar: 'The backup could not be made. Your shifts are still saved on this phone; try again. If it happens again, send this screen over WhatsApp:',
     exportar: 'Export', importar: 'Import',
     borrarTodo: 'Delete all data',
     pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. All rights reserved.',
@@ -1579,7 +1591,7 @@ const TEXTOS = {
     datosIlegibles: 'The data saved on this phone could not be read. A copy of what was there has been kept in case it can be recovered, so do NOT delete the app or its data. Send a screenshot of this message before you keep using it.',
     noSeGuardo: 'Could not save on this phone. You may be out of space, or browsing in private mode. What you typed is still on screen: write it down somewhere before closing, or free up space and try again.',
     ofrecerRespaldo: 'You have %1 shifts saved. Do you want to download a backup before deleting them?',
-    respaldoAntesDeBorrar: 'Backup downloaded. Save it somewhere you can find it, then tap Delete all data again when you are ready.',
+    respaldoAntesDeBorrar: 'Backup done. Save it somewhere you can find it, then tap Delete all data again when you are ready.',
     confirmBorrarTodo: 'This will delete %1 shifts from this phone. Sure?',
     confirmBorrarTodo2: 'It cannot be undone and there is no way to get them back. Really?'
   }
@@ -1620,7 +1632,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v26';
+const VERSION_APP = 'v27';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -2607,13 +2619,93 @@ function borrarRol(id) {
    SECCIÓN S — Respaldo
    ========================================================================== */
 
-function exportar() {
+/**
+ * Hace el respaldo y, si sale, apunta la fecha en `datos.ultimoRespaldo`.
+ *
+ * `alTerminar(hecho)` es opcional y existe por Borrar todos los datos: ese
+ * camino necesita saber si el respaldo salió antes de decir "listo". Recibe
+ * una función y no devuelve verdadero o falso por la misma razón que
+ * `preguntar`: en el iPhone el menú de compartir contesta más tarde.
+ *
+ * La fecha se apunta solo cuando el respaldo sale. Si se apuntara al tocar el
+ * botón, quien abre el menú de compartir y lo cierra sin guardar vería
+ * "Último respaldo: hoy" sin tener ningún archivo, y la línea que existe para
+ * avisarle le diría justo lo contrario.
+ */
+function exportar(alTerminar) {
+  const terminar = hecho => {
+    if (hecho) {
+      datos.ultimoRespaldo = hoy();
+      guardar();
+      pintar();
+    }
+    if (alTerminar) alTerminar(hecho);
+  };
+
+  try {
+    // El archivo lleva dentro su propia fecha. Al importarlo en un teléfono
+    // nuevo, esa es la fecha del respaldo más reciente que existe.
+    const texto = JSON.stringify({ ...datos, ultimoRespaldo: hoy() }, null, 2);
+    const nombre = `tips-control-${hoy()}.json`;
+
+    const archivo = crearArchivo(texto, nombre);
+    if (archivo && debeCompartir(archivo)) {
+      compartirRespaldo(archivo, terminar);
+      return;
+    }
+    descargar(texto, nombre);
+    terminar(true);
+  } catch (err) {
+    console.error('Falló la exportación:', err);
+    avisar(t('errorExportar') + '\n\n' + (err && err.message ? err.message : err));
+    if (alTerminar) alTerminar(false);
+  }
+}
+
+/* `File` no existe en todos los navegadores viejos. Sin él no hay nada que
+   compartir y se descarga como siempre. */
+function crearArchivo(texto, nombre) {
+  if (typeof File !== 'function') return null;
+  return new File([texto], nombre, { type: 'application/json' });
+}
+
+/* Compartir solo en la app instalada en un iPhone. Ahí es donde la descarga
+   no siempre se porta como en Safari, y el menú de compartir tiene "Guardar
+   en Archivos", que es lo que hace falta. En Safari normal y en Android la
+   descarga funciona y es lo que la gente espera: no se les cambia.
+
+   `canShare` se pregunta con el archivo de verdad, no en general: hay
+   navegadores que saben compartir texto y enlaces pero no archivos. */
+function debeCompartir(archivo) {
+  return esIOS() && estaInstalada()
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare({ files: [archivo] });
+}
+
+function compartirRespaldo(archivo, terminar) {
+  navigator.share({ files: [archivo] }).then(
+    () => terminar(true),
+    err => {
+      // Cerrar el menú sin elegir nada llega como AbortError. No es un fallo:
+      // la persona decidió no guardarlo, y un aviso ahí sería regañarla.
+      if (err && err.name === 'AbortError') { terminar(false); return; }
+      // Cualquier otra cosa sí se dice. No se intenta descargar como plan B:
+      // fuera del toque que la pidió, el iPhone puede bloquear la descarga
+      // en silencio, y entonces la app diría "listo" sin que exista archivo.
+      console.error('Falló compartir el respaldo:', err);
+      avisar(t('errorExportar') + '\n\n' + (err && err.message ? err.message : err));
+      terminar(false);
+    });
+}
+
+function descargar(texto, nombre) {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }));
+    new Blob([texto], { type: 'application/json' }));
 
   const enlace = document.createElement('a');
   enlace.href = url;
-  enlace.download = `tips-control-${hoy()}.json`;
+  enlace.download = nombre;
 
   // El enlace tiene que estar dentro de la página para que el clic cuente.
   // Suelto en memoria funciona en casi todos los navegadores, pero "casi
@@ -2691,7 +2783,18 @@ function hacerImportacion(leido) {
   // los misterios con dinero de por medio destruyen la confianza en la app.
   try {
     const fusion = fusionarTurnos(datos.turnos, leido.turnos);
+    /* La fecha del último respaldo no se copia del archivo a ciegas: se queda
+       la más reciente de las dos. Importar un respaldo de junio en un teléfono
+       que se respaldó ayer no puede hacer que la app diga "hace tres meses";
+       y al revés, en un teléfono nuevo, el archivo que se acaba de importar SÍ
+       es un respaldo que existe. Una fecha rara (a mano, de otra versión) se
+       ignora. Las fechas "AAAA-MM-DD" se ordenan bien como texto. */
+    const ultimo = [datos.ultimoRespaldo, leido.ultimoRespaldo]
+      .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(String(f)))
+      .sort().pop();
     datos = { ...datos, ...leido, turnos: fusion.turnos };
+    if (ultimo) datos.ultimoRespaldo = ultimo;
+    else delete datos.ultimoRespaldo;
     /* Las dos mezclas van también aquí, y este es el camino por el que ya se
        coló el fallo una vez: un respaldo exportado con una versión vieja no
        trae los campos que se añadieron después, y sin estas dos líneas
@@ -2718,6 +2821,34 @@ function hacerImportacion(leido) {
   }
 }
 
+/**
+ * Le pide al teléfono que no borre los datos de la app cuando le falte
+ * espacio.
+ *
+ * Por defecto el navegador trata lo guardado como "de mejor esfuerzo": si el
+ * teléfono se queda sin espacio, puede borrarlo sin preguntar. Con
+ * `persist()` se pide el trato de "no tocar". Según la documentación de
+ * WebKit (verificado el 23 de septiembre de 2026), Safari lo concede con
+ * heurísticas, "como que el sitio se abra como app de pantalla de inicio":
+ * justo el caso que la pantalla de instalación ya obliga a cumplir.
+ *
+ * Solo en la app instalada. En un navegador de ordenador, Firefox muestra un
+ * permiso que nadie entendería, y quien usa la app sin instalar ya sabe que
+ * se arriesga (la pantalla de instalación se lo dijo).
+ *
+ * Que no lo conceda no es un error que la persona pueda arreglar, así que no
+ * se le avisa: se deja en la consola. La defensa visible contra perder datos
+ * es la línea del último respaldo en Ajustes, no esta.
+ */
+function pedirPersistencia() {
+  if (!estaInstalada()) return;
+  const almacen = navigator.storage;
+  if (!almacen || typeof almacen.persist !== 'function') return;
+  almacen.persist().then(
+    concedido => { if (!concedido) console.warn('El teléfono no garantizó guardar los datos.'); },
+    err => console.error('No se pudo pedir que se guarden los datos:', err));
+}
+
 function borrarTodo() {
   /* Antes de la primera pregunta va la oferta de exportar.
      Quien llega a este botón suele venir de "algo se ve raro, lo borro y
@@ -2732,10 +2863,11 @@ function borrarTodo() {
   if (cuantos > 0) {
     preguntar(rellenar(t('ofrecerRespaldo'), cuantos),
       () => {
-        exportar();
         // No seguimos de largo: la descarga tarda un instante y encadenar el
         // borrado sin confirmar dejaría a alguien sin datos y sin archivo.
-        avisar(t('respaldoAntesDeBorrar'));
+        // Y el "listo" solo sale si el respaldo salió: en el iPhone se puede
+        // cerrar el menú de compartir sin guardar nada.
+        exportar(hecho => { if (hecho) avisar(t('respaldoAntesDeBorrar')); });
       },
       // Rechazar el respaldo no cancela el borrado: sigue con las dos
       // confirmaciones. Es el único sitio de la app donde cancelar continúa.
@@ -3705,9 +3837,30 @@ function pintarMarca() {
   });
 }
 
+/* "Último respaldo: hace 23 días". El respaldo depende de que la persona se
+   acuerde, y sin esta línea no había forma de saber cuánto tiempo llevaba sin
+   hacerlo hasta el día que perdía el teléfono. */
+function pintarUltimoRespaldo() {
+  const linea = document.getElementById('ultimo-respaldo');
+  // Sin turnos no hay nada que respaldar: la línea sería ruido.
+  const hayTurnos = datos.turnos.length > 0;
+  linea.classList.toggle('oculto', !hayTurnos);
+  if (!hayTurnos) return;
+
+  const dias = diasEntre(datos.ultimoRespaldo, hoy());
+  // `null` es que nunca se hizo (o la fecha no se entiende). Un número
+  // negativo es una fecha en el futuro, que solo pasa si el reloj del
+  // teléfono se movió: se trata como hoy en vez de decir "hace -3 días".
+  if (dias === null)  linea.textContent = t('ultimoRespaldoNunca');
+  else if (dias <= 0) linea.textContent = t('ultimoRespaldoHoy');
+  else if (dias === 1) linea.textContent = t('ultimoRespaldoAyer');
+  else linea.textContent = rellenar(t('ultimoRespaldoDias'), dias);
+}
+
 function pintarAjustes() {
   document.getElementById('pie-legal').textContent =
     rellenar(t('pieDerechos'), VERSION_APP);
+  pintarUltimoRespaldo();
   document.getElementById('a-nombre').value = datos.trabajo.nombre;
   document.getElementById('a-tarifa').value = datos.trabajo.tarifaHora || '';
   document.getElementById('a-contar-sueldo').checked = !!datos.prefs.contarSueldo;
@@ -3946,7 +4099,8 @@ const FUNCIONES_NECESARIAS = [
   'calcularTipOutTramos', 'revisarCortes',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
-  'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado'
+  'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
+  'diasEntre'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la
@@ -3979,6 +4133,7 @@ if (faltan.length > 0) {
      de arriba y no antes para que se lea en el orden en que ocurre. */
   if (debeInstalar()) pantalla = 'instalacion';
   pintar();
+  pedirPersistencia();
 }
 
 // Si el tema está en Automático y cambias el del teléfono (o entra el modo
