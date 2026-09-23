@@ -614,7 +614,7 @@ importar.
 
 ---
 
-## 16. Reportes: qué turno conviene (Fase 2, en construcción)
+## 16. Reportes: qué turno conviene (Fase 2)
 
 Es la pregunta con la que nació la app. El cálculo vive en `logica.js`
 (`franjaDelTurno`, `turnosDelPeriodo`, `reportePorDia`, `reportePorFranja`,
@@ -640,3 +640,25 @@ después el mes y el año.
 - **Los turnos sin hora de salida se cuentan aparte** (`sinHora`) en vez de
   desaparecer: si no, las franjas no cuadrarían con los días sin explicación.
 - La cifra respeta `prefs.contarSueldo`, igual que el resto de la app.
+
+### La pantalla (opción A, elegida sobre una vista previa)
+
+Se mostraron dos diseños: tabla y barras. Se eligió la **tabla**: día, por
+hora, turnos y promedio por turno. Arriba, la cifra grande del mejor día;
+abajo, mañana contra tarde.
+
+- **Período en memoria, 90 días al abrir** (30 / 90 / 1 año / Todo). No se
+  guarda: nadie necesita que se recuerde, así que no pasa la prueba de la
+  casilla.
+- **Sin día que coronar, se dice con palabras**, no con $0.00: un cero se lee
+  como "ese día no ganas nada".
+- **Siete filas siempre**; las que tienen pocos turnos se apagan en vez de
+  esconderse, para que cada día esté siempre en el mismo sitio.
+- **"Por turno" usa la misma cifra que "por hora"** (con o sin sueldo). El
+  `promedioPorTurno` de `resumir` cuenta siempre el sueldo, y mezclarlo en la
+  misma fila daría números que no cuadran entre sí.
+- Las clases llevan prefijo `rep-` porque `.fila` ya existe y una tabla con esa
+  clase heredaría su rejilla de dos columnas sin dar ningún error.
+- **El mini-dom cambia cada etiqueta por un espacio** al leer `textContent`
+  ("Los viernes , en 3 turnos"). Las pruebas de la frase con negrita quitan
+  las etiquetas a mano para comparar lo que se ve en el teléfono.

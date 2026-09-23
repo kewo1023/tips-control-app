@@ -1828,6 +1828,120 @@ ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(html));
 
 
 /* ==========================================================================
+   Reportes: qué turno conviene
+   --------------------------------------------------------------------------
+   El desastre que vigila este grupo: que la pantalla corone un día con un
+   solo turno detrás, o que mezcle la cifra con sueldo y la de sin sueldo en
+   la misma fila. Las fórmulas ya las prueba pruebas.js; aquí se prueba lo que
+   se ENSEÑA.
+
+   Cuentas hechas a mano antes de correr nada (hoy es jueves 6 de agosto):
+     Tres viernes de julio, 17:00–23:00 (6 h), $180 de propina cada uno,
+     sueldo $10/h  → $540 / 18 h = $30.00 por hora; $180 por turno.
+       Con sueldo: $240 por turno, $40.00 por hora.
+     Un lunes 3/8, 10:00–15:00 (5 h), $100 → pocos datos; mañana.
+     Un viernes de marzo, fuera de los 90 días, $600 en 6 h.
+       Con "Todo": $1,140 / 24 h = $47.50 por hora, en 4 turnos.
+   ========================================================================== */
+grupo('Reportes');
+const estadoAntesReportes = JSON.stringify(D());
+const turnoRepApp = (id, fecha, entrada, salida, efectivo, tarjeta) =>
+  ({ id, fecha, entrada, salida, ventas: 1000, efectivo, tarjeta, tarifaHora: 10, tipOut: 0 });
+const TURNOS_REPORTE = [
+  turnoRepApp('v1', '2026-07-17', '17:00', '23:00', 60, 120),
+  turnoRepApp('v2', '2026-07-24', '17:00', '23:00', 60, 120),
+  turnoRepApp('v3', '2026-07-31', '17:00', '23:00', 60, 120),
+  turnoRepApp('l1', '2026-08-03', '10:00', '15:00', 50, 50),
+  turnoRepApp('v0', '2026-03-06', '17:00', '23:00', 200, 400)
+];
+run(`datos.turnos = ${JSON.stringify(TURNOS_REPORTE)};
+     datos.prefs.contarSueldo = false; datos.prefs.idioma = 'es';
+     periodoReporte = 90; irA('reportes')`);
+
+ok('la pestaña Reportes existe y abre su pantalla',
+   !d.getElementById('p-reportes')._classes.has('oculto')
+   && d.getElementById('p-semana')._classes.has('oculto'));
+ok('su pestaña queda marcada, y la de la semana no',
+   d.getElementById('tab-reportes')._classes.has('activa')
+   && !d.getElementById('tab-semana')._classes.has('activa'));
+ok('las pestañas siguen a la vista', !d.getElementById('pestanas')._classes.has('oculto'));
+
+ok('arranca en 90 días', d.getElementById('rep-periodos').children[1]._classes.has('activo'));
+ok('el mejor día: viernes, a $30.00 por hora', texto('rep-mejor') === '$30.00');
+/* `rep-contra` lleva el día en negrita. El `textContent` del mini-dom cambia
+   cada etiqueta por un espacio y leería "Los viernes , en 3 turnos"; el
+   navegador de verdad no mete ese espacio. Se quitan las etiquetas a mano
+   para comparar lo que se ve en el teléfono, no lo que se inventa el doble. */
+const contraRep = () => d.getElementById('rep-contra').innerHTML.replace(/<[^>]*>/g, '');
+ok('dicho con palabras y con cuántos turnos hay detrás',
+   contraRep() === 'Los viernes, en 3 turnos');
+ok('y no el viernes suelto de marzo, que está fuera del período',
+   texto('rep-mejor') !== '$47.50' && texto('rep-mejor') !== '$100.00');
+
+const htmlDias = () => d.getElementById('rep-dias').innerHTML;
+ok('la tabla tiene sus siete días más los títulos',
+   (htmlDias().match(/class="rep-fila/g) || []).length === 8);
+ok('solo una fila en verde', (htmlDias().match(/rep-fila mejor/g) || []).length === 1);
+ok('el lunes, con un turno, dice "pocos datos" en vez de competir',
+   /Lunes<\/span><span class="rep-hora"><span class="nota">pocos datos/.test(htmlDias()));
+ok('los días sin turnos se apagan pero no desaparecen',
+   (htmlDias().match(/rep-fila poco/g) || []).length === 6);
+ok('el por turno del viernes sale sin sueldo, como el por hora',
+   htmlDias().includes('$30.00</span><span class="rep-n">3</span><span class="rep-turno">$180<'));
+ok('y no con el sueldo metido, que no cuadraría con su por hora',
+   !htmlDias().includes('$240'));
+
+const htmlFranjas = () => d.getElementById('rep-franjas').innerHTML;
+ok('la tarde gana, con sus tres turnos',
+   /metrica mejor"><div class="etiqueta">Tarde<\/div><div class="valor">\$30\.00/.test(htmlFranjas()));
+ok('la mañana, con uno solo, no enseña una cifra que parezca comparable',
+   /Mañana<\/div><div class="valor poco">pocos datos/.test(htmlFranjas()));
+ok('explica cómo se decide mañana o tarde', texto('rep-aclara') === run("t('repAclara')"));
+
+// Contando el sueldo cambian la cifra y la etiqueta, en todos los sitios a la vez.
+run('datos.prefs.contarSueldo = true; pintar()');
+ok('con el sueldo, $40.00 por hora', texto('rep-mejor') === '$40.00');
+ok('y la etiqueta lo dice', texto('rep-etiqueta') === run("t('repEtiquetaTotal')"));
+ok('el por turno también lo cuenta', htmlDias().includes('$240'));
+run('datos.prefs.contarSueldo = false; pintar()');
+
+// Cambiar el período tocando el botón, no la variable.
+d.getElementById('rep-periodos').children[3].click();
+ok('"Todo" mete el viernes de marzo: $47.50 en 4 turnos',
+   texto('rep-mejor') === '$47.50' && contraRep() === 'Los viernes, en 4 turnos');
+ok('y el botón queda marcado', d.getElementById('rep-periodos').children[3]._classes.has('activo'));
+d.getElementById('rep-periodos').children[1].click();
+
+// Un turno sin hora de salida se cuenta aparte, y se dice.
+run(`datos.turnos.push({ id: 'x1', fecha: '2026-08-05', entrada: '10:00', ventas: 0,
+     efectivo: 0, tarjeta: 0, tarifaHora: 10, tipOut: 0 }); pintar()`);
+ok('avisa del turno que no entra en mañana o tarde',
+   texto('rep-aclara').includes(run("rellenar(t('repSinHora'), 1)")));
+
+// Sin ningún día con 3 turnos no se corona a nadie.
+run(`datos.turnos = [${JSON.stringify(TURNOS_REPORTE[3])}]; pintar()`);
+ok('sin días con 3 turnos, no hay mejor día', texto('rep-mejor') === '—');
+ok('y explica por qué', texto('rep-contra') === run("t('repSinMejor')"));
+ok('pero la tabla sigue a la vista', !d.getElementById('rep-cuerpo')._classes.has('oculto'));
+ok('ninguna fila en verde', !/rep-fila mejor/.test(htmlDias()));
+
+// Sin turnos en el período.
+run('datos.turnos = []; pintar()');
+ok('sin turnos lo dice en vez de enseñar $0.00',
+   texto('rep-mejor') === '—' && texto('rep-contra') === run("t('repSinTurnos')"));
+ok('y esconde las tablas vacías', d.getElementById('rep-cuerpo')._classes.has('oculto'));
+
+// En inglés.
+run(`datos.turnos = ${JSON.stringify(TURNOS_REPORTE)}; datos.prefs.idioma = 'en'; pintar()`);
+ok('en inglés, "Fridays, over 3 shifts"', contraRep() === 'Fridays, over 3 shifts');
+ok('y los días de la tabla también', htmlDias().includes('Friday'));
+
+run('datos = ' + estadoAntesReportes);
+run("periodoReporte = 90; irA('semana')");
+avisos.length = 0;
+
+
+/* ==========================================================================
    Respaldo desde la app instalada en el iPhone
    --------------------------------------------------------------------------
    Va de último, y es el único grupo que espera: el menú de compartir contesta

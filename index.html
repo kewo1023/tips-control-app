@@ -409,6 +409,38 @@ body {
 .dato-suelto { font-size: 0.8125rem; color: var(--tinta-2); padding: 12px 2px 0; }
 
 /* ============================================================================
+   SECCIÓN E2 — Reportes: qué turno conviene
+   ----------------------------------------------------------------------------
+   Todo lleva el prefijo `rep-` a propósito: `.fila` ya existe (la rejilla de
+   dos columnas del formulario) y una tabla con esa clase heredaría su
+   `grid-template-columns` sin dar ningún error. Se vería rota y nada diría
+   por qué.
+   ========================================================================== */
+.rep-periodos { margin: 4px 0 2px; }
+.rep-tabla { background: var(--tarjeta); border: 1px solid var(--linea);
+             border-radius: 12px; overflow: hidden; }
+.rep-fila { display: grid; grid-template-columns: 1.3fr 1fr 0.7fr 1fr;
+            align-items: baseline; padding: 9px 12px;
+            border-top: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
+.rep-fila:first-child { border-top: 0; }
+.rep-fila > :not(:first-child) { text-align: right; }
+.rep-fila.titulos { padding: 8px 12px 6px; }
+.rep-dia   { font-weight: 500; }
+.rep-hora  { font-weight: 600; }
+.rep-n, .rep-turno { color: var(--tinta-2); font-size: 0.8125rem; }
+/* El mejor día en verde, y solo ese: es la respuesta a la pregunta de la
+   pantalla. Si se pintaran también los "buenos", la respuesta se diluye. */
+.rep-fila.mejor .rep-dia, .rep-fila.mejor .rep-hora { color: var(--verde); }
+/* Pocos datos (o ninguno) se apaga, no se esconde: la fila sigue ahí para que
+   la tabla tenga siempre sus siete días en el mismo sitio. */
+.rep-fila.poco > * { color: var(--tinta-3); font-weight: 400; }
+.rep-fila .nota { font-size: 0.6875rem; }
+.metrica.mejor .valor { color: var(--verde); }
+.metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-3); }
+.rep-aclara { font-size: 0.75rem; color: var(--tinta-3); margin: 8px 2px 0;
+              line-height: 1.4; }
+
+/* ============================================================================
    SECCIÓN F — Formulario del turno
    ========================================================================== */
 .barra-titulo {
@@ -896,6 +928,34 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
 
 <!-- ==========================================================================
+     SECCIÓN I2 — Pantalla: REPORTES (qué turno conviene)
+     ====================================================================== -->
+<section id="p-reportes" class="oculto">
+  <div class="cabecera">
+    <span class="lugar" data-t="reportes">Reportes</span>
+  </div>
+  <div class="chips rep-periodos" id="rep-periodos"></div>
+
+  <div class="total">
+    <div class="etiqueta" id="rep-etiqueta"></div>
+    <div class="cantidad cifra" id="rep-mejor"></div>
+    <div class="contra" id="rep-contra"></div>
+  </div>
+
+  <div id="rep-cuerpo">
+    <h2 class="seccion" data-t="repPorDia">Por día de la semana</h2>
+    <div class="rep-tabla" id="rep-dias"></div>
+
+    <h2 class="seccion" data-t="repFranjas">Mañana o tarde</h2>
+    <div class="metricas" id="rep-franjas"></div>
+    <p class="rep-aclara" id="rep-aclara"></p>
+  </div>
+
+  <div class="marca-kev" id="marca-reportes" aria-hidden="true"></div>
+</section>
+
+
+<!-- ==========================================================================
      SECCIÓN J — Pantalla: TURNO (se abre al tocar un día)
      ====================================================================== -->
 <section id="p-turno" class="oculto">
@@ -1211,6 +1271,7 @@ h2.seccion { font-size: 0.625rem; font-weight: 600; letter-spacing: 0.09em;
 
 <nav class="pestanas" id="pestanas">
   <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
+  <button id="tab-reportes" data-t="reportes" onclick="irA('reportes')">Reportes</button>
   <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
 </nav>
 
@@ -1259,6 +1320,22 @@ const TEXTOS = {
     mejorDia: 'Mejor día', conEn: 'con', enHoras: 'en',
     semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
     letrasDias: ['L','M','X','J','V','S','D'],
+    reportes: 'Reportes',
+    repPorDia: 'Por día de la semana', repFranjas: 'Mañana o tarde',
+    rep30: '30 días', rep90: '90 días', repAno: '1 año', repTodo: 'Todo',
+    repDia: 'Día', repPorHora: 'Por hora', repTurnos: 'Turnos', repPorTurno: 'Por turno',
+    repEtiquetaPropina: 'Tu mejor día · propina por hora',
+    repEtiquetaTotal: 'Tu mejor día · total por hora',
+    repContra: 'Los %1, en %2 turnos',
+    repPocosDatos: 'pocos datos',
+    repSinMejor: 'Todavía no hay un día con 3 turnos o más en este período. Con menos, comparar días es adivinar.',
+    repSinTurnos: 'No hay turnos en este período.',
+    repPorHoraTurnos: 'por hora · %1 turnos',
+    repAclara: 'Mañana: sales a las 3 pm o antes. Tarde: sales después, dobles incluidos.',
+    repSinHora: '%1 turnos sin hora de salida no entran en mañana o tarde.',
+    nombresDias: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+    diasPlural: ['lunes','martes','miércoles','jueves','viernes','sábados','domingos'],
+    franjaManana: 'Mañana', franjaTarde: 'Tarde',
 
     // Los botones del diálogo
     dlgAceptar: 'Aceptar', dlgCancelar: 'Cancelar', dlgEntendido: 'Entendido',
@@ -1450,6 +1527,22 @@ const TEXTOS = {
     mejorDia: 'Best day', conEn: 'with', enHoras: 'in',
     semanaAnterior: 'Previous week', semanaSiguiente: 'Next week',
     letrasDias: ['M','T','W','T','F','S','S'],
+    reportes: 'Reports',
+    repPorDia: 'By day of the week', repFranjas: 'Morning or evening',
+    rep30: '30 days', rep90: '90 days', repAno: '1 year', repTodo: 'All',
+    repDia: 'Day', repPorHora: 'Per hour', repTurnos: 'Shifts', repPorTurno: 'Per shift',
+    repEtiquetaPropina: 'Your best day · tips per hour',
+    repEtiquetaTotal: 'Your best day · total per hour',
+    repContra: '%1, over %2 shifts',
+    repPocosDatos: 'not enough data',
+    repSinMejor: 'No day has 3 or more shifts in this period yet. With fewer, comparing days is guessing.',
+    repSinTurnos: 'No shifts in this period.',
+    repPorHoraTurnos: 'per hour · %1 shifts',
+    repAclara: 'Morning: you leave at 3 pm or earlier. Evening: you leave later, doubles included.',
+    repSinHora: '%1 shifts without a clock-out time are not counted as morning or evening.',
+    nombresDias: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    diasPlural: ['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'],
+    franjaManana: 'Morning', franjaTarde: 'Evening',
 
     mHoras: 'Hours',       nHoras: 'Total length of every shift.',
     mPorHora: 'Per hour',  nPorHora: 'Everything you take home ÷ hours worked.',
@@ -1632,7 +1725,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v27';
+const VERSION_APP = 'v28';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3247,6 +3340,7 @@ function traducirEstaticos() {
 function pintar() {
   traducirEstaticos();
   document.getElementById('p-semana').classList.toggle('oculto', pantalla !== 'semana');
+  document.getElementById('p-reportes').classList.toggle('oculto', pantalla !== 'reportes');
   document.getElementById('p-turno').classList.toggle('oculto', pantalla !== 'turno');
   document.getElementById('p-ajustes').classList.toggle('oculto', pantalla !== 'ajustes');
   document.getElementById('p-bienvenida').classList
@@ -3266,6 +3360,7 @@ function pintar() {
     .toggle('oculto', pantalla === 'turno' || pantalla === 'bienvenida'
                    || pantalla === 'instalacion');
   document.getElementById('tab-semana').classList.toggle('activa', pantalla === 'semana');
+  document.getElementById('tab-reportes').classList.toggle('activa', pantalla === 'reportes');
   // La Ayuda cuelga de Ajustes, así que su pestaña sigue marcada mientras se
   // lee. Dejarla apagada haría parecer que te fuiste de la app.
   document.getElementById('tab-ajustes').classList
@@ -3278,6 +3373,7 @@ function pintar() {
      suya sino de la sección que lo contiene, y el día que se mueva de sitio
      dejaría de actualizarse sin dar ningún error. */
   pintarBanner();
+  if (pantalla === 'reportes')   pintarReportes();
   if (pantalla === 'turno')      pintarTurno();
   if (pantalla === 'ajustes')    pintarAjustes();
   if (pantalla === 'bienvenida') pintarBienvenida();
@@ -3534,6 +3630,102 @@ function incentivoMetrica(r, rAnterior, metrica) {
 
   return metrica('', entero(r.incentivo), r.incentivo, rAnterior.incentivo,
                  entero, 'mas', 'nIncentivo', nombreIncentivo(), pie);
+}
+
+/* --- Reportes: qué turno conviene --- */
+
+/* El período que se está mirando, en días (null = todo). Vive en memoria y no
+   se guarda: al abrir la app vuelve a 90 días, que es lo bastante largo para
+   tener varios turnos de cada día y lo bastante corto para que un cambio de
+   horario de hace un año no pese. No pasa la prueba de la casilla en Ajustes:
+   nadie necesita que se recuerde. */
+let periodoReporte = 90;
+const PERIODOS_REPORTE = [
+  { dias: 30,   clave: 'rep30' },
+  { dias: 90,   clave: 'rep90' },
+  { dias: 365,  clave: 'repAno' },
+  { dias: null, clave: 'repTodo' }
+];
+
+function pintarReportes() {
+  const conSueldo = !!datos.prefs.contarSueldo;
+
+  const periodos = document.getElementById('rep-periodos');
+  periodos.innerHTML = '';
+  PERIODOS_REPORTE.forEach(p => {
+    const boton = document.createElement('button');
+    boton.className = 'chip' + (p.dias === periodoReporte ? ' activo' : '');
+    boton.textContent = t(p.clave);
+    boton.onclick = () => { periodoReporte = p.dias; pintarReportes(); };
+    periodos.appendChild(boton);
+  });
+
+  const turnos = turnosDelPeriodo(datos.turnos, hoy(), periodoReporte);
+  const porDia = reportePorDia(turnos);
+  const mejor = mejorGrupo(porDia, conSueldo);
+  const porHora = r => cifrasPrincipales(r, conSueldo).porHora;
+
+  /* La cifra grande responde la pregunta de la pantalla. Cuando no hay con
+     qué responderla, lo dice con palabras en vez de enseñar un $0.00: un cero
+     se lee como "los lunes no ganas nada", que es falso. */
+  document.getElementById('rep-etiqueta').textContent =
+    t(conSueldo ? 'repEtiquetaTotal' : 'repEtiquetaPropina');
+  const cantidad = document.getElementById('rep-mejor');
+  const contra = document.getElementById('rep-contra');
+  if (mejor !== null) {
+    const r = porDia[mejor].resumen;
+    cantidad.textContent = $(porHora(r));
+    contra.innerHTML = rellenar(t('repContra'),
+      `<strong class="sube">${t('diasPlural')[mejor]}</strong>`, r.turnos);
+  } else {
+    cantidad.textContent = '—';
+    contra.textContent = t(turnos.length === 0 ? 'repSinTurnos' : 'repSinMejor');
+  }
+  // Sin turnos en el período, las tablas serían siete filas de guiones.
+  document.getElementById('rep-cuerpo').classList.toggle('oculto', turnos.length === 0);
+
+  /* La tabla: siempre siete filas, en el mismo orden que la semana. Un día sin
+     suficientes turnos se apaga en vez de esconderse, para que cada día esté
+     siempre en el mismo sitio. */
+  const minimo = MINIMO_TURNOS_REPORTE;
+  let filas = `<div class="rep-fila titulos">`
+    + `<span class="etiqueta">${t('repDia')}</span>`
+    + `<span class="etiqueta">${t('repPorHora')}</span>`
+    + `<span class="etiqueta">${t('repTurnos')}</span>`
+    + `<span class="etiqueta">${t('repPorTurno')}</span></div>`;
+  porDia.forEach(({ clave, resumen: r }) => {
+    const nombre = t('nombresDias')[clave];
+    if (r.turnos < minimo) {
+      const hora = r.turnos === 0 ? '—' : `<span class="nota">${t('repPocosDatos')}</span>`;
+      filas += `<div class="rep-fila poco"><span class="rep-dia">${nombre}</span>`
+        + `<span class="rep-hora">${hora}</span><span class="rep-n">${r.turnos}</span>`
+        + `<span class="rep-turno">—</span></div>`;
+      return;
+    }
+    // "Por turno" con la misma cifra que el resto de la pantalla. El promedio
+    // de `resumir` cuenta siempre el sueldo, y mezclar las dos cifras en una
+    // misma fila daría un por turno que no cuadra con su por hora.
+    const porTurno = cifrasPrincipales(r, conSueldo).total / r.turnos;
+    filas += `<div class="rep-fila${clave === mejor ? ' mejor' : ''}">`
+      + `<span class="rep-dia">${nombre}</span><span class="rep-hora">${$(porHora(r))}</span>`
+      + `<span class="rep-n">${r.turnos}</span><span class="rep-turno">${$0(porTurno)}</span></div>`;
+  });
+  document.getElementById('rep-dias').innerHTML = filas;
+
+  const franjas = reportePorFranja(turnos);
+  const mejorFranja = mejorGrupo(franjas.grupos, conSueldo);
+  document.getElementById('rep-franjas').innerHTML = franjas.grupos.map(({ clave, resumen: r }) => {
+    const nombre = t(clave === 'manana' ? 'franjaManana' : 'franjaTarde');
+    const valor = r.turnos >= minimo
+      ? `<div class="valor">${$(porHora(r))}</div>`
+      : `<div class="valor poco">${r.turnos === 0 ? '—' : t('repPocosDatos')}</div>`;
+    return `<div class="metrica${clave === mejorFranja ? ' mejor' : ''}">`
+      + `<div class="etiqueta">${nombre}</div>${valor}`
+      + `<div class="cuantos">${rellenar(t('repPorHoraTurnos'), r.turnos)}</div></div>`;
+  }).join('');
+
+  document.getElementById('rep-aclara').textContent = t('repAclara')
+    + (franjas.sinHora > 0 ? ' ' + rellenar(t('repSinHora'), franjas.sinHora) : '');
 }
 
 /* --- El formulario --- */
@@ -3831,7 +4023,7 @@ function pintarRecibo() {
  * da por hecho que existan los dos.
  */
 function pintarMarca() {
-  ['marca-semana', 'marca-ajustes'].forEach(id => {
+  ['marca-semana', 'marca-reportes', 'marca-ajustes'].forEach(id => {
     const sitio = document.getElementById(id);
     if (sitio) sitio.innerHTML = MARCA_KEV;
   });
@@ -4100,7 +4292,7 @@ const FUNCIONES_NECESARIAS = [
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
-  'diasEntre'
+  'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la
