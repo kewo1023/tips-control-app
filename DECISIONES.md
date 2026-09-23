@@ -722,3 +722,14 @@ Se descartó bajar la barra con un `bottom` negativo hasta el borde real: queda
 fuera de la ventana que iOS le da a la app, y si iOS no la pinta o no le pasa
 los toques, las pestañas dejarían de funcionar. No se puede probar sin arriesgar
 la navegación.
+
+**Incidente de la v31 (23 de septiembre de 2026): las pestañas parpadeaban al
+hacer scroll.** La clase `hueco-ios` le ponía al cuerpo un alto mínimo y le
+quitaba margen. Como la clase se pone y se quita al hacer scroll, cada cambio
+alteraba el alto de la página, iOS volvía a medir la ventana y la clase volvía
+a cambiar: un bucle, con la barra saltando arriba y abajo. Arreglo (v32): la
+clase solo toca cosas que no ocupan sitio (la barra `fixed`, el fondo de la
+raíz y una capa `fixed` de papel). **Regla: nada que se active con el scroll
+puede cambiar el alto de la página.** Una prueba lo vigila. La lección de
+siempre, con otra cara: la versión probada en el Mac no podía ver el bucle,
+porque solo existe en el teléfono con el fallo de iOS de por medio.

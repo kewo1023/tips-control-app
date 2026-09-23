@@ -200,13 +200,23 @@ html { font-size: 100%; }
        al hueco.
      - Pintar la raíz del color de la barra, para que la franja se lea como
        parte de ella y no como una tira de otro color.
-     - Que el cuerpo cubra al menos la ventana, para que ese color de la raíz
-       no asome detrás del contenido en una pantalla corta.
+     - Tapar la ventana con el papel, para que ese color de la raíz no asome
+       detrás del contenido en una pantalla corta.
    Cuando iOS corrige la ventana, la clase se va y todo vuelve a ser como en
-   cualquier otro teléfono. */
+   cualquier otro teléfono.
+
+   REGLA: nada de lo que hace esta clase puede cambiar el ALTO DE LA PÁGINA.
+   La primera versión (v31) le ponía al cuerpo un alto mínimo y le quitaba
+   margen, y eso armó un bucle: al hacer scroll iOS corregía la ventana, la
+   clase se iba, la página cambiaba de alto, iOS volvía a medir, la clase
+   volvía... y las pestañas parpadeaban saltando arriba y abajo. Por eso solo
+   se tocan cosas que no ocupan sitio en la página: la barra (que es `fixed`),
+   el fondo de la raíz y una capa `fixed` de papel. Hay una prueba que falla
+   si alguien vuelve a meter aquí un alto, un margen o un relleno del cuerpo. */
 :root.hueco-ios { background: var(--tarjeta); }
-:root.hueco-ios body { min-height: 100vh; box-sizing: border-box;
-                       padding-bottom: 4.75rem; }
+:root.hueco-ios body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; background: var(--papel);
+}
 :root.hueco-ios .pestanas { padding-bottom: 0; }
 
 body {
@@ -1811,7 +1821,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v31';
+const VERSION_APP = 'v32';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.

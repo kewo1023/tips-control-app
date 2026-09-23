@@ -1895,6 +1895,18 @@ ok('con el hueco, la barra pierde el margen de la rayita',
    /:root\.hueco-ios \.pestanas \{ padding-bottom: 0; \}/.test(html));
 ok('y la raíz toma el color de la barra',
    /:root\.hueco-ios \{ background: var\(--tarjeta\); \}/.test(html));
+/* La regla que rompió la v31: la clase se pone y se quita al hacer scroll, así
+   que si cambia el alto de la página arma un bucle con iOS y las pestañas
+   parpadean. Ninguna regla de `hueco-ios` puede tocar el alto, los márgenes o
+   los rellenos del cuerpo o de la página; el relleno solo se le quita a la
+   barra, que es `fixed` y no ocupa sitio. */
+const reglasHueco = html.match(/:root\.hueco-ios[^{]*\{[^}]*\}/g) || [];
+ok('las reglas de la franja existen', reglasHueco.length >= 3);
+ok('ninguna cambia el alto de la página (el bucle del parpadeo)',
+   reglasHueco.every(r => !/(min-height|max-height|[^-]height|margin)\s*:/.test(r.replace(/^[^{]*/, ''))
+                          && (!/padding/.test(r) || /^:root\.hueco-ios \.pestanas/.test(r))));
+ok('la capa de papel va fija, sin ocupar sitio',
+   reglasHueco.some(r => /body::before/.test(r) && /position: fixed/.test(r)));
 
 /* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
    que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */
