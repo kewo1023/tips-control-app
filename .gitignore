@@ -13,3 +13,6 @@ desktop.ini
 
 # Contexto local: datos de la persona, no del software. Nunca se versiona.
 CONTEXTO-LOCAL.md
+
+# Bitácora: menciona a la persona y su contexto. Solo en esta máquina.
+BITACORA.md
