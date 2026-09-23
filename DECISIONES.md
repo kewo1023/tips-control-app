@@ -733,3 +733,16 @@ raíz y una capa `fixed` de papel). **Regla: nada que se active con el scroll
 puede cambiar el alto de la página.** Una prueba lo vigila. La lección de
 siempre, con otra cara: la versión probada en el Mac no podía ver el bucle,
 porque solo existe en el teléfono con el fallo de iOS de por medio.
+
+**Segunda vuelta (v33): la ventana no se corrige, alterna.** Un video del
+teléfono mostró que al hacer scroll iOS hace ir y venir la ventana entre 894 y
+956. Con la barra pegada abajo (`bottom: 0`), la barra saltaba 62 cada vez; y
+con la clase poniéndose y quitándose (v31, v32), además cambiaba de alto.
+Arreglo: la barra se ancla ARRIBA, a la altura corta que iOS da al abrir
+(`top: var(--alto-estable)` + `translateY(-100%)`), porque el borde de arriba
+de la ventana nunca se mueve; su fondo se prolonga hacia abajo con `::after`; y
+la clase se pone una vez y no se quita. Todo en `orientation: portrait`.
+El precio: la franja de color de la barra bajo las etiquetas se queda siempre,
+también cuando iOS da la pantalla entera. Se prefirió una barra quieta con
+espacio debajo a una barra que salta. `mini-dom.js` aprendió
+`style.setProperty` para poder probarlo.

@@ -186,38 +186,51 @@ html { font-size: 100%; }
 /* La franja muerta de iOS 26 (WebKit 301108).
 
    Medido en el teléfono con el diagnóstico de Ajustes: al abrir la app
-   instalada, iOS le da una ventana de 894 de alto en una pantalla de 956. Le
-   quita justo lo que mide el hueco del reloj (62). La barra de pestañas va
-   pegada al borde de ESA ventana, así que queda 62 por encima del borde real,
-   y debajo iOS pinta una franja con el fondo de la raíz. En cuanto se hace
-   scroll, iOS corrige la ventana a 956 y la barra baja sola a su sitio: por
-   eso en las pantallas largas el hueco "se achicaba".
+   instalada, iOS le da una ventana de 894 de alto en una pantalla de 956 (le
+   quita justo lo que mide el hueco del reloj, 62), y debajo pinta una franja
+   con el fondo de la raíz. Ese hueco no se puede recuperar desde la app.
 
-   Ese hueco no se puede recuperar desde la app. Lo que sí se hace mientras
-   dura (`hueco-ios`, lo pone `medirHuecoIOS()`):
-     - Quitarle a la barra el margen de la rayita de inicio. La rayita está en
-       el borde real, dentro de la franja muerta: el margen sobraba y se sumaba
-       al hueco.
-     - Pintar la raíz del color de la barra, para que la franja se lea como
-       parte de ella y no como una tira de otro color.
-     - Tapar la ventana con el papel, para que ese color de la raíz no asome
-       detrás del contenido en una pantalla corta.
-   Cuando iOS corrige la ventana, la clase se va y todo vuelve a ser como en
-   cualquier otro teléfono.
+   Lo que se descubrió después, con un video del teléfono: al hacer scroll iOS
+   no corrige la ventana UNA vez, la hace ALTERNAR entre 894 y 956. Una barra
+   pegada abajo (`bottom: 0`) sigue ese borde y salta 62 cada vez. Por eso,
+   cuando se detecta el fallo (`hueco-ios`, lo pone `medirHuecoIOS()`):
 
-   REGLA: nada de lo que hace esta clase puede cambiar el ALTO DE LA PÁGINA.
-   La primera versión (v31) le ponía al cuerpo un alto mínimo y le quitaba
-   margen, y eso armó un bucle: al hacer scroll iOS corregía la ventana, la
-   clase se iba, la página cambiaba de alto, iOS volvía a medir, la clase
-   volvía... y las pestañas parpadeaban saltando arriba y abajo. Por eso solo
-   se tocan cosas que no ocupan sitio en la página: la barra (que es `fixed`),
-   el fondo de la raíz y una capa `fixed` de papel. Hay una prueba que falla
-   si alguien vuelve a meter aquí un alto, un margen o un relleno del cuerpo. */
-:root.hueco-ios { background: var(--tarjeta); }
-:root.hueco-ios body::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; background: var(--papel);
+     - La barra se ancla ARRIBA, no abajo: `top` a la altura corta que iOS da
+       al abrir (`--alto-estable`) y subida su propio alto con `translateY`.
+       El borde de arriba de la ventana no se mueve nunca, así que la barra
+       tampoco. La etiqueta queda siempre donde estaba con la ventana corta.
+     - Su fondo se prolonga hacia abajo (`::after`). Con la ventana larga tapa
+       la franja que queda debajo; con la corta cae en la franja muerta, que
+       ya es del mismo color porque la raíz se pinta como la barra.
+     - Pierde el margen de la rayita de inicio: la rayita está en el borde
+       real, dentro de la franja.
+     - Una capa fija de papel tapa la ventana, para que el color de la raíz no
+       asome detrás del contenido en una pantalla corta.
+
+   La clase NO se quita al hacer scroll: se pone una vez y se queda. Quitarla
+   y ponerla fue lo que hizo parpadear la barra en la v31 y la v32. La
+   `--alto-estable` solo cambia si aparece una ventana todavía más corta.
+   Todo va dentro de `orientation: portrait`: en horizontal, anclar la barra a
+   894 la mandaría fuera de la pantalla.
+
+   REGLA: nada de esto puede cambiar el ALTO DE LA PÁGINA. La v31 le ponía al
+   cuerpo un alto mínimo y armó un bucle con iOS. Solo se tocan cosas que no
+   ocupan sitio: la barra (`fixed`), el fondo de la raíz y la capa fija. Una
+   prueba lo vigila. */
+@media (orientation: portrait) {
+  :root.hueco-ios { background: var(--tarjeta); }
+  :root.hueco-ios body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; background: var(--papel);
+  }
+  :root.hueco-ios .pestanas {
+    top: var(--alto-estable); bottom: auto; transform: translateY(-100%);
+    padding-bottom: 0;
+  }
+  :root.hueco-ios .pestanas::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 100%;
+    height: 200px; background: var(--tarjeta);
+  }
 }
-:root.hueco-ios .pestanas { padding-bottom: 0; }
 
 body {
   margin: 0;
@@ -1821,7 +1834,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v32';
+const VERSION_APP = 'v33';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3225,10 +3238,13 @@ function estaInstalada() {
       || window.navigator.standalone === true;
 }
 
+let altoEstable = 0;
+
 /**
- * Pone o quita `hueco-ios` en la raíz según lo que mida la ventana ahora.
+ * Pone `hueco-ios` en la raíz si iOS dio una ventana más corta que la pantalla.
  * Ver la sección B del CSS: iOS 26 abre las apps instaladas con una ventana
- * más corta que la pantalla y la corrige al hacer scroll.
+ * más corta que la pantalla, y al hacer scroll la hace alternar entre la corta
+ * y la real. Se apunta la corta, que es donde se ancla la barra.
  *
  * Solo en la app instalada en iOS y en vertical. `screen.height` en iOS es
  * siempre el alto en vertical aunque se gire el teléfono: en horizontal la
@@ -3236,17 +3252,22 @@ function estaInstalada() {
  * de 120 tampoco es este fallo (el reloj más alto mide 62): no se toca nada.
  */
 function medirHuecoIOS() {
-  let hueco = 0;
   try {
-    if (esIOS() && estaInstalada() && window.innerWidth < window.innerHeight) {
-      hueco = Math.round(screen.height - window.innerHeight);
+    if (!(esIOS() && estaInstalada() && window.innerWidth < window.innerHeight)) return;
+    const alto = Math.round(window.innerHeight);
+    const hueco = Math.round(screen.height - alto);
+    // Solo se apunta la ventana más corta que se haya visto: esa es la que iOS
+    // da al abrir, y anclar la barra ahí la deja quieta aunque la ventana
+    // crezca y encoja al hacer scroll. Nunca se quita: ver la sección B.
+    if (hueco > 0 && hueco <= 120 && (altoEstable === 0 || alto < altoEstable)) {
+      altoEstable = alto;
+      document.documentElement.style.setProperty('--alto-estable', alto + 'px');
+      document.documentElement.classList.add('hueco-ios');
     }
   } catch (e) {
     // Sin `screen` o sin medidas no hay forma de saberlo: se deja como en
     // cualquier otro teléfono, que es exactamente lo que había antes.
-    hueco = 0;
   }
-  document.documentElement.classList.toggle('hueco-ios', hueco > 0 && hueco <= 120);
 }
 
 function esIOS() {

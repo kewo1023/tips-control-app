@@ -1864,16 +1864,37 @@ run("irA('semana')");
    (diagnóstico del 23 de septiembre de 2026): pantalla 956, ventana 894 al
    abrir y 956 después de hacer scroll. */
 grupo('La franja muerta de iOS');
+/* Medidas del teléfono real: pantalla 956, ventana 894 al abrir, y al hacer
+   scroll la ventana ALTERNA entre 894 y 956 (visto en un video). La barra se
+   ancla a la corta y la clase no se quita nunca: quitarla y ponerla fue lo que
+   hizo parpadear las pestañas en la v31 y la v32. */
 const raiz = d.documentElement;
 const conHueco = () => raiz._classes.has('hueco-ios');
+const altoEstableCss = () => raiz.style.getPropertyValue('--alto-estable');
+const reiniciarHueco = () => { run('altoEstable = 0'); raiz._classes.delete('hueco-ios');
+                               raiz.style['--alto-estable'] = undefined; };
 ctx.screen = { width: 440, height: 956 };
 ctx.innerWidth = 440;
 ctx.navigator.userAgent = IPHONE;
 modoStandalone = true;
+
+reiniciarHueco();
 ctx.innerHeight = 894; run('medirHuecoIOS()');
 ok('instalada en un iPhone con la ventana corta: se marca', conHueco());
+ok('y apunta la altura corta para anclar la barra', altoEstableCss() === '894px');
 ctx.innerHeight = 956; run('medirHuecoIOS()');
-ok('cuando iOS corrige la ventana, se quita', !conHueco());
+ok('cuando iOS agranda la ventana, la marca se queda (quitarla hacía parpadear)', conHueco());
+ok('y el ancla no se mueve', altoEstableCss() === '894px');
+ctx.innerHeight = 894; run('medirHuecoIOS()'); ctx.innerHeight = 956; run('medirHuecoIOS()');
+ok('aunque la ventana vaya y venga', conHueco() && altoEstableCss() === '894px');
+ctx.innerHeight = 880; run('medirHuecoIOS()');
+ok('solo una ventana más corta todavía mueve el ancla', altoEstableCss() === '880px');
+ctx.innerHeight = 894; run('medirHuecoIOS()');
+ok('y volver a una corta pero no tanto no la devuelve', altoEstableCss() === '880px');
+
+reiniciarHueco();
+ctx.innerHeight = 956; run('medirHuecoIOS()');
+ok('si iOS da la pantalla entera, no se marca nada', !conHueco());
 // 900 de alto a propósito: con un hueco pequeño, lo único que puede frenar
 // esto es la comprobación de vertical, no el tope de 120.
 ctx.innerWidth = 1000; ctx.innerHeight = 900; run('medirHuecoIOS()');
@@ -1891,22 +1912,26 @@ ok('sin `screen` no revienta', huecoReviento === null);
 ok('y no marca nada', !conHueco());
 ctx.navigator.userAgent = ''; modoStandalone = false;
 delete ctx.innerHeight; ctx.innerWidth = 390;
-ok('con el hueco, la barra pierde el margen de la rayita',
-   /:root\.hueco-ios \.pestanas \{ padding-bottom: 0; \}/.test(html));
-ok('y la raíz toma el color de la barra',
-   /:root\.hueco-ios \{ background: var\(--tarjeta\); \}/.test(html));
-/* La regla que rompió la v31: la clase se pone y se quita al hacer scroll, así
-   que si cambia el alto de la página arma un bucle con iOS y las pestañas
-   parpadean. Ninguna regla de `hueco-ios` puede tocar el alto, los márgenes o
-   los rellenos del cuerpo o de la página; el relleno solo se le quita a la
+reiniciarHueco();
+
+const bloqueHueco = (html.match(/@media \(orientation: portrait\) \{\s*:root\.hueco-ios[\s\S]*?\n\}/) || [''])[0];
+ok('todo el arreglo va dentro de "solo en vertical"', bloqueHueco.length > 0);
+ok('la barra se ancla arriba, no al borde que se mueve',
+   /\.pestanas \{[^}]*top: var\(--alto-estable\)[^}]*bottom: auto[^}]*translateY\(-100%\)/.test(bloqueHueco));
+ok('y pierde el margen de la rayita', /\.pestanas \{[^}]*padding-bottom: 0/.test(bloqueHueco));
+ok('su fondo se prolonga hacia abajo', /\.pestanas::after \{[^}]*top: 100%/.test(bloqueHueco));
+ok('y la raíz toma el color de la barra', /:root\.hueco-ios \{ background: var\(--tarjeta\); \}/.test(bloqueHueco));
+/* La regla que rompió la v31: nada de esto puede cambiar el alto de la
+   página. Solo se permiten la raíz (su fondo), la capa fija del cuerpo y la
    barra, que es `fixed` y no ocupa sitio. */
-const reglasHueco = html.match(/:root\.hueco-ios[^{]*\{[^}]*\}/g) || [];
-ok('las reglas de la franja existen', reglasHueco.length >= 3);
-ok('ninguna cambia el alto de la página (el bucle del parpadeo)',
-   reglasHueco.every(r => !/(min-height|max-height|[^-]height|margin)\s*:/.test(r.replace(/^[^{]*/, ''))
-                          && (!/padding/.test(r) || /^:root\.hueco-ios \.pestanas/.test(r))));
-ok('la capa de papel va fija, sin ocupar sitio',
-   reglasHueco.some(r => /body::before/.test(r) && /position: fixed/.test(r)));
+const reglasHueco = bloqueHueco.match(/:root\.hueco-ios[^{]*\{[^}]*\}/g) || [];
+const selectoresPermitidos = [':root.hueco-ios', ':root.hueco-ios body::before',
+                              ':root.hueco-ios .pestanas', ':root.hueco-ios .pestanas::after'];
+ok('las reglas de la franja existen', reglasHueco.length === 4);
+ok('ninguna toca algo que ocupe sitio en la página (el bucle del parpadeo)',
+   reglasHueco.every(r => selectoresPermitidos.includes(r.slice(0, r.indexOf('{')).trim()))
+   && reglasHueco.every(r => !r.startsWith(':root.hueco-ios {') || !/height|margin|padding/.test(r)));
+ok('la capa de papel va fija', reglasHueco.some(r => /body::before/.test(r) && /position: fixed/.test(r)));
 
 /* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
    que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */

@@ -22,7 +22,14 @@ const sinTags = s => String(s).replace(/<[^>]*>/g, ' ');
 class El {
   constructor(tag) {
     this.tagName = (tag || 'div').toUpperCase();
-    this.children = []; this._value = ''; this.style = {}; this.dataset = {};
+    this.children = []; this._value = ''; this.dataset = {};
+    /* `setProperty` es como el navegador escribe variables CSS (`--algo`). Sin
+       él, la app lanzaba un error aquí y en el teléfono no: se guarda el
+       valor para que las pruebas puedan leerlo. */
+    this.style = {
+      setProperty(n, v) { this[n] = String(v); },
+      getPropertyValue(n) { return this[n] === undefined ? '' : this[n]; }
+    };
     this._text = ''; this._html = ''; this._classes = new Set();
     this._lis = {}; this.onclick = null; this.onchange = null;
     this.type = ''; this.disabled = false;
