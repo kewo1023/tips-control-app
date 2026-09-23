@@ -871,7 +871,9 @@ run("irA('ayuda')");
 ok('se abre desde Ajustes', !d.getElementById('p-ayuda')._classes.has('oculto'));
 ok('la pestaña de Ajustes sigue marcada',
    d.getElementById('tab-ajustes')._classes.has('activa'));
-ok('lista las ocho preguntas', d.querySelectorAll('#ayuda-lista .ayuda-item').length === 8);
+ok('lista todas las preguntas, una por clave de AYUDA',
+   d.querySelectorAll('#ayuda-lista .ayuda-item').length === run('AYUDA.length'));
+ok('incluida la de Reportes', run("AYUDA.includes('reportes')"));
 ok('todas empiezan cerradas',
    d.querySelectorAll('#ayuda-lista .ayuda-r').length === 0);
 
@@ -882,6 +884,17 @@ ok('y es la que se tocó', texto('ayuda-lista').includes('VENTAS del turno'));
 
 /* Solo una abierta a la vez: con varias, hay que desplazarse para encontrar la
    siguiente pregunta, que es justo lo que el plegado venía a evitar. */
+/* La regla de la Ayuda: decir cómo se llama un botón, nunca dónde está. Así
+   no caduca cuando se mueven cosas. La respuesta de Reportes es la que más
+   tienta a romperla ("arriba eliges el período"). */
+const sinUbicacion = texto => !/\b(arriba|abajo|izquierda|derecha|top|bottom|left|right)\b/i.test(texto);
+ok('la respuesta de Reportes no dice dónde está nada',
+   sinUbicacion(run("TEXTOS.es.ayudaReportesR")) && sinUbicacion(run("TEXTOS.en.ayudaReportesR")));
+ok('y explica las tres reglas: por hora, 3 turnos y las 3 pm',
+   ['por hora', '3 turnos', '3 pm'].every(x => run("TEXTOS.es.ayudaReportesR").includes(x)));
+ok('la de los datos ya no dice que siempre se descarga',
+   !run("TEXTOS.es.ayudaDatosR").includes('se descarga'));
+
 run("abrirAyuda('datos')");
 ok('abrir otra cierra la anterior',
    d.querySelectorAll('#ayuda-lista .ayuda-r').length === 1);

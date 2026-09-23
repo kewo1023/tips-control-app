@@ -1502,11 +1502,14 @@ const TEXTOS = {
     ayudaFuturoP: '¿Por qué no puedo pasar a la semana que viene?',
     ayudaFuturoR: 'Porque todavía no ha pasado y no hay nada que apuntar. La flecha se activa cuando llega. Hacia atrás sí puedes ir todo lo que quieras.',
 
+    ayudaReportesP: '¿Cómo leo los Reportes?',
+    ayudaReportesR: 'Reportes junta tus turnos por día de la semana y te dice cuál te deja más por hora. Ese "por hora" es todo lo que ganaste ese día dividido entre todas las horas, así que un doble pesa lo que duró. Un día solo compite si tiene 3 turnos o más en el período; con menos sale "pocos datos", porque dos viernes buenos no dicen que el viernes pague más. Mañana es cuando sales a las 3 pm o antes; tarde, cuando sales después, dobles incluidos. Puedes mirar los últimos 30 días, 90 días, 1 año o todo.',
+
     ayudaCambioPctP: 'Me cambiaron los porcentajes del tip-out, ¿qué hago?',
     ayudaCambioPctR: 'Cámbialos en Ajustes y listo. Los turnos que ya tienes guardados NO se recalculan: cada uno se queda con el porcentaje que se pagó ese día, que es lo correcto. Lo nuevo empieza a usar el porcentaje nuevo.',
 
     ayudaDatosP: '¿Dónde están mis datos? ¿Y si cambio de teléfono?',
-    ayudaDatosR: 'Tus turnos están guardados solo en este teléfono, no en internet: nadie más los ve, pero tampoco hay copia en ningún lado. Por eso, cada cierto tiempo entra en Ajustes y toca Exportar: se descarga un archivo con todo. Guárdalo donde no lo pierdas. En el teléfono nuevo instalas la app y tocas Importar. Si no exportas y pierdes el teléfono, los turnos no se pueden recuperar.',
+    ayudaDatosR: 'Tus turnos están guardados solo en este teléfono, no en internet: nadie más los ve, pero tampoco hay copia en ningún lado. Por eso, cada cierto tiempo entra en Ajustes y toca Exportar: sale un archivo con todo. En el iPhone, con la app instalada, se abre el menú de compartir: elige Guardar en Archivos. Guárdalo donde no lo pierdas; en Ajustes ves cuándo fue tu último respaldo. En el teléfono nuevo instalas la app y tocas Importar. Si no exportas y pierdes el teléfono, los turnos no se pueden recuperar.',
     archivoMalo: 'Ese archivo no parece un respaldo de Tips Control. Busca el que empieza por "tips-control-" y termina en .json, el que sale al tocar Exportar. Tus turnos no se han tocado.',
     datosIlegibles: 'No se pudieron leer los datos guardados en este teléfono. Se guardó una copia de lo que había por si se puede recuperar, así que NO borres la app ni sus datos. Manda una captura de esta pantalla antes de seguir usándola.',
     noSeGuardo: 'No se pudo guardar en este teléfono. Puede que no quede espacio, o que estés navegando en modo privado. Lo que escribiste sigue en pantalla: apúntalo en otro sitio antes de cerrar, o libera espacio y vuelve a intentarlo.',
@@ -1675,11 +1678,14 @@ const TEXTOS = {
     ayudaFuturoP: 'Why can’t I move to next week?',
     ayudaFuturoR: 'Because it hasn’t happened yet and there’s nothing to log. The arrow turns on when it arrives. You can go back as far as you like.',
 
+    ayudaReportesP: 'How do I read Reports?',
+    ayudaReportesR: 'Reports groups your shifts by day of the week and tells you which one pays you the most per hour. That "per hour" is everything you made that day divided by all the hours, so a double counts for as long as it lasted. A day only competes if it has 3 or more shifts in the period; with fewer it says "not enough data", because two good Fridays don’t mean Friday pays more. Morning is when you leave at 3 pm or earlier; evening, when you leave later, doubles included. You can look at the last 30 days, 90 days, 1 year or everything.',
+
     ayudaCambioPctP: 'My tip-out percentages changed. What do I do?',
     ayudaCambioPctR: 'Change them in Settings and that’s it. Shifts you already saved are NOT recalculated: each one keeps the percentage that was actually paid that day, which is the correct behavior. New shifts start using the new percentage.',
 
     ayudaDatosP: 'Where is my data? What if I change phones?',
-    ayudaDatosR: 'Your shifts are saved only on this phone, not on the internet: nobody else sees them, but there’s no copy anywhere either. So every once in a while go to Settings and tap Export: it downloads a file with everything. Keep it somewhere safe. On the new phone you install the app and tap Import. If you don’t export and you lose the phone, the shifts cannot be recovered.',
+    ayudaDatosR: 'Your shifts are saved only on this phone, not on the internet: nobody else sees them, but there’s no copy anywhere either. So every once in a while go to Settings and tap Export: you get a file with everything. On an iPhone, with the app installed, the share menu opens: choose Save to Files. Keep it somewhere safe; Settings shows when your last backup was. On the new phone you install the app and tap Import. If you don’t export and you lose the phone, the shifts cannot be recovered.',
     archivoMalo: 'That file doesn’t look like a Tips Control backup. Look for the one starting with "tips-control-" and ending in .json, the one you get from Export. Your shifts were not touched.',
     datosIlegibles: 'The data saved on this phone could not be read. A copy of what was there has been kept in case it can be recovered, so do NOT delete the app or its data. Send a screenshot of this message before you keep using it.',
     noSeGuardo: 'Could not save on this phone. You may be out of space, or browsing in private mode. What you typed is still on screen: write it down somewhere before closing, or free up space and try again.',
@@ -1725,7 +1731,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v28';
+const VERSION_APP = 'v29';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1858,7 +1864,7 @@ const TEMAS = [
    porcentajes", "cambié de teléfono"). Ordenarlas por antigüedad del usuario y
    no por tema hace que casi nadie tenga que bajar hasta el final. */
 const AYUDA = ['registrar', 'corregir', 'tipout', 'sueldo',
-               'porHora', 'futuro', 'cambioPct', 'datos'];
+               'porHora', 'futuro', 'reportes', 'cambioPct', 'datos'];
 
 /* Tres tamaños, no un deslizador.
    Un deslizador tiene infinitas posiciones y no se pueden probar todas: alguna

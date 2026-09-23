@@ -198,10 +198,10 @@ restaurante, sueldo por hora y porcentajes de tip-out.
 
 ### Ayuda en vez de tour guiado
 
-Ocho preguntas plegadas, ordenadas por antigüedad del usuario. **Ninguna
+Preguntas plegadas, ordenadas por antigüedad del usuario (la de Reportes va después de las del uso diario: hace falta tener semanas de turnos para que sirva). **Ninguna
 respuesta dice dónde está un botón, solo cómo se llama**: así no caduca al
 mover cosas. El tour con burbujas se descartó porque se ancla a elementos
-concretos y cada rediseño lo rompe en silencio. Una prueba recorre las ocho
+concretos y cada rediseño lo rompe en silencio. Una prueba recorre todas las
 claves en los dos idiomas.
 
 ---
