@@ -703,3 +703,22 @@ estar sumándose encima. **Antes de tocar el CSS se mide**: tocar el pie de
 Ajustes muestra las medidas del teléfono (`mostrarDiagnostico`). Con ellas se
 decide el arreglo: quitar el margen doble cuando se detecte el fallo y pintar
 la franja del color de la barra.
+
+### La franja de iOS, medida (23 de septiembre de 2026)
+
+El diagnóstico en un iPhone grande instalado dio: pantalla 956, ventana 894 al
+abrir (le falta justo el hueco del reloj, 62) y 956 después de hacer scroll.
+`safe-area-inset-top` vale 62 aunque la barra de estado esté en `default`: el
+comentario que decía que valía 0 estaba mal y se corrigió.
+
+Arreglo (`medirHuecoIOS()` + clase `hueco-ios`, solo instalada en iOS, en
+vertical y con un hueco de 1 a 120): la barra pierde el margen de la rayita
+de inicio y la raíz toma el color de la barra, para que la franja se lea como
+parte de ella. Se mide al abrir, al cambiar de tamaño y al hacer scroll; cuando
+iOS corrige la ventana, la clase se va. **Los 62 del fallo no se recuperan**:
+lo que se quita es el margen que se sumaba encima.
+
+Se descartó bajar la barra con un `bottom` negativo hasta el borde real: queda
+fuera de la ventana que iOS le da a la app, y si iOS no la pinta o no le pasa
+los toques, las pestañas dejarían de funcionar. No se puede probar sin arriesgar
+la navegación.

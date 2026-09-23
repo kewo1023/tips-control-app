@@ -183,18 +183,42 @@
    -------------------------------------------------------------------------- */
 html { font-size: 100%; }
 
+/* La franja muerta de iOS 26 (WebKit 301108).
+
+   Medido en el teléfono con el diagnóstico de Ajustes: al abrir la app
+   instalada, iOS le da una ventana de 894 de alto en una pantalla de 956. Le
+   quita justo lo que mide el hueco del reloj (62). La barra de pestañas va
+   pegada al borde de ESA ventana, así que queda 62 por encima del borde real,
+   y debajo iOS pinta una franja con el fondo de la raíz. En cuanto se hace
+   scroll, iOS corrige la ventana a 956 y la barra baja sola a su sitio: por
+   eso en las pantallas largas el hueco "se achicaba".
+
+   Ese hueco no se puede recuperar desde la app. Lo que sí se hace mientras
+   dura (`hueco-ios`, lo pone `medirHuecoIOS()`):
+     - Quitarle a la barra el margen de la rayita de inicio. La rayita está en
+       el borde real, dentro de la franja muerta: el margen sobraba y se sumaba
+       al hueco.
+     - Pintar la raíz del color de la barra, para que la franja se lea como
+       parte de ella y no como una tira de otro color.
+     - Que el cuerpo cubra al menos la ventana, para que ese color de la raíz
+       no asome detrás del contenido en una pantalla corta.
+   Cuando iOS corrige la ventana, la clase se va y todo vuelve a ser como en
+   cualquier otro teléfono. */
+:root.hueco-ios { background: var(--tarjeta); }
+:root.hueco-ios body { min-height: 100vh; box-sizing: border-box;
+                       padding-bottom: 4.75rem; }
+:root.hueco-ios .pestanas { padding-bottom: 0; }
+
 body {
   margin: 0;
   /* El relleno de arriba es el hueco del reloj y la isla dinámica, por si la
      app se dibuja debajo de ellos.
 
-     Hoy no se dibuja: la barra de estado está en `default` (ver el <meta> de
-     la cabecera y por qué se cambió) y la app empieza debajo de ella, así que
-     `env(safe-area-inset-top)` vale 0 en iPhone igual que en Android y en un
-     ordenador. La línea se queda porque no cuesta nada y porque protege el
-     botón Cerrar del formulario, que vive justo arriba, si algún día alguien
-     vuelve a poner la barra translúcida: sin este relleno quedaba pisado por
-     el reloj y la batería en los iPhone con isla dinámica. */
+     Se creía que con la barra de estado en `default` la app empezaba debajo
+     del reloj y este relleno valía 0. El diagnóstico del 23 de septiembre de
+     2026 lo desmintió: en iOS 26, instalada, vale 62px en un iPhone grande y
+     la página se dibuja debajo del reloj igual. Este relleno es lo que evita
+     que el título y el botón Cerrar del formulario queden tapados. */
   padding: env(safe-area-inset-top) 14px calc(4.75rem + env(safe-area-inset-bottom));
   background: var(--papel);
   color: var(--tinta);
@@ -1787,7 +1811,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v30';
+const VERSION_APP = 'v31';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3191,6 +3215,30 @@ function estaInstalada() {
       || window.navigator.standalone === true;
 }
 
+/**
+ * Pone o quita `hueco-ios` en la raíz según lo que mida la ventana ahora.
+ * Ver la sección B del CSS: iOS 26 abre las apps instaladas con una ventana
+ * más corta que la pantalla y la corrige al hacer scroll.
+ *
+ * Solo en la app instalada en iOS y en vertical. `screen.height` en iOS es
+ * siempre el alto en vertical aunque se gire el teléfono: en horizontal la
+ * resta daría cientos de puntos de "hueco" que no existen. Y un hueco de más
+ * de 120 tampoco es este fallo (el reloj más alto mide 62): no se toca nada.
+ */
+function medirHuecoIOS() {
+  let hueco = 0;
+  try {
+    if (esIOS() && estaInstalada() && window.innerWidth < window.innerHeight) {
+      hueco = Math.round(screen.height - window.innerHeight);
+    }
+  } catch (e) {
+    // Sin `screen` o sin medidas no hay forma de saberlo: se deja como en
+    // cualquier otro teléfono, que es exactamente lo que había antes.
+    hueco = 0;
+  }
+  document.documentElement.classList.toggle('hueco-ios', hueco > 0 && hueco <= 120);
+}
+
 function esIOS() {
   const ua = navigator.userAgent;
   // El iPad moderno miente y se presenta como un Mac. Se le pilla porque un Mac
@@ -4108,8 +4156,8 @@ function apuntarAltura() {
   const h = Math.round(window.innerHeight);
   if (Number.isFinite(h) && !alturasVistas.includes(h)) alturasVistas.push(h);
 }
-window.addEventListener('resize', apuntarAltura);
-window.addEventListener('scroll', apuntarAltura);
+window.addEventListener('resize', () => { apuntarAltura(); medirHuecoIOS(); });
+window.addEventListener('scroll', () => { apuntarAltura(); medirHuecoIOS(); });
 
 function medida(nombre, leer) {
   try {
@@ -4446,6 +4494,7 @@ if (faltan.length > 0) {
      de arriba y no antes para que se lea en el orden en que ocurre. */
   if (debeInstalar()) pantalla = 'instalacion';
   pintar();
+  medirHuecoIOS();
   pedirPersistencia();
 }
 

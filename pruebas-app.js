@@ -1860,6 +1860,42 @@ ok('una medida que no se puede leer sale "?" en vez de romper el resto',
 avisos.length = 0;
 run("irA('semana')");
 
+/* La franja muerta de iOS 26. Las medidas son las del teléfono real
+   (diagnóstico del 23 de septiembre de 2026): pantalla 956, ventana 894 al
+   abrir y 956 después de hacer scroll. */
+grupo('La franja muerta de iOS');
+const raiz = d.documentElement;
+const conHueco = () => raiz._classes.has('hueco-ios');
+ctx.screen = { width: 440, height: 956 };
+ctx.innerWidth = 440;
+ctx.navigator.userAgent = IPHONE;
+modoStandalone = true;
+ctx.innerHeight = 894; run('medirHuecoIOS()');
+ok('instalada en un iPhone con la ventana corta: se marca', conHueco());
+ctx.innerHeight = 956; run('medirHuecoIOS()');
+ok('cuando iOS corrige la ventana, se quita', !conHueco());
+// 900 de alto a propósito: con un hueco pequeño, lo único que puede frenar
+// esto es la comprobación de vertical, no el tope de 120.
+ctx.innerWidth = 1000; ctx.innerHeight = 900; run('medirHuecoIOS()');
+ok('en horizontal no se confunde el giro con el fallo', !conHueco());
+ctx.innerWidth = 440; ctx.innerHeight = 700; run('medirHuecoIOS()');
+ok('un hueco demasiado grande no es este fallo', !conHueco());
+ctx.innerHeight = 894; modoStandalone = false; run('medirHuecoIOS()');
+ok('en Safari sin instalar no se toca nada', !conHueco());
+modoStandalone = true; ctx.navigator.userAgent = ''; run('medirHuecoIOS()');
+ok('ni en un teléfono que no es iPhone', !conHueco());
+delete ctx.screen; ctx.navigator.userAgent = IPHONE;
+let huecoReviento = null;
+try { run('medirHuecoIOS()'); } catch (e) { huecoReviento = e.message; }
+ok('sin `screen` no revienta', huecoReviento === null);
+ok('y no marca nada', !conHueco());
+ctx.navigator.userAgent = ''; modoStandalone = false;
+delete ctx.innerHeight; ctx.innerWidth = 390;
+ok('con el hueco, la barra pierde el margen de la rayita',
+   /:root\.hueco-ios \.pestanas \{ padding-bottom: 0; \}/.test(html));
+ok('y la raíz toma el color de la barra',
+   /:root\.hueco-ios \{ background: var\(--tarjeta\); \}/.test(html));
+
 /* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
    que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */
 grupo('Diseño: jerarquía y selecciones');
