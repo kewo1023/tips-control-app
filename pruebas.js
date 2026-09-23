@@ -743,6 +743,89 @@ probar('sin argumentos no revienta',
 
 
 /* --------------------------------------------------------------------------
+   Reportes: qué turno conviene
+   --------------------------------------------------------------------------
+   El desastre a evitar no es una cuenta mal hecha: es que el reporte le diga
+   a alguien "pide los martes" con base en un solo martes, o con un promedio
+   que hace pesar igual un turno de 3 horas que un doble.
+
+   Resultados calculados a mano ANTES de correr nada (sin sueldo ni tip-out
+   para que las cuentas se vean):
+     A lunes 3/8   10:00–15:00  5 h   $100  → mañana (sale a las 3 en punto)
+     B martes 4/8  17:00–01:00  8 h   $240  → tarde (cruza la medianoche)
+     C lunes 10/8  10:00–21:00 11 h   $220  → tarde (doble)
+     D lunes 17/8  16:00–19:00  3 h    $90  → tarde
+   Lunes: (100 + 220 + 90) / (5 + 11 + 3) = 410 / 19 = 21.58 por hora.
+   El promedio de los "por hora" (20, 20, 30) daría 23.33: es el que NO vale.
+   Tarde: (240 + 220 + 90) / (8 + 11 + 3) = 550 / 22 = 25.00 por hora.
+   -------------------------------------------------------------------------- */
+grupo('Reportes');
+
+const turnoRep = (id, fecha, entrada, salida, efectivo, tarjeta) =>
+  ({ id, fecha, entrada, salida, ventas: 1000, efectivo, tarjeta,
+     tarifaHora: 0, tipOut: 0 });
+const repA = turnoRep('A', '2026-08-03', '10:00', '15:00', 50, 50);
+const repB = turnoRep('B', '2026-08-04', '17:00', '01:00', 100, 140);
+const repC = turnoRep('C', '2026-08-10', '10:00', '21:00', 0, 220);
+const repD = turnoRep('D', '2026-08-17', '16:00', '19:00', 90, 0);
+
+probar('sale a las 3:00 en punto: mañana', L.franjaDelTurno(repA), 'manana');
+probar('sale a las 3:01: tarde',
+  L.franjaDelTurno({ entrada: '10:00', salida: '15:01' }), 'tarde');
+probar('sale a la 1 am: tarde, no mañana por ser "antes de las 3"',
+  L.franjaDelTurno(repB), 'tarde');
+probar('un doble cae en la tarde, sin regla aparte', L.franjaDelTurno(repC), 'tarde');
+probar('sin hora de salida no se adivina',
+  L.franjaDelTurno({ entrada: '10:00' }) === null, true);
+probar('y un turno vacío tampoco revienta', L.franjaDelTurno(undefined) === null, true);
+
+const porDia = L.reportePorDia([repA, repB, repC, repD]);
+probar('siempre devuelve los siete días', porDia.length, 7);
+probar('el lunes junta sus tres turnos', porDia[0].resumen.turnos, 3);
+probar('el por hora del lunes es total entre horas', porDia[0].resumen.propinaPorHora, 21.58);
+probar('y no el promedio de los por hora de cada turno',
+  porDia[0].resumen.propinaPorHora !== 23.33, true);
+probar('el martes tiene el suyo', porDia[1].resumen.turnos, 1);
+probar('un día sin turnos sale vacío, no desaparece', porDia[2].resumen.turnos, 0);
+probar('el domingo es el último',
+  L.reportePorDia([turnoRep('S', '2026-08-09', '10:00', '15:00', 1, 0)])[6].resumen.turnos, 1);
+
+/* El martes paga más por hora (30) que el lunes (21.58), pero es UN turno.
+   Coronarlo es justo el error que este reporte no puede cometer. */
+probar('el mejor día necesita turnos detrás: gana el lunes, no el martes de un solo turno',
+  L.mejorGrupo(porDia, false), 0);
+probar('sin ningún grupo con suficientes turnos, no hay mejor',
+  L.mejorGrupo(L.reportePorDia([repA, repB]), false) === null, true);
+
+const porFranja = L.reportePorFranja([repA, repB, repC, repD,
+  { id: 'X', fecha: '2026-08-05', entrada: '10:00' }]);
+probar('la mañana tiene un turno', porFranja.grupos[0].resumen.turnos, 1);
+probar('la tarde, tres', porFranja.grupos[1].resumen.turnos, 3);
+probar('el por hora de la tarde', porFranja.grupos[1].resumen.propinaPorHora, 25);
+probar('el turno sin hora se cuenta aparte en vez de perderse', porFranja.sinHora, 1);
+
+probar('en un empate gana el grupo con más turnos detrás',
+  L.mejorGrupo([{ clave: 'a', resumen: { turnos: 3, propinaPorHora: 25 } },
+                { clave: 'b', resumen: { turnos: 4, propinaPorHora: 25 } }], false), 'b');
+const conYSin = [
+  { clave: 'a', resumen: { turnos: 3, propinaPorHora: 20, totalPorHora: 40 } },
+  { clave: 'b', resumen: { turnos: 3, propinaPorHora: 25, totalPorHora: 30 } }];
+probar('sin contar el sueldo, gana el de más propina por hora',
+  L.mejorGrupo(conYSin, false), 'b');
+probar('contándolo, el mejor puede cambiar', L.mejorGrupo(conYSin, true), 'a');
+
+const fechasPeriodo = ['2026-07-07', '2026-07-08', '2026-08-06', '2026-08-07']
+  .map((f, i) => ({ id: 'p' + i, fecha: f }));
+probar('últimos 30 días: del 8 de julio al 6 de agosto',
+  L.turnosDelPeriodo(fechasPeriodo, '2026-08-06', 30).map(t => t.fecha),
+  ['2026-07-08', '2026-08-06']);
+probar('sin período entran todos menos los del futuro',
+  L.turnosDelPeriodo(fechasPeriodo, '2026-08-06', null).length, 3);
+probar('un turno sin fecha válida no entra',
+  L.turnosDelPeriodo([{ id: 'z', fecha: 'ayer' }], '2026-08-06', null).length, 0);
+
+
+/* --------------------------------------------------------------------------
    Resultado
    -------------------------------------------------------------------------- */
 console.log(`\n${'─'.repeat(50)}`);

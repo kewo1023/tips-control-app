@@ -662,6 +662,112 @@ function fusionarTurnos(actuales, importados) {
 }
 
 
+/* --- Reportes: qué turno conviene -------------------------------------- */
+
+/* La franja la decide la hora de SALIDA, no la de entrada: así lo cuentan en
+   el restaurante. Quien sale a las 3:00 pm o antes hizo el turno de la
+   mañana; quien sale después, el de la tarde. Las 3:00 en punto todavía son
+   mañana.
+
+   Un doble (mañana y tarde seguidas, más de 9 horas) sale después de las 3 y
+   cae en la tarde solo, sin regla aparte: así se cuenta allá. */
+const CORTE_TARDE_MIN = 15 * 60;
+
+/* Con menos turnos que esto, un grupo no compite por "el mejor". Dos martes
+   buenos no dicen que el martes pague más: dicen que hubo dos martes buenos,
+   y alguien podría pedir martes por eso. */
+const MINIMO_TURNOS_REPORTE = 3;
+
+/**
+ * 'manana', 'tarde', o `null` si el turno no tiene una hora de salida que se
+ * entienda.
+ *
+ * El caso que importa es el de la madrugada: un turno de 5 pm a 1 am sale a
+ * la 1:00, que en el reloj es "antes de las 3". Comparando solo la hora de
+ * salida caería en la mañana. Por eso, si la salida es menor que la entrada
+ * (el turno cruzó la medianoche, como en `calcularHoras`), es de la tarde.
+ */
+function franjaDelTurno(turno) {
+  const t = turno || {};
+  const ini = horaAMinutos(t.entrada);
+  const fin = horaAMinutos(t.salida);
+  if (fin === null) return null;
+  if (ini !== null && fin < ini) return 'tarde';
+  return fin <= CORTE_TARDE_MIN ? 'manana' : 'tarde';
+}
+
+/**
+ * Los turnos de los últimos `dias` días, contando hoy. Con `dias` vacío,
+ * todos. "Últimos 30 días" el 6 de agosto va del 8 de julio al 6 de agosto:
+ * 30 fechas, no 31. Tampoco entran turnos con fecha posterior a hoy.
+ */
+function turnosDelPeriodo(turnos, hoyTexto, dias) {
+  const lista = Array.isArray(turnos) ? turnos.filter(turnoValido) : [];
+  if (!dias) return lista.filter(t => t.fecha <= hoyTexto);
+  const desde = sumarDias(hoyTexto, -(dias - 1));
+  return lista.filter(t => t.fecha >= desde && t.fecha <= hoyTexto);
+}
+
+/**
+ * Los turnos agrupados por día de la semana, de lunes (0) a domingo (6), cada
+ * grupo ya resumido con `resumir`. Siempre devuelve los siete, aunque alguno
+ * esté vacío: una tabla a la que le faltan filas según el mes se lee peor que
+ * una fila con un guion.
+ *
+ * El "por hora" de cada día es el de `resumir`: el total dividido entre el
+ * total de horas, no el promedio de los "por hora" de cada turno. En Excel,
+ * SUMA(neto)/SUMA(horas) y no PROMEDIO(neto_por_hora), que haría pesar igual
+ * un turno de 3 horas que un doble de 10.
+ */
+function reportePorDia(turnos) {
+  const grupos = [[], [], [], [], [], [], []];
+  (Array.isArray(turnos) ? turnos : []).filter(turnoValido).forEach(t => {
+    grupos[diasEntre(lunesDeLaSemana(t.fecha), t.fecha)].push(t);
+  });
+  return grupos.map((lista, dia) => ({ clave: dia, resumen: resumir(lista) }));
+}
+
+/**
+ * Los turnos agrupados por franja, más cuántos no se pudieron clasificar.
+ * `sinHora` existe para poder decirlo en la pantalla: si un turno sin hora de
+ * salida desapareciera de la tabla sin más, la suma de las franjas no cuadraría
+ * con la de los días y nada lo explicaría.
+ */
+function reportePorFranja(turnos) {
+  const manana = [], tarde = [];
+  let sinHora = 0;
+  (Array.isArray(turnos) ? turnos : []).filter(turnoValido).forEach(t => {
+    const f = franjaDelTurno(t);
+    if (f === 'manana') manana.push(t);
+    else if (f === 'tarde') tarde.push(t);
+    else sinHora++;
+  });
+  return {
+    grupos: [{ clave: 'manana', resumen: resumir(manana) },
+             { clave: 'tarde',  resumen: resumir(tarde) }],
+    sinHora
+  };
+}
+
+/**
+ * La clave del grupo que más deja por hora, con la misma cifra que se está
+ * mostrando (con o sin sueldo, igual que `mejorTurno`). Solo compiten los
+ * grupos con al menos `MINIMO_TURNOS_REPORTE` turnos; si ninguno llega,
+ * devuelve `null` y la pantalla dice "pocos datos" en vez de coronar a uno.
+ * En un empate gana el que tiene más turnos detrás: es la cifra más sólida.
+ */
+function mejorGrupo(grupos, contarSueldo) {
+  const candidatos = (Array.isArray(grupos) ? grupos : [])
+    .filter(g => g && g.resumen && g.resumen.turnos >= MINIMO_TURNOS_REPORTE);
+  if (candidatos.length === 0) return null;
+  const porHora = g => cifrasPrincipales(g.resumen, contarSueldo).porHora;
+  return candidatos.reduce((mejor, g) =>
+    porHora(g) > porHora(mejor)
+    || (porHora(g) === porHora(mejor) && g.resumen.turnos > mejor.resumen.turnos)
+      ? g : mejor).clave;
+}
+
+
 /* --- Para que node pueda probar este archivo ----------------------------- */
 /* En el navegador estas funciones ya quedan disponibles al cargar el script.
    `module` solo existe cuando el archivo lo abre node, así que esta línea es
@@ -673,6 +779,8 @@ if (typeof module !== 'undefined' && module.exports) {
     calcularTurno, resumir, lunesDeLaSemana,
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
-    turnoValido, fusionarTurnos
+    turnoValido, fusionarTurnos,
+    franjaDelTurno, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
+    CORTE_TARDE_MIN, MINIMO_TURNOS_REPORTE
   };
 }

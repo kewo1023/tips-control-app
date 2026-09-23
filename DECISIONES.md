@@ -611,3 +611,32 @@ escondería justo el fallo de marcar la fecha antes de tiempo.
 **Lo que falta verificar en un iPhone:** que el menú de compartir aparezca en
 la app instalada y que "Guardar en Archivos" deje un `.json` que se pueda
 importar.
+
+---
+
+## 16. Reportes: qué turno conviene (Fase 2, en construcción)
+
+Es la pregunta con la que nació la app. El cálculo vive en `logica.js`
+(`franjaDelTurno`, `turnosDelPeriodo`, `reportePorDia`, `reportePorFranja`,
+`mejorGrupo`). La pantalla va en una tercera pestaña, "Reportes", donde cabrán
+después el mes y el año.
+
+- **La franja la decide la hora de SALIDA**, porque así se cuenta en el
+  restaurante: salir a las 3:00 pm o antes es la mañana; después, la tarde.
+  Las 3:00 en punto son mañana. **Un doble cae en la tarde** sin regla aparte,
+  porque sale después de las 3.
+- **Un turno que cruza la medianoche es de la tarde** aunque salga "antes de
+  las 3" en el reloj: salir a la 1 am no es un turno de mañana.
+- **Regla fija, sin casilla en Ajustes**: hoy todos los usuarios trabajan en el
+  mismo tipo de horario. Si entra alguien de un restaurante con otra división,
+  se vuelve configurable.
+- **El "por hora" de un grupo es el total entre el total de horas**
+  (`resumir`), no el promedio de los "por hora" de cada turno. Si no, un turno
+  de 3 horas pesaría igual que un doble de 10.
+- **Solo compite por "el mejor" un grupo con al menos 3 turnos**
+  (`MINIMO_TURNOS_REPORTE`). Dos martes buenos no dicen que el martes pague
+  más, y alguien podría pedir martes por eso. Con menos turnos se muestra
+  "pocos datos". En un empate gana el grupo con más turnos detrás.
+- **Los turnos sin hora de salida se cuentan aparte** (`sinHora`) en vez de
+  desaparecer: si no, las franjas no cuadrarían con los días sin explicación.
+- La cifra respeta `prefs.contarSueldo`, igual que el resto de la app.
