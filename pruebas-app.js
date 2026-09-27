@@ -1461,17 +1461,81 @@ ok('la pantalla se muestra',
    !d.getElementById('p-instalacion')._classes.has('oculto'));
 ok('con las pestañas escondidas, como la bienvenida',
    d.getElementById('pestanas')._classes.has('oculto'));
-ok('y explica los tres pasos',
-   (d.getElementById('inst2-cuerpo').innerHTML.match(/<li>/g) || []).length === 3);
-ok('avisa de que lo escrito aquí no pasa a la app instalada',
-   d.getElementById('inst2-cuerpo').innerHTML.includes('no pasa a la app instalada'));
+const cuerpoInst = () => d.getElementById('inst2-cuerpo').innerHTML;
+const pasosInst = () => (cuerpoInst().match(/<li>/g) || []).length;
+ok('antes de los pasos dice qué es la app',
+   texto('inst2-titulo') === 'Tips Control'
+   && texto('inst2-entradilla') === run("t('instEntradilla')"));
 
-/* La salida. Existe solo para que un fallo de detección en algún teléfono raro
-   no deje a esa persona encerrada fuera de su app, así que tiene que llevar a
-   algún sitio de verdad. `preguntar` acepta siempre en las pruebas, que es el
-   caso de quien confirma que prefiere el navegador. */
+/* Los pasos cambian con el teléfono. Los user agents son los de verdad de
+   cada caso; el de iOS 26 lleva el sistema congelado en 18_6, como lo manda
+   Safari desde esa versión. */
+const UA_IOS26 = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) '
+  + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
+const UA_CHROME_IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) '
+  + 'AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/140.0.0.0 Mobile/15E148 Safari/604.1';
+const UA_WHATSAPP = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) '
+  + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
+const conUA = ua => { ctx.navigator.userAgent = ua; run('pintar()'); };
+
+ok('Safari de iOS 18: tres pasos', pasosInst() === 3);
+ok('con Compartir en la barra de Safari', cuerpoInst().includes(run("rellenar(t('instSafariPaso1'), ICONO_COMPARTIR)")));
+ok('y sin el interruptor de iOS 26', !cuerpoInst().includes('Abrir como app web'));
+ok('con el nombre que usa Apple en EE. UU.: "Agregar a Inicio"', cuerpoInst().includes('Agregar a Inicio'));
+
+conUA(UA_IOS26);
+ok('iOS 26 se reconoce aunque el sistema diga 18_6', run('versionSafariIOS()') === 26);
+ok('Safari de iOS 26: pasa por el botón Más', cuerpoInst().includes(run('ICONO_MAS')));
+ok('y dice que deje activado "Abrir como app web"', cuerpoInst().includes('Abrir como app web'));
+
+conUA(UA_CHROME_IOS);
+ok('Chrome del iPhone: compartir en la barra de la dirección',
+   cuerpoInst().includes('barra de la dirección') && pasosInst() === 3);
+ok('y no se confunde con Safari de iOS 26', run('versionSafariIOS()') === null);
+// Chrome no trae "Version/", así que la prueba de arriba pasaría sin la guarda.
+// Un navegador que sí lo trajera (Edge lo ha llevado) no puede pasar por Safari.
+ctx.navigator.userAgent = UA_CHROME_IOS.replace('CriOS/140.0.0.0', 'Version/26.0 EdgiOS/140.0');
+ok('un navegador que no es Safari no da versión de Safari aunque traiga "Version/26"',
+   run('versionSafariIOS()') === null);
+
+conUA(UA_WHATSAPP);
+ok('dentro de WhatsApp: primero abrirla en Safari, sin pasos',
+   pasosInst() === 0 && cuerpoInst().includes(run("t('instAbrirSafari')")));
+ok('con el botón de copiar la dirección',
+   !d.getElementById('inst2-copiar')._classes.has('oculto'));
+
+conUA(UA_ANDROID);
+ok('en Android la pantalla sale aunque Chrome no haya dado permiso todavía',
+   run('debeInstalar()') === true);
+ok('con dos pasos a mano por el menú', pasosInst() === 2 && cuerpoInst().includes(run('ICONO_VERTICAL')));
+ok('y sin botón de instalar', d.getElementById('inst2-btn')._classes.has('oculto'));
+run('promptInstalar = { prompt() {} }; pintar()');
+ok('cuando Chrome da permiso, sale el botón', !d.getElementById('inst2-btn')._classes.has('oculto'));
+ok('y sobran los pasos', pasosInst() === 0);
+run('promptInstalar = null');
+
+run("cambiarIdioma('en')");
+conUA(UA_IOS26);
+ok('en inglés, los nombres de Apple en inglés',
+   cuerpoInst().includes('Add to Home Screen') && cuerpoInst().includes('Open as Web App'));
+run("cambiarIdioma('es')");
+ctx.navigator.userAgent = IPHONE;
+run("pantalla = 'instalacion'; pintar()");
+
+ok('ningún texto usa el nombre de España ("Añadir a pantalla de inicio")',
+   !JSON.stringify(run('TEXTOS')).includes('Añadir a'));
+
+/* La salida. Ya no invita a usar el navegador: es la puerta para cuando la
+   detección falla, así que tiene que llevar a algún sitio de verdad.
+   `preguntar` acepta siempre en las pruebas. */
+ok('la salida dice que ya se instaló, no que prefiere el navegador',
+   texto('inst2-salida') === run("t('instSalida')") && !texto('inst2-salida').includes('navegador'));
 run('datos.configurado = false');
+avisos.length = 0;
 run('seguirSinInstalar()');
+ok('antes de dejar pasar explica el arreglo', avisos[0] === run("t('instSalidaPregunta')"));
 ok('la salida lleva a la bienvenida si no se ha configurado',
    run('pantalla') === 'bienvenida');
 

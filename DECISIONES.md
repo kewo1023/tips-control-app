@@ -86,6 +86,43 @@ app (WhatsApp, Instagram), que no tiene "Añadir a pantalla de inicio" y por eso
 se ofrece copiar la dirección y abrirla en Safari; y Safari o similar, con los
 tres pasos.
 
+### La primera pantalla, rehecha (27 de septiembre de 2026, elegida sobre una vista previa)
+
+Reemplaza en parte lo de arriba: la salida y los pasos cambiaron.
+
+- **Primero qué es la app** ("Tips Control" y una frase), después cómo
+  instalarla. Quien abre un enlace que le pasaron no sabe para qué sirve lo que
+  le piden instalar.
+- **La salida ya no dice "Prefiero usarla en el navegador"** sino "Ya la
+  instalé y me sigue saliendo esta pantalla". Se pidió quitarla; se mantuvo
+  como puerta para el fallo de detección, que ahora tiene un caso concreto: en
+  iOS 26, si al agregarla se apaga "Abrir como app web", el ícono abre Safari y
+  la pantalla saldría siempre. Antes de dejar pasar explica el arreglo.
+- **Los pasos dependen del teléfono** (`pasosInstalacion()`), con datos
+  verificados en las guías de Apple y Google el 27 de septiembre de 2026:
+  - Safari de iOS 26 o más: Más (···) → Compartir → Agregar a Inicio → dejar
+    activado "Abrir como app web" → Agregar. Con los diseños de pestañas
+    inferior o superior, Compartir está a la vista; como no se puede saber cuál
+    usa la persona, el paso nombra los dos.
+  - Safari de iOS 18 o antes: Compartir en la barra → Agregar a Inicio →
+    Agregar.
+  - Chrome, Edge o Firefox en iPhone: Compartir en la barra de la dirección.
+  - Dentro de WhatsApp o Instagram: copiar la dirección y abrirla en Safari.
+  - Android: con el permiso de Chrome, un botón; sin él, el menú (⋮).
+- **La versión de iOS sale de la de Safari** (`versionSafariIOS()`). Desde iOS
+  26, Safari congela el sistema en "18_6" en su identificación; "Version/26"
+  sí cambia.
+- **"Agregar a Inicio", no «Añadir a pantalla de inicio»**: es el nombre de
+  Apple en el español de EE. UU. El otro es el de España.
+- **Android ya no espera al permiso para mostrar la pantalla.** Chrome lo da
+  después de un toque y 30 segundos en la página: en la primera visita no
+  llegaba y la pantalla no salía. En Android el navegador y la app instalada
+  comparten los datos, así que ahí el riesgo es menor que en iPhone.
+- **Sin verificar:** el nombre exacto del menú de Chrome Android en español
+  (la guía en inglés dice "Add to home screen"; la de es-419, "Instalar y crear
+  acceso directo"). El paso nombra "Agregar a la pantalla principal" o
+  "Instalar".
+
 **Límite conocido:** si WhatsApp abre el enlace con el visor de Safari, no se
 distingue y salen los tres pasos normales. El video de instalación que se manda
 con el enlace tiene que **empezar en WhatsApp**: ese es el paso donde se atasca

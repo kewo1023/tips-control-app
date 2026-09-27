@@ -929,6 +929,10 @@ button { font-family: inherit; }
 .inst-pantalla .entradilla {
   margin: 0 0 22px; color: var(--tinta-2); font-size: 0.9375rem; line-height: 1.45;
 }
+.inst-pantalla .inst-sub {
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--tinta-2); margin: 0 0 10px;
+}
 .inst-pantalla ol { margin: 0; padding-left: 1.3em; font-size: 0.9375rem; }
 .inst-pantalla li { margin-bottom: 11px; line-height: 1.45; }
 .inst-pantalla b { font-weight: 600; }
@@ -1571,7 +1575,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v34';
+const VERSION_APP = 'v35';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3113,6 +3117,25 @@ function esOtroNavegadorIOS() {
   return esIOS() && /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent);
 }
 
+function esAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+
+/**
+ * La versión de Safari en un iPhone, o `null` si no es Safari o no se sabe.
+ *
+ * Sirve para saber si es iOS 26 o más, donde el botón de compartir se movió
+ * dentro del menú Más (···). La versión del sistema no sirve: desde iOS 26,
+ * Safari la congela en "18_6" en su identificación. La de Safari sí cambia
+ * ("Version/26.0") y va con la del sistema. Verificado el 27 de septiembre de
+ * 2026 (WebKit, "Safari 26.0").
+ */
+function versionSafariIOS() {
+  if (!esIOS() || esOtroNavegadorIOS() || enNavegadorDeOtraApp()) return null;
+  const m = /Version\/(\d+)/.exec(navigator.userAgent);
+  return m ? Number(m[1]) : null;
+}
+
 function ahoraNo() {
   instalarOculto = true;
   pintarBanner();
@@ -3134,9 +3157,11 @@ function instalarAhora() {
  * saldría cada vez que la prueba en el Mac.
  */
 function debeInstalar() {
-  const enAndroid = /Android/i.test(navigator.userAgent);
-  return !estaInstalada() && !instalarOculto
-      && (esIOS() || (enAndroid && promptInstalar));
+  /* Android ya no espera al permiso de instalar: Chrome lo da después de un
+     toque y 30 segundos en la página, así que en la primera visita no
+     llegaba nunca y la pantalla no salía. Ahora sale con los pasos a mano y
+     cambia al botón cuando llega el permiso. */
+  return !estaInstalada() && !instalarOculto && (esIOS() || esAndroid());
 }
 
 /**
@@ -3153,30 +3178,57 @@ function pasosInstalacion() {
      frase. Es seguro aquí y solo aquí: todo lo que entra son textos fijos
      nuestros. El día que uno venga de algo que escriba el usuario, hay que
      volver a textContent. */
+  const lista = pasos => '<ol>' + pasos.map(p => '<li>' + p + '</li>').join('') + '</ol>';
+
   if (promptInstalar) {
-    // Android: hay botón de verdad, un toque y ya. Sobran las instrucciones.
-    return { html: '<p>' + t('instAndroid') + '</p>', boton: true, copiar: false };
+    // Android con permiso: hay botón de verdad, un toque y ya.
+    return { titulo: t('instUnToque'), html: '<p>' + t('instAndroid') + '</p>',
+             aviso: t('instDespues'), boton: true, copiar: false };
   }
   if (enNavegadorDeOtraApp()) {
-    return { html: '<p>' + t('instOtro') + '</p>', boton: false, copiar: true };
+    return { titulo: t('instAbrirSafari'), html: '<p>' + t('instOtro') + '</p>',
+             aviso: '', boton: false, copiar: true };
   }
-  return {
-    html: '<ol>'
-      + '<li>' + t('instPaso1a') + ' ' + ICONO_COMPARTIR + ' '
-        + t(esOtroNavegadorIOS() ? 'instPaso1bOtro' : 'instPaso1b') + '</li>'
-      + '<li>' + t('instPaso2') + '</li>'
-      + '<li>' + t('instPaso3') + '</li>'
-      + '</ol>',
-    boton: false, copiar: false
-  };
+  if (esAndroid()) {
+    return { titulo: t('instPasos2'),
+             html: lista([rellenar(t('instAndroidPaso1'), ICONO_VERTICAL), t('instAndroidPaso2')]),
+             aviso: t('instAndroidLuego'), boton: false, copiar: false };
+  }
+  if (esOtroNavegadorIOS()) {
+    // Chrome, Edge o Firefox en iPhone: el botón de compartir va en la barra
+    // de la dirección en todas las versiones de iOS.
+    return { titulo: t('instPasos3'),
+             html: lista([rellenar(t('instOtroPaso1'), ICONO_COMPARTIR),
+                          t('instAgregarInicio'), t('instTocarAgregar')]),
+             aviso: t('instDespues'), boton: false, copiar: false };
+  }
+  if ((versionSafariIOS() || 0) >= 26) {
+    /* Safari de iOS 26 en adelante: con el diseño de pestañas de fábrica,
+       Compartir está dentro de Más (···); con los otros dos diseños está a la
+       vista. No hay forma de saber cuál usa la persona, así que el paso nombra
+       los dos. Y aparece "Abrir como app web": si se apaga, el ícono abre
+       Safari y esta pantalla vuelve a salir. */
+    return { titulo: t('instPasos3'),
+             html: lista([rellenar(t('instIOS26Paso1'), ICONO_MAS, ICONO_COMPARTIR),
+                          t('instAgregarInicio'), t('instIOS26Paso3')]),
+             aviso: t('instDespues'), boton: false, copiar: false };
+  }
+  // Safari de iOS 18 o antes (o una versión que no se pudo leer).
+  return { titulo: t('instPasos3'),
+           html: lista([rellenar(t('instSafariPaso1'), ICONO_COMPARTIR),
+                        t('instAgregarInicio'), t('instTocarAgregar')]),
+           aviso: t('instDespues'), boton: false, copiar: false };
 }
 
 function pintarInstalacion() {
   const paso = pasosInstalacion();
-  document.getElementById('inst2-titulo').textContent = t('instTitulo');
+  // Primero qué es la app, después cómo instalarla: quien abre un enlace que
+  // le pasaron no sabe todavía para qué sirve lo que le piden instalar.
+  document.getElementById('inst2-titulo').textContent = t('appNombre');
   document.getElementById('inst2-entradilla').textContent = t('instEntradilla');
   document.getElementById('inst2-cuerpo').innerHTML =
-    paso.html + '<p class="aviso">' + t('instAviso') + '</p>';
+    '<div class="inst-sub">' + paso.titulo + '</div>' + paso.html
+    + (paso.aviso ? '<p class="aviso">' + paso.aviso + '</p>' : '');
 
   const btn = document.getElementById('inst2-btn');
   const copiar = document.getElementById('inst2-copiar');
@@ -3188,11 +3240,17 @@ function pintarInstalacion() {
 }
 
 /**
- * La salida de la pantalla de instalación.
+ * La salida de la pantalla de instalación: "Ya la instalé y me sigue saliendo
+ * esta pantalla".
  *
- * Pregunta antes de dejar pasar. No es por poner una traba: quien elige este
- * camino va a configurar su restaurante y sus porcentajes en un sitio del que
- * no se pueden mover, y eso tiene que saberlo antes y no cuando le desaparezca.
+ * Ya no invita a usar la app en el navegador (antes decía "Prefiero usarla en
+ * el navegador"). Sigue existiendo porque toda la pantalla depende de una sola
+ * señal, `estaInstalada()`, y esa señal falla de verdad: en iOS 26, si al
+ * agregarla se apaga "Abrir como app web", el ícono abre Safari y esta
+ * pantalla saldría para siempre. Sin salida, esa persona no entraría nunca.
+ *
+ * Antes de dejar pasar explica el arreglo (borrar el ícono y volver a
+ * agregarla) y que lo que registre así puede no llegar a la app.
  */
 function seguirSinInstalar() {
   preguntar(t('instSalidaPregunta'), () => {
@@ -3223,6 +3281,17 @@ function copiarDireccion(idBoton) {
     avisar(t('instCopiarMal') + '\n\n' + url);
   }
 }
+
+/* Los tres puntos del botón Más de Safari (iOS 26 en adelante) y los tres
+   puntos en vertical del menú de Chrome en Android. */
+const ICONO_MAS =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">' +
+  '<circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/>' +
+  '<circle cx="19" cy="12" r="1.9"/></svg>';
+const ICONO_VERTICAL =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">' +
+  '<circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/>' +
+  '<circle cx="12" cy="19" r="1.9"/></svg>';
 
 /* El dibujo del botón Compartir de iPhone. `currentColor` hace que siga al color
    del texto y funcione igual en claro y en oscuro sin dos versiones. */
