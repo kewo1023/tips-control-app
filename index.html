@@ -387,6 +387,8 @@
 
   <button class="secundario" data-t="verAyuda"
           onclick="irA('ayuda')">Cómo funciona la app</button>
+  <button class="secundario" data-t="enviarComentario"
+          onclick="enviarComentario()">Enviar un comentario</button>
 
   <button class="secundario riesgo" data-t="borrarTodo"
           onclick="borrarTodo()">Borrar todos los datos</button>
@@ -626,7 +628,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v38';
+const VERSION_APP = 'v39';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -2854,7 +2856,9 @@ function pintarReportes() {
       : `<div class="valor poco">${r.turnos === 0 ? '—' : t('repPocosDatos')}</div>`;
     return `<div class="metrica${clave === mejorFranja ? ' mejor' : ''}">`
       + `<div class="etiqueta">${nombre}</div>${valor}`
-      + `<div class="cuantos">${rellenar(t('repPorHoraTurnos'), r.turnos)}</div></div>`;
+      // "1 turno", no "1 turnos": el plural sale de las claves de siempre.
+      + `<div class="cuantos">${rellenar(t('repPorHoraTurnos'),
+          r.turnos + ' ' + plural(r.turnos, 'turno', 'turnos'))}</div></div>`;
   }).join('');
 
   document.getElementById('rep-aclara').textContent = rellenar(t('repAclara'), horaCorta(corte))
@@ -3351,6 +3355,65 @@ function insetSistema(lado) {
   const valor = getComputedStyle(sonda)['padding' + lado.charAt(0).toUpperCase() + lado.slice(1)];
   document.body.removeChild(sonda);
   return valor;
+}
+
+/* ----------------------------------------------------------------------------
+   "Enviar un comentario".
+
+   La app ya llega a gente que no conoce a quien la mantiene, y sin esto nadie
+   se entera de lo que les falla. El botón junta los datos técnicos que hacen
+   falta para entender un fallo (versión, teléfono, si está instalada, la
+   pantalla, los ajustes de aspecto y cuántos turnos hay) y los copia.
+
+   NUNCA lleva el nombre del restaurante, ni montos, ni fechas, ni notas: se
+   pega en un mensaje a otra persona. Una prueba lo vigila.
+
+   Mientras no exista un formulario o un correo propio de la app, se le pide a
+   la persona que lo mande a quien le pasó la app. El destino NO puede ser un
+   correo o un teléfono personal: este archivo es público.
+   -------------------------------------------------------------------------- */
+
+/* El enlace del formulario de comentarios, cuando exista. Vacío: se copia y
+   se pide mandarlo a quien pasó la app. Tiene que ser https y de la app,
+   nunca de una persona. */
+const DESTINO_COMENTARIOS = '';
+
+/** Los datos técnicos del teléfono, en el idioma de la app. */
+function datosParaComentario() {
+  let telefono = t('comentarioOtro');
+  if (esIOS()) {
+    const safari = versionSafariIOS();
+    telefono = 'iPhone · ' + (safari ? 'Safari ' + safari
+      : esOtroNavegadorIOS() ? t('comentarioOtroNavegador')
+      : enNavegadorDeOtraApp() ? t('comentarioOtraApp') : 'Safari');
+  } else if (esAndroid()) {
+    telefono = 'Android';
+  }
+  const turnos = datos.turnos.filter(turnoValido).length;
+  return rellenar(t('comentarioDatos'),
+    VERSION_APP, telefono,
+    t(estaInstalada() ? 'comentarioSi' : 'comentarioNo'),
+    `${window.innerWidth} × ${window.innerHeight}`,
+    datos.prefs.idioma || 'es', datos.prefs.tema || 'auto', datos.prefs.escala || 'normal',
+    turnos);
+}
+
+function enviarComentario() {
+  const texto = datosParaComentario();
+  const destino = /^https:\/\//.test(DESTINO_COMENTARIOS) ? DESTINO_COMENTARIOS : '';
+  // El formulario se abre aquí mismo, dentro del toque: fuera de él, el
+  // teléfono puede bloquear la ventana nueva sin decir nada.
+  if (destino) window.open(destino, '_blank', 'noopener');
+
+  const alCopiar = () => avisar(t(destino ? 'comentarioFormulario' : 'comentarioCopiado') + '\n\n' + texto);
+  const sinCopiar = () => avisar(t('comentarioSinCopiar') + '\n\n' + texto);
+  // Copiar toca el portapapeles, que puede fallar sin que el código tenga la
+  // culpa. Si falla, los datos salen igual en el aviso para una captura.
+  try {
+    navigator.clipboard.writeText(texto).then(alCopiar, sinCopiar);
+  } catch (e) {
+    sinCopiar();
+  }
 }
 
 function mostrarDiagnostico() {

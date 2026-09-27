@@ -1368,6 +1368,48 @@ run("irA('semana')");
 avisos.length = 0;
 
 
+/* "Enviar un comentario". Los datos se pegan en un mensaje a otra persona:
+   lo que se prueba primero es lo que NO puede salir (el restaurante, montos,
+   fechas, notas). El botón lleva su onclick en el HTML; se llama a la
+   función que ejecuta. */
+grupo('Enviar un comentario');
+const estadoAntesComentario = JSON.stringify(D());
+ok('el botón está en Ajustes', /id="p-ajustes"[\s\S]*onclick="enviarComentario\(\)"/.test(html));
+run(`datos.trabajo.nombre = 'Restaurante Secreto'; datos.trabajo.tarifaHora = 12.34;
+     datos.turnos = [{ id: 'c1', fecha: '2026-08-03', entrada: '17:00', salida: '23:00',
+       ventas: 987.65, efectivo: 43.21, tarjeta: 65.43, tarifaHora: 12.34, tipOut: 24.68,
+       nota: 'Mesa del jefe' }]`);
+const datosComentario = run('datosParaComentario()');
+ok('lleva la versión y cuántos turnos hay',
+   datosComentario.includes(run('VERSION_APP')) && datosComentario.includes('Turnos guardados: 1'));
+ok('no lleva el nombre del restaurante', !datosComentario.includes('Secreto'));
+ok('ni ningún monto', !/987|43\.21|65\.43|12\.34|24\.68/.test(datosComentario));
+ok('ni fechas ni notas', !datosComentario.includes('2026-08-03') && !datosComentario.includes('jefe'));
+
+// Con portapapeles que funciona (contesta al momento, como `then`).
+let copiado = null;
+ctx.navigator.clipboard = { writeText: x => { copiado = x; return { then: (bien) => bien() }; } };
+avisos.length = 0;
+run('enviarComentario()');
+ok('copia los datos', copiado === datosComentario);
+ok('y dice que se los mande a quien le pasó la app, con los datos a la vista',
+   avisos.length === 1 && avisos[0].startsWith(run("t('comentarioCopiado')"))
+   && avisos[0].includes(datosComentario));
+
+// Sin portapapeles, los datos salen igual para una captura.
+delete ctx.navigator.clipboard;
+avisos.length = 0;
+run('enviarComentario()');
+ok('sin portapapeles no se queda callado: pide una captura',
+   avisos.length === 1 && avisos[0].startsWith(run("t('comentarioSinCopiar')"))
+   && avisos[0].includes(datosComentario));
+ok('el destino de los comentarios no es un correo ni un teléfono',
+   !/@|mailto:|tel:|wa\.me/.test(run('DESTINO_COMENTARIOS')));
+
+run('datos = ' + estadoAntesComentario);
+avisos.length = 0;
+
+
 /* El diálogo de verdad, no el de mentira que usan las pruebas de arriba.
    Se llama a `cerrarDialogo()` en vez de tocar los botones porque el mini-dom
    solo dispara los `onclick` que se asignan desde el código, y los de este
@@ -2465,6 +2507,9 @@ ok('y se guarda en el teléfono', JSON.parse(almacen.tipsControl).trabajo.corteT
 run("cambiarCorteTarde('14:00')");
 ok('con corte a las 2 pm, el turno que sale a las 3 pasa a la tarde',
    franjasTexto().includes('por hora · 0 turnos') && franjasTexto().includes('por hora · 4 turnos'));
+run("cambiarCorteTarde('15:00')");
+ok('un solo turno se escribe en singular: "1 turno", no "1 turnos"',
+   franjasTexto().includes('por hora · 1 turno') && !franjasTexto().includes('1 turnos'));
 run("datos.trabajo.corteTarde = 'mediodía'; pintar()");
 ok('un corte ilegible se trata como las 3 pm, en la cuenta y en el texto',
    texto('rep-aclara').startsWith('Mañana: sales a las 3 pm o antes')

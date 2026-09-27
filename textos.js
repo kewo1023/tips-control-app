@@ -53,7 +53,7 @@ const TEXTOS = {
     repPocosDatos: 'pocos datos',
     repSinMejor: 'Todavía no hay un día con 3 turnos o más en este período. Con menos, comparar días es adivinar.',
     repSinTurnos: 'No hay turnos en este período.',
-    repPorHoraTurnos: 'por hora · %1 turnos',
+    repPorHoraTurnos: 'por hora · %1',
     repAclara: 'Mañana: sales a las %1 o antes. Tarde: sales después, dobles incluidos.',
     repSinHora: '%1 turnos sin hora de salida no entran en mañana o tarde.',
     // La hora de corte, en Reportes
@@ -89,7 +89,6 @@ const TEXTOS = {
        DECISIONES.md, sección 2). */
     instSalida: 'Ya la instalé y me sigue saliendo esta pantalla',
     instSalidaPregunta: 'Si la abriste desde el ícono y sigue saliendo esto, el teléfono la agregó como enlace y no como app. Borra el ícono y vuelve a agregarla; si ves «Abrir como app web», déjalo activado.\n\nLo que registres así puede no pasar a la app. ¿Entrar de todos modos?',
-    instIOS: 'Se abre como una app normal, sin la barra del navegador.',
     // Los pasos, según el teléfono. %1 y %2 son los dibujos de los botones.
     // "Agregar a Inicio" es el nombre que usa Apple en el español de EE. UU.
     instPasos3: 'Instálala en 3 pasos',
@@ -235,6 +234,15 @@ const TEXTOS = {
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
 
     verAyuda: 'Cómo funciona la app',
+    // "Enviar un comentario": los datos técnicos del teléfono, nunca turnos
+    // ni dinero, para que quien mantiene la app sepa dónde pasó el fallo.
+    enviarComentario: 'Enviar un comentario',
+    comentarioDatos: 'Tips Control %1\nTeléfono: %2\nInstalada: %3\nPantalla: %4\nIdioma: %5 · Tema: %6 · Letra: %7\nTurnos guardados: %8',
+    comentarioSi: 'sí', comentarioNo: 'no',
+    comentarioOtro: 'otro', comentarioOtroNavegador: 'otro navegador', comentarioOtraApp: 'dentro de otra app',
+    comentarioCopiado: 'Copiamos estos datos de tu teléfono. No llevan tus turnos ni tu dinero. Pégalos en un mensaje a quien te pasó la app y cuéntale qué pasó o qué te gustaría que tuviera:',
+    comentarioSinCopiar: 'No se pudieron copiar solos. Mándale una captura de esta pantalla a quien te pasó la app y cuéntale qué pasó:',
+    comentarioFormulario: 'Copiamos estos datos de tu teléfono. No llevan tus turnos ni tu dinero. Pégalos en el formulario que se abrió y cuéntanos qué pasó:',
     ayuda: 'Cómo funciona',
 
     ayudaRegistrarP: '¿Cómo registro un turno?',
@@ -327,7 +335,7 @@ const TEXTOS = {
     repPocosDatos: 'not enough data',
     repSinMejor: 'No day has 3 or more shifts in this period yet. With fewer, comparing days is guessing.',
     repSinTurnos: 'No shifts in this period.',
-    repPorHoraTurnos: 'per hour · %1 shifts',
+    repPorHoraTurnos: 'per hour · %1',
     repAclara: 'Morning: you leave at %1 or earlier. Evening: you leave later, doubles included.',
     repSinHora: '%1 shifts without a clock-out time are not counted as morning or evening.',
     // The cut-off hour, in Reports
@@ -389,7 +397,6 @@ const TEXTOS = {
     instEntradilla: 'Log the tips from every shift and see what each hour really pays you. Free, no accounts: your data stays on your phone.',
     instSalida: 'I installed it and I still see this screen',
     instSalidaPregunta: 'If you opened it from the icon and still see this, the phone added it as a link instead of an app. Delete the icon and add it again; if you see “Open as Web App”, leave it on.\n\nWhat you log this way may not carry over to the app. Enter anyway?',
-    instIOS: 'It opens like a normal app, with no browser bar.',
     instPasos3: 'Install it in 3 steps',
     instPasos2: 'Install it in 2 steps',
     instUnToque: 'Install it with one tap',
@@ -473,6 +480,13 @@ const TEXTOS = {
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
 
     verAyuda: 'How the app works',
+    enviarComentario: 'Send feedback',
+    comentarioDatos: 'Tips Control %1\nPhone: %2\nInstalled: %3\nScreen: %4\nLanguage: %5 · Theme: %6 · Text: %7\nShifts saved: %8',
+    comentarioSi: 'yes', comentarioNo: 'no',
+    comentarioOtro: 'other', comentarioOtroNavegador: 'another browser', comentarioOtraApp: 'inside another app',
+    comentarioCopiado: 'We copied these details about your phone. They do not include your shifts or your money. Paste them in a message to whoever sent you the app and tell them what happened or what you would like it to have:',
+    comentarioSinCopiar: 'They could not be copied automatically. Send a screenshot of this screen to whoever sent you the app and tell them what happened:',
+    comentarioFormulario: 'We copied these details about your phone. They do not include your shifts or your money. Paste them in the form that just opened and tell us what happened:',
     ayuda: 'How it works',
 
     ayudaRegistrarP: 'How do I log a shift?',

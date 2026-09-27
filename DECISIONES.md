@@ -938,3 +938,19 @@ persona. Es un registro personal, nunca un cálculo de impuestos.
   impuestos." Sin esa línea, en temporada de impuestos se lee como consejo
   fiscal.
 
+**"Enviar un comentario" (27 de septiembre de 2026).** Con la app en manos de
+gente que no conoce a quien la mantiene, hacía falta un camino para que los
+fallos lleguen. El botón, en Ajustes, copia los datos técnicos (versión,
+teléfono, si está instalada, pantalla, idioma, tema, letra y cuántos turnos
+hay) y los enseña en el aviso por si copiar falla.
+
+- **Nunca lleva el nombre del restaurante, montos, fechas ni notas**: se pega
+  en un mensaje a otra persona. Una prueba lo vigila con datos inventados.
+- **No hay destino todavía** (`DESTINO_COMENTARIOS` vacío): se le pide a la
+  persona que lo mande a quien le pasó la app. Cuando exista un formulario o
+  correo propio de la app, su enlace va en esa constante. **Nunca un correo o
+  teléfono personal**: el código es público. Una prueba rechaza correos,
+  teléfonos y enlaces de WhatsApp.
+- Contar cuánta gente usa la app se dejó para después: pide algún rastreo, y
+  la Ayuda promete "sin rastreo". Ver la bitácora.
+
