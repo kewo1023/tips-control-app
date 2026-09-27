@@ -387,6 +387,8 @@
 
   <button class="secundario" data-t="verAyuda"
           onclick="irA('ayuda')">Cómo funciona la app</button>
+  <button class="secundario" data-t="compartirApp"
+          onclick="compartirApp()">Compartir la app</button>
   <button class="secundario" data-t="enviarComentario"
           onclick="enviarComentario()">Enviar un comentario</button>
 
@@ -628,7 +630,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v39';
+const VERSION_APP = 'v40';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3355,6 +3357,52 @@ function insetSistema(lado) {
   const valor = getComputedStyle(sonda)['padding' + lado.charAt(0).toUpperCase() + lado.slice(1)];
   document.body.removeChild(sonda);
   return valor;
+}
+
+/* ----------------------------------------------------------------------------
+   "Compartir la app".
+
+   Abre el menú de compartir del teléfono con una frase y el enlace. Solo eso:
+   ni el nombre del restaurante ni nada de quien comparte. Quien lo recibe cae
+   en la pantalla de instalación, que ya sabe qué hacer si lo abre dentro de
+   WhatsApp.
+
+   El enlace sale de donde está la app y no se escribe a mano: así sirve igual
+   en el sitio publicado que probándola en otra dirección.
+   -------------------------------------------------------------------------- */
+
+/** La carpeta de la app: sin "#…", sin "?…" y sin el nombre del archivo. */
+function enlaceDeLaApp() {
+  return String(location.href).split('#')[0].split('?')[0].replace(/[^/]*$/, '');
+}
+
+function compartirApp() {
+  const url = enlaceDeLaApp();
+  const copiar = () => {
+    // Sin menú de compartir (o si falló), se copia el enlace. Y si tampoco se
+    // puede copiar, se enseña: un botón que no hace nada es un error mudo.
+    const enPantalla = clave => avisar(t(clave) + '\n\n' + url);
+    try {
+      navigator.clipboard.writeText(url).then(
+        () => enPantalla('compartirCopiado'), () => enPantalla('compartirSinCopiar'));
+    } catch (e) {
+      enPantalla('compartirSinCopiar');
+    }
+  };
+
+  if (typeof navigator.share !== 'function') { copiar(); return; }
+  try {
+    navigator.share({ title: 'Tips Control', text: t('compartirTexto'), url }).then(
+      () => {},
+      err => {
+        // Cerrar el menú sin elegir a quién no es un error.
+        if (err && err.name === 'AbortError') return;
+        console.error('Falló compartir la app:', err);
+        copiar();
+      });
+  } catch (e) {
+    copiar();
+  }
 }
 
 /* ----------------------------------------------------------------------------

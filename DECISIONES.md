@@ -954,3 +954,15 @@ hay) y los enseña en el aviso por si copiar falla.
 - Contar cuánta gente usa la app se dejó para después: pide algún rastreo, y
   la Ayuda promete "sin rastreo". Ver la bitácora.
 
+**"Compartir la app" (27 de septiembre de 2026).** Botón en Ajustes, entre
+"Cómo funciona la app" y "Enviar un comentario". Abre el menú de compartir
+del teléfono con una frase y el enlace; sin él, copia el enlace; sin
+portapapeles, lo enseña. Cancelar el menú no es un error.
+
+- **Solo el enlace y la frase**: nada del restaurante ni de quien comparte.
+- **El enlace sale de donde está la app** (`enlaceDeLaApp()`: la carpeta, sin
+  "#", sin "?" y sin "index.html"), no escrito a mano. Se calcula con texto y
+  no con `new URL()`, que el doble de pruebas no tiene.
+- Quien lo recibe cae en la pantalla de instalación, que ya resuelve el caso
+  de abrirlo dentro de WhatsApp.
+

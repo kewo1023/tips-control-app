@@ -1368,6 +1368,61 @@ run("irA('semana')");
 avisos.length = 0;
 
 
+/* "Compartir la app". Los botones llevan su onclick en el HTML; se llama a la
+   función. Las respuestas de `share` y del portapapeles contestan al momento
+   (con `then`), igual que en "Enviar un comentario". */
+grupo('Compartir la app');
+const estadoAntesCompartirApp = JSON.stringify(D());
+ok('el botón está en Ajustes, entre la ayuda y los comentarios',
+   /onclick="irA\('ayuda'\)"[\s\S]*?onclick="compartirApp\(\)"[\s\S]*?onclick="enviarComentario\(\)"/.test(html));
+ctx.location.href = 'https://ejemplo.github.io/tips/index.html#algo';
+ok('el enlace es la carpeta de la app, sin index.html ni #',
+   run('enlaceDeLaApp()') === 'https://ejemplo.github.io/tips/');
+ctx.location.href = 'https://ejemplo.github.io/tips/?source=pwa';
+ok('ni lo que va después de "?" (la app instalada puede abrir con eso)',
+   run('enlaceDeLaApp()') === 'https://ejemplo.github.io/tips/');
+ctx.location.href = 'https://ejemplo.github.io/tips/index.html#algo';
+
+run("datos.trabajo.nombre = 'Restaurante Secreto'");
+let compartido = null;
+ctx.navigator.share = d => { compartido = d; return { then: bien => bien() }; };
+avisos.length = 0;
+run('compartirApp()');
+ok('abre el menú de compartir con el enlace', compartido && compartido.url === 'https://ejemplo.github.io/tips/');
+ok('y una frase que dice qué es', compartido.text === run("t('compartirTexto')"));
+ok('sin nada de quien comparte', !JSON.stringify(compartido).includes('Secreto'));
+ok('y sin avisos de por medio', avisos.length === 0);
+
+// Cerrar el menú sin elegir no es un error.
+ctx.navigator.share = () => ({ then: (bien, mal) => mal({ name: 'AbortError' }) });
+avisos.length = 0;
+run('compartirApp()');
+ok('cancelar el menú no avisa nada', avisos.length === 0);
+
+// Si compartir falla de verdad, se copia el enlace.
+let copiadoApp = null;
+ctx.navigator.clipboard = { writeText: x => { copiadoApp = x; return { then: bien => bien() }; } };
+ctx.navigator.share = () => ({ then: (bien, mal) => mal(new Error('no se pudo')) });
+avisos.length = 0;
+run('compartirApp()');
+ok('si compartir falla, copia el enlace y lo dice',
+   copiadoApp === 'https://ejemplo.github.io/tips/' && avisos.length === 1
+   && avisos[0].startsWith(run("t('compartirCopiado')")));
+
+// Sin menú de compartir ni portapapeles, el enlace sale en pantalla.
+delete ctx.navigator.share;
+delete ctx.navigator.clipboard;
+avisos.length = 0;
+run('compartirApp()');
+ok('sin compartir ni portapapeles, enseña el enlace',
+   avisos.length === 1 && avisos[0].startsWith(run("t('compartirSinCopiar')"))
+   && avisos[0].includes('https://ejemplo.github.io/tips/'));
+
+delete ctx.location.href;
+run('datos = ' + estadoAntesCompartirApp);
+avisos.length = 0;
+
+
 /* "Enviar un comentario". Los datos se pegan en un mensaje a otra persona:
    lo que se prueba primero es lo que NO puede salir (el restaurante, montos,
    fechas, notas). El botón lleva su onclick en el HTML; se llama a la

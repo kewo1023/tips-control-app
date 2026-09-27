@@ -234,6 +234,11 @@ const TEXTOS = {
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
 
     verAyuda: 'Cómo funciona la app',
+    // "Compartir la app": solo el enlace y una frase. Ningún dato de quien comparte.
+    compartirApp: 'Compartir la app',
+    compartirTexto: 'Te paso Tips Control: anota las propinas de cada turno y mira cuánto ganas de verdad por hora. Gratis y sin cuentas.',
+    compartirCopiado: 'Copiamos el enlace de la app. Pégalo en un mensaje:',
+    compartirSinCopiar: 'Este es el enlace de la app. Cópialo y mándalo:',
     // "Enviar un comentario": los datos técnicos del teléfono, nunca turnos
     // ni dinero, para que quien mantiene la app sepa dónde pasó el fallo.
     enviarComentario: 'Enviar un comentario',
@@ -480,6 +485,10 @@ const TEXTOS = {
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
 
     verAyuda: 'How the app works',
+    compartirApp: 'Share the app',
+    compartirTexto: 'Here is Tips Control: log the tips from every shift and see what you really make per hour. Free, no accounts.',
+    compartirCopiado: 'We copied the link to the app. Paste it in a message:',
+    compartirSinCopiar: 'This is the link to the app. Copy it and send it:',
     enviarComentario: 'Send feedback',
     comentarioDatos: 'Tips Control %1\nPhone: %2\nInstalled: %3\nScreen: %4\nLanguage: %5 · Theme: %6 · Text: %7\nShifts saved: %8',
     comentarioSi: 'yes', comentarioNo: 'no',
