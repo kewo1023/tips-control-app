@@ -162,7 +162,32 @@
 
     <h2 class="seccion" data-t="repFranjas">Mañana o tarde</h2>
     <div class="metricas" id="rep-franjas"></div>
-    <p class="rep-aclara" id="rep-aclara"></p>
+    <!-- La hora de corte se cambia aquí y no en Ajustes: quien la necesita es
+         quien está mirando esta tabla y ve que "mañana" no es su mañana. -->
+    <p class="rep-aclara"><span id="rep-aclara"></span>
+      <button class="enlace" type="button" id="btn-corte-tarde"
+              onclick="alternarCorte()">Cambiar</button></p>
+    <div class="oculto" id="rep-corte">
+      <p class="rep-aclara" data-t="corteTermina">La mañana termina a las:</p>
+      <div class="chips" id="rep-cortes" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- El año calendario. Fuera de `rep-cuerpo` a propósito: ese se esconde
+       cuando el período elegido no tiene turnos, y el año no depende de él. -->
+  <div class="oculto" id="rep-anio">
+    <h2 class="seccion" data-t="tuAnio">Tu año</h2>
+    <div class="chips" id="rep-anios"></div>
+    <div class="total">
+      <div class="etiqueta" id="anio-etiqueta"></div>
+      <div class="cantidad cifra" id="anio-total"></div>
+      <div class="contra" id="anio-contra"></div>
+    </div>
+    <div class="metricas" id="anio-metricas"></div>
+    <div class="rep-tabla" id="anio-meses" style="margin-top:10px"></div>
+    <button class="secundario" data-t="descargarExcel"
+            onclick="exportarCSV()">Descargar para Excel</button>
+    <p class="rep-aclara" data-t="anioAviso"></p>
   </div>
 
 </section>
@@ -601,7 +626,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v37';
+const VERSION_APP = 'v38';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -749,7 +774,7 @@ const TEMAS = [
    no por tema hace que casi nadie tenga que bajar hasta el final. */
 const AYUDA = ['registrar', 'corregir', 'ventas', 'tipout', 'sueldo',
                'porHora', 'privacidad', 'futuro', 'equipo', 'semanaPago',
-               'reportes', 'cambioPct', 'datos'];
+               'reportes', 'excel', 'cambioPct', 'datos'];
 
 /* Las preguntas que salen en la hoja de ayuda de cada pantalla: las que
    alguien se hace MIRANDO esa pantalla. Salen de la lista de arriba, así que
@@ -759,7 +784,7 @@ const AYUDA = ['registrar', 'corregir', 'ventas', 'tipout', 'sueldo',
 const AYUDA_POR_PANTALLA = {
   semana:   ['registrar', 'corregir', 'porHora', 'futuro'],
   turno:    ['ventas', 'tipout', 'equipo', 'corregir'],
-  reportes: ['reportes', 'porHora'],
+  reportes: ['reportes', 'porHora', 'excel'],
   ajustes:  ['privacidad', 'semanaPago', 'sueldo', 'cambioPct', 'datos']
 };
 
@@ -1712,9 +1737,9 @@ function exportar(alTerminar) {
 
 /* `File` no existe en todos los navegadores viejos. Sin él no hay nada que
    compartir y se descarga como siempre. */
-function crearArchivo(texto, nombre) {
+function crearArchivo(texto, nombre, tipo = 'application/json') {
   if (typeof File !== 'function') return null;
-  return new File([texto], nombre, { type: 'application/json' });
+  return new File([texto], nombre, { type: tipo });
 }
 
 /* Compartir solo en la app instalada en un iPhone. Ahí es donde la descarga
@@ -1731,7 +1756,7 @@ function debeCompartir(archivo) {
       && navigator.canShare({ files: [archivo] });
 }
 
-function compartirRespaldo(archivo, terminar) {
+function compartirRespaldo(archivo, terminar, claveError = 'errorExportar') {
   navigator.share({ files: [archivo] }).then(
     () => terminar(true),
     err => {
@@ -1741,15 +1766,15 @@ function compartirRespaldo(archivo, terminar) {
       // Cualquier otra cosa sí se dice. No se intenta descargar como plan B:
       // fuera del toque que la pidió, el iPhone puede bloquear la descarga
       // en silencio, y entonces la app diría "listo" sin que exista archivo.
-      console.error('Falló compartir el respaldo:', err);
-      avisar(t('errorExportar') + '\n\n' + (err && err.message ? err.message : err));
+      console.error('Falló compartir el archivo:', err);
+      avisar(t(claveError) + '\n\n' + (err && err.message ? err.message : err));
       terminar(false);
     });
 }
 
-function descargar(texto, nombre) {
+function descargar(texto, nombre, tipo = 'application/json') {
   const url = URL.createObjectURL(
-    new Blob([texto], { type: 'application/json' }));
+    new Blob([texto], { type: tipo }));
 
   const enlace = document.createElement('a');
   enlace.href = url;
@@ -2834,6 +2859,137 @@ function pintarReportes() {
 
   document.getElementById('rep-aclara').textContent = rellenar(t('repAclara'), horaCorta(corte))
     + (franjas.sinHora > 0 ? ' ' + rellenar(t('repSinHora'), franjas.sinHora) : '');
+
+  // "Cambiar" abre las horas; con las horas abiertas, el mismo botón cierra.
+  document.getElementById('btn-corte-tarde').textContent =
+    t(corteAbierto ? 'cerrar' : 'corteCambiar');
+  document.getElementById('rep-corte').classList.toggle('oculto', !corteAbierto);
+  const cortes = document.getElementById('rep-cortes');
+  cortes.innerHTML = '';
+  CORTES_OFRECIDOS.forEach(hora => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (hora === corte ? ' activo' : '');
+    chip.textContent = horaCorta(hora);
+    chip.onclick = () => elegirCorte(hora);
+    cortes.appendChild(chip);
+  });
+
+  pintarAnio();
+}
+
+/* Las horas de corte que se ofrecen. Cinco, de 1 a 5 pm: cubren las mañanas
+   de los restaurantes que se conocen y caben en un renglón. Un selector de
+   hora libre sería un toque más para un dato que se pone una vez. */
+const CORTES_OFRECIDOS = ['13:00', '14:00', '15:00', '16:00', '17:00'];
+
+/* Si las horas de corte están abiertas. En memoria: al volver, cerradas. */
+let corteAbierto = false;
+
+function alternarCorte() {
+  corteAbierto = !corteAbierto;
+  pintar();
+}
+
+/** Elegir una hora la guarda y cierra las horas: el cambio se ve en la tabla. */
+function elegirCorte(hora) {
+  corteAbierto = false;
+  cambiarCorteTarde(hora);
+}
+
+/* --- Tu año ---
+
+   El año calendario, de enero a diciembre, al final de Reportes. Es un
+   registro de lo que la persona anotó, para llevar sus cuentas y compararlas
+   con sus cheques; la pantalla lo dice con esas palabras y no lo llama de
+   ninguna forma que suene a impuestos. */
+
+/* El año que se está mirando. En memoria: al abrir la app, el más reciente
+   con turnos. */
+let anioReporte = null;
+
+function pintarAnio() {
+  const caja = document.getElementById('rep-anio');
+  const anios = aniosConTurnos(datos.turnos);
+  caja.classList.toggle('oculto', anios.length === 0);
+  if (anios.length === 0) return;
+  if (!anios.includes(anioReporte)) anioReporte = anios[0];
+
+  // Los años solo se ofrecen si hay más de uno: un solo chip no elige nada.
+  const chips = document.getElementById('rep-anios');
+  chips.innerHTML = '';
+  chips.classList.toggle('oculto', anios.length < 2);
+  anios.forEach(anio => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (anio === anioReporte ? ' activo' : '');
+    chip.textContent = String(anio);
+    chip.onclick = () => { anioReporte = anio; pintar(); };
+    chips.appendChild(chip);
+  });
+
+  const r = resumenAnual(datos.turnos, anioReporte);
+  const conSueldo = !!datos.prefs.contarSueldo;
+  const cifras = cifrasPrincipales(r.total, conSueldo);
+  document.getElementById('anio-etiqueta').textContent = rellenar(t('netoDe'), anioReporte);
+  document.getElementById('anio-total').textContent = $(cifras.total);
+  document.getElementById('anio-contra').textContent = rellenar(t('anioContra'),
+    r.total.turnos + ' ' + plural(r.total.turnos, 'turno', 'turnos'),
+    redondear(r.total.horas), $(cifras.porHora));
+
+  /* Efectivo y tarjeta en bruto, con el tip-out al lado: efectivo + tarjeta −
+     tip-out es el neto sin sueldo, y la cuenta se puede hacer a ojo. Con el
+     tip-out ya restado del efectivo, esa suma no cuadraría a la vista. */
+  const tarjeta = (clave, valor) => `<div class="metrica"><div class="etiqueta">${t(clave)}</div>`
+    + `<div class="valor">${$0(valor)}</div></div>`;
+  document.getElementById('anio-metricas').innerHTML =
+      tarjeta('propEfectivo', r.total.efectivo) + tarjeta('propTarjeta', r.total.tarjeta)
+    + tarjeta('tipOutPagado', r.total.tipOut) + tarjeta('mSueldo', r.total.sueldoBase);
+
+  // Los doce meses siempre, con un guion en los que no tienen turnos.
+  let filas = `<div class="anio-fila rep-fila titulos">`
+    + `<span class="etiqueta">${t('anioMes')}</span>`
+    + `<span class="etiqueta">${t('anioNeto')}</span>`
+    + `<span class="etiqueta">${t('repPorHora')}</span></div>`;
+  r.meses.forEach((m, i) => {
+    const nombre = new Date(anioReporte, i, 1).toLocaleDateString(locale(), { month: 'long' });
+    const mes = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+    if (m.turnos === 0) {
+      filas += `<div class="anio-fila vacio"><span>${mes}</span><span>—</span><span>—</span></div>`;
+      return;
+    }
+    const c = cifrasPrincipales(m, conSueldo);
+    filas += `<div class="anio-fila"><span>${mes}</span>`
+      + `<span>${$0(c.total)}</span><span>${$(c.porHora)}</span></div>`;
+  });
+  document.getElementById('anio-meses').innerHTML = filas;
+}
+
+/**
+ * Los turnos del año que se está mirando, como hoja para Excel (CSV).
+ *
+ * Mismo camino que el respaldo: en la app instalada en iPhone, el menú de
+ * compartir (con "Guardar en Archivos"); en lo demás, descarga. Cerrar el
+ * menú sin elegir no es un error. Y si algo falla, se dice: un botón que no
+ * hace nada es un error mudo.
+ */
+function exportarCSV() {
+  try {
+    const anio = anioReporte;
+    const turnos = datos.turnos.filter(x => turnoValido(x) && x.fecha.startsWith(anio + '-'));
+    const encabezados = { ...t('csvColumnas'), incentivo: nombreIncentivo() };
+    const texto = turnosACSV(turnos, encabezados);
+    const nombre = `tips-control-${anio}.csv`;
+    const archivo = crearArchivo(texto, nombre, 'text/csv');
+    if (archivo && debeCompartir(archivo)) {
+      compartirRespaldo(archivo, () => {}, 'errorExcel');
+      return;
+    }
+    descargar(texto, nombre, 'text/csv');
+  } catch (err) {
+    console.error('Falló la hoja para Excel:', err);
+    avisar(t('errorExcel') + '\n\n' + (err && err.message ? err.message : err));
+  }
 }
 
 /**
@@ -3561,7 +3717,7 @@ const FUNCIONES_NECESARIAS = [
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
   'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo',
-  'minutosDeCorte',
+  'minutosDeCorte', 'resumenAnual', 'aniosConTurnos', 'turnosACSV',
   'avisoRespaldo'
 ];
 

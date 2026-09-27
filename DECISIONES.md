@@ -747,9 +747,12 @@ verde en negrita): chips, control segmentado, casillas y pestaña activa.
   código no cambian.
 - La píldora de la pestaña activa se dibuja con `::before`: la zona táctil
   sigue siendo el tercio entero de la barra.
-- **Pendiente:** verde sobre verde suave da 4.26:1 en claro. Subir la letra no
-  lo arregla (haría falta ~19 px en negrita); lo arreglaría un verde un poco
-  más oscuro, que es cambiar la paleta.
+- ~~Pendiente: verde sobre verde suave da 4.26:1 en claro.~~ **Resuelto el 27
+  de septiembre de 2026** (opción 4b de una vista previa): `--verde` pasa de
+  #15803d a #137537 en claro, 4.92:1 sobre el verde suave y 5.5:1 sobre el
+  papel. Se descartaron #147a3a (4.61:1, pasaba justo) y aclarar el fondo
+  suave (4.56:1, pero lo elegido se distinguía menos de lo que no). Una prueba
+  calcula el contraste con los colores de `estilos.css`, en los dos temas.
 
 **La marca de agua va solo en Ajustes**, junto a la versión. En la Semana y en
 Reportes flotaba en medio del espacio vacío. Es una excepción de esta app: la
@@ -916,4 +919,22 @@ cuadra con la semana. `turnosACSV` saca una fila por turno con números sin
 Excel rompe los acentos) y protege con un apóstrofo el texto que empieza por
 = + - o @, porque Excel lo ejecutaría como fórmula y la nota la escribe la
 persona. Es un registro personal, nunca un cálculo de impuestos.
+
+**Las pantallas, elegidas sobre una vista previa (27 de septiembre de 2026).**
+
+- **La hora de corte se cambia en Reportes (2a)**, con "Cambiar" junto a la
+  frase de mañana o tarde: cinco horas, de 1 a 5 pm. Ahí es donde alguien ve
+  que "mañana" no es su mañana; en Ajustes no la buscaría.
+- **"Tu año" va al final de Reportes (5a)**: el neto del año, turnos, horas,
+  por hora, efectivo, tarjeta, tip-out pagado y sueldo, y los doce meses.
+  Efectivo y tarjeta en bruto con el tip-out al lado, para que la resta se
+  pueda hacer a ojo. El neto sigue la misma regla del sueldo que el resto de
+  la app. Los años se ofrecen solo si hay más de uno.
+- **"Descargar para Excel"** baja los turnos del año que se está mirando, por
+  el mismo camino que el respaldo (compartir en la app instalada en iPhone,
+  descarga en lo demás). Los encabezados van en el idioma de la app y la
+  columna del incentivo se llama como la llamó la persona.
+- Debajo, siempre: "Es lo que anotaste en la app… No es un documento de
+  impuestos." Sin esa línea, en temporada de impuestos se lee como consejo
+  fiscal.
 

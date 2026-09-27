@@ -56,6 +56,23 @@ const TEXTOS = {
     repPorHoraTurnos: 'por hora · %1 turnos',
     repAclara: 'Mañana: sales a las %1 o antes. Tarde: sales después, dobles incluidos.',
     repSinHora: '%1 turnos sin hora de salida no entran en mañana o tarde.',
+    // La hora de corte, en Reportes
+    corteCambiar: 'Cambiar',
+    corteTermina: 'La mañana termina a las:',
+    // El año, al final de Reportes
+    tuAnio: 'Tu año',
+    netoDe: 'Neto de %1',
+    anioContra: '%1 · %2 h · %3 por hora',
+    tipOutPagado: 'Tip-out pagado',
+    anioMes: 'Mes', anioNeto: 'Neto',
+    descargarExcel: 'Descargar para Excel',
+    anioAviso: 'Es lo que anotaste en la app: sirve para llevar tus cuentas y compararlas con tus cheques. No es un documento de impuestos.',
+    errorExcel: 'No se pudo crear la hoja para Excel. Tus turnos están a salvo: no se tocó nada. Manda esta pantalla por WhatsApp:',
+    // Los encabezados de la hoja para Excel
+    csvColumnas: { fecha: 'Fecha', entrada: 'Entrada', salida: 'Salida', horas: 'Horas',
+      ventas: 'Ventas', efectivo: 'Propina efectivo', tarjeta: 'Propina tarjeta',
+      propinas: 'Propinas', tipOut: 'Tip-out', netoPropinas: 'Propinas netas',
+      tarifaHora: 'Sueldo por hora', sueldo: 'Sueldo', nota: 'Nota' },
     nombresDias: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
     diasPlural: ['lunes','martes','miércoles','jueves','viernes','sábados','domingos'],
     franjaManana: 'Mañana', franjaTarde: 'Tarde',
@@ -239,7 +256,7 @@ const TEXTOS = {
     ayudaFuturoR: 'Porque todavía no ha pasado y no hay nada que apuntar. La flecha se activa cuando llega. Hacia atrás sí puedes ir todo lo que quieras.',
 
     ayudaReportesP: '¿Cómo leo los Reportes?',
-    ayudaReportesR: 'Reportes junta tus turnos por día de la semana y te dice cuál te deja más por hora. Ese "por hora" es todo lo que ganaste ese día dividido entre todas las horas, así que un doble pesa lo que duró. Un día solo compite si tiene 3 turnos o más en el período; con menos sale "pocos datos", porque dos viernes buenos no dicen que el viernes pague más. Mañana es cuando sales a las 3 pm o antes; tarde, cuando sales después, dobles incluidos. Puedes mirar los últimos 30 días, 90 días, 1 año o todo.',
+    ayudaReportesR: 'Reportes junta tus turnos por día de la semana y te dice cuál te deja más por hora. Ese "por hora" es todo lo que ganaste ese día dividido entre todas las horas, así que un doble pesa lo que duró. Un día solo compite si tiene 3 turnos o más en el período; con menos sale "pocos datos", porque dos viernes buenos no dicen que el viernes pague más. Mañana es cuando sales a las 3 pm o antes; tarde, cuando sales después, dobles incluidos. Si en tu restaurante la mañana termina a otra hora, cámbiala con «Cambiar», en la parte de mañana o tarde. Puedes mirar los últimos 30 días, 90 días, 1 año o todo.',
 
     ayudaCambioPctP: 'Me cambiaron los porcentajes del tip-out, ¿qué hago?',
     ayudaCambioPctR: 'Cámbialos en Ajustes y listo. Los turnos que ya tienes guardados NO se recalculan: cada uno se queda con el porcentaje que se pagó ese día, que es lo correcto. Lo nuevo empieza a usar el porcentaje nuevo.',
@@ -258,6 +275,9 @@ const TEXTOS = {
 
     ayudaPrivacidadP: '¿Quién ve mis datos?',
     ayudaPrivacidadR: 'Nadie. Tus turnos se guardan solo en este teléfono: la app no tiene cuentas, no manda tus números a ningún servidor y no lleva publicidad ni rastreo. Como cualquier página web, el sitio donde vive la app (GitHub Pages) registra la dirección de internet de quien la abre; eso lo maneja GitHub, no la app.',
+
+    ayudaExcelP: '¿Puedo pasar mis turnos a Excel?',
+    ayudaExcelR: 'Sí. En Reportes, en Tu año, toca Descargar para Excel: sale un archivo con una fila por turno de ese año, que se abre en Excel o en Google Sheets. En el iPhone, con la app instalada, se abre el menú de compartir: elige Guardar en Archivos. Es tu registro personal, no un documento de impuestos.',
 
     // La hoja de ayuda de cada pantalla
     ayudaBoton: 'Ayuda',
@@ -310,6 +330,23 @@ const TEXTOS = {
     repPorHoraTurnos: 'per hour · %1 shifts',
     repAclara: 'Morning: you leave at %1 or earlier. Evening: you leave later, doubles included.',
     repSinHora: '%1 shifts without a clock-out time are not counted as morning or evening.',
+    // The cut-off hour, in Reports
+    corteCambiar: 'Change',
+    corteTermina: 'Morning ends at:',
+    // The year, at the end of Reports
+    tuAnio: 'Your year',
+    netoDe: 'Net for %1',
+    anioContra: '%1 · %2 h · %3 per hour',
+    tipOutPagado: 'Tip-out paid',
+    anioMes: 'Month', anioNeto: 'Net',
+    descargarExcel: 'Download for Excel',
+    anioAviso: 'It is what you logged in the app: use it to keep track and check it against your paychecks. It is not a tax document.',
+    errorExcel: 'The Excel sheet could not be created. Your shifts are safe: nothing was changed. Send this screen over WhatsApp:',
+    // Column headers for the Excel sheet
+    csvColumnas: { fecha: 'Date', entrada: 'Clock in', salida: 'Clock out', horas: 'Hours',
+      ventas: 'Sales', efectivo: 'Cash tips', tarjeta: 'Card tips',
+      propinas: 'Tips', tipOut: 'Tip-out', netoPropinas: 'Net tips',
+      tarifaHora: 'Hourly wage', sueldo: 'Wage', nota: 'Note' },
     nombresDias: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
     diasPlural: ['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'],
     franjaManana: 'Morning', franjaTarde: 'Evening',
@@ -457,7 +494,7 @@ const TEXTOS = {
     ayudaFuturoR: 'Because it hasn’t happened yet and there’s nothing to log. The arrow turns on when it arrives. You can go back as far as you like.',
 
     ayudaReportesP: 'How do I read Reports?',
-    ayudaReportesR: 'Reports groups your shifts by day of the week and tells you which one pays you the most per hour. That "per hour" is everything you made that day divided by all the hours, so a double counts for as long as it lasted. A day only competes if it has 3 or more shifts in the period; with fewer it says "not enough data", because two good Fridays don’t mean Friday pays more. Morning is when you leave at 3 pm or earlier; evening, when you leave later, doubles included. You can look at the last 30 days, 90 days, 1 year or everything.',
+    ayudaReportesR: 'Reports groups your shifts by day of the week and tells you which one pays you the most per hour. That "per hour" is everything you made that day divided by all the hours, so a double counts for as long as it lasted. A day only competes if it has 3 or more shifts in the period; with fewer it says "not enough data", because two good Fridays don’t mean Friday pays more. Morning is when you leave at 3 pm or earlier; evening, when you leave later, doubles included. If morning ends at a different time at your restaurant, change it with “Change”, in the morning or evening part. You can look at the last 30 days, 90 days, 1 year or everything.',
 
     ayudaCambioPctP: 'My tip-out percentages changed. What do I do?',
     ayudaCambioPctR: 'Change them in Settings and that’s it. Shifts you already saved are NOT recalculated: each one keeps the percentage that was actually paid that day, which is the correct behavior. New shifts start using the new percentage.',
@@ -476,6 +513,9 @@ const TEXTOS = {
 
     ayudaPrivacidadP: 'Who sees my data?',
     ayudaPrivacidadR: 'Nobody. Your shifts are saved only on this phone: the app has no accounts, doesn’t send your numbers to any server, and has no ads or tracking. Like any website, the site where the app lives (GitHub Pages) logs the internet address of whoever opens it; GitHub handles that, not the app.',
+
+    ayudaExcelP: 'Can I move my shifts to Excel?',
+    ayudaExcelR: 'Yes. In Reports, under Your year, tap Download for Excel: you get a file with one row per shift of that year, which opens in Excel or Google Sheets. On an iPhone, with the app installed, the share menu opens: choose Save to Files. It is your personal record, not a tax document.',
 
     // The help sheet on each screen
     ayudaBoton: 'Help',

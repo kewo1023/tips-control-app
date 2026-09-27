@@ -30,7 +30,11 @@
   --tinta:      #16150f;   /* el texto principal */
   --tinta-2:    #6b6963;   /* etiquetas y datos secundarios */
   --tinta-3:    #9a9891;   /* lo que casi no importa */
-  --verde:      #15803d;
+  /* #137537 y no #15803d (hasta el 27 de septiembre de 2026): el verde sobre
+     `--verde-suave` de los chips daba 4.26:1, por debajo del 4.5:1 que hace
+     falta para leerlo bien. Este da 4.92:1, con margen, y a simple vista casi
+     no cambia. Sobre el papel da 5.5:1. */
+  --verde:      #137537;
   --verde-suave:#dcf2e3;   /* solo para las barras de los días */
   --rojo:       #a52020;
   /* El día libre que ya pasó. Va MÁS OSCURO que el papel a propósito: así se
@@ -497,6 +501,21 @@ body {
 .metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-2); }
 .rep-aclara { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0;
               line-height: 1.4; }
+/* "Cambiar", dentro de la frase. Parece un enlace, pero la zona de toque
+   crece por arriba y por abajo con relleno y margen negativo, sin mover el
+   renglón: a 12 px de letra, sin eso habría que atinarle. */
+.rep-aclara .enlace {
+  background: none; border: 0; font: inherit; font-weight: 600;
+  color: var(--verde); padding: 12px 4px; margin: -12px 0; cursor: pointer;
+}
+/* Los meses del año: tres columnas (mes, neto, por hora). Clase propia por
+   la misma razón que `rep-`: la rejilla de `.rep-fila` es de cuatro. */
+.anio-fila { display: grid; grid-template-columns: 1.3fr 1fr 1fr;
+             align-items: baseline; padding: 8px 12px;
+             border-top: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
+.anio-fila:first-child { border-top: 0; }
+.anio-fila > :not(:first-child) { text-align: right; }
+.anio-fila.vacio > * { color: var(--tinta-2); }
 
 /* ============================================================================
    SECCIÓN F — Formulario del turno

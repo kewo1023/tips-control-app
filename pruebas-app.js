@@ -2361,6 +2361,24 @@ ok('dos toques no hacen zoom: manipulation en la raíz y en la hoja, que tiene s
    /touch-action: manipulation/.test(regla('html')) && /touch-action: manipulation/.test(regla('.hoja')));
 ok('y el pellizco para ampliar no se bloquea',
    !/user-scalable\s*=\s*no|maximum-scale\s*=\s*1\b/.test(html));
+/* El verde de lo elegido sobre el verde suave, calculado con la fórmula de
+   WCAG a partir de los colores que de verdad están en estilos.css. Tiene que
+   llegar a 4.5:1 en los dos temas. */
+const colorDe = (bloque, nombre) => (bloque.match(new RegExp(nombre + ':\\s*(#[0-9a-fA-F]{6})')) || [])[1];
+const luminancia = hex => {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+const contraste = (a, b) => { const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05); };
+const bloqueClaro = regla(':root');
+const bloqueOscuro = regla(':root[data-tema="oscuro"]');
+ok('el verde sobre el verde suave llega a 4.5:1 en claro',
+   contraste(colorDe(bloqueClaro, '--verde'), colorDe(bloqueClaro, '--verde-suave')) >= 4.5);
+ok('y en oscuro', contraste(colorDe(bloqueOscuro, '--verde'), colorDe(bloqueOscuro, '--verde-suave')) >= 4.5);
+ok('y el botón verde con letra de papel, también en claro',
+   contraste(colorDe(bloqueClaro, '--verde'), colorDe(bloqueClaro, '--papel')) >= 4.5);
 ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
 ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
    /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));
@@ -2452,6 +2470,75 @@ ok('un corte ilegible se trata como las 3 pm, en la cuenta y en el texto',
    texto('rep-aclara').startsWith('Mañana: sales a las 3 pm o antes')
    && franjasTexto().includes('por hora · 1 turno'));
 run("cambiarCorteTarde('15:00')");
+
+/* La hora de corte, desde la pantalla: "Cambiar" abre cinco horas; elegir
+   una la guarda y las cierra. El botón lleva su onclick en el HTML, que el
+   mini-dom no dispara: se llama a la función que ejecuta. */
+ok('"Cambiar" está junto a la aclaración', texto('btn-corte-tarde') === 'Cambiar'
+   && html.includes('onclick="alternarCorte()"'));
+ok('las horas empiezan cerradas', d.getElementById('rep-corte')._classes.has('oculto'));
+run('alternarCorte()');
+ok('al tocarlo se abren', !d.getElementById('rep-corte')._classes.has('oculto'));
+ok('y el mismo botón pasa a cerrar', texto('btn-corte-tarde') === 'Cerrar');
+const cortesChips = () => d.getElementById('rep-cortes').children;
+ok('cinco horas, de 1 a 5 pm', cortesChips().map(c => c.textContent).join(' ') === '1 pm 2 pm 3 pm 4 pm 5 pm');
+ok('marcada la que vale ahora', cortesChips()[2]._classes.has('activo')
+   && cortesChips().filter(c => c._classes.has('activo')).length === 1);
+cortesChips()[3].click();
+ok('elegir las 4 pm la guarda', D().trabajo.corteTarde === '16:00');
+ok('cierra las horas', d.getElementById('rep-corte')._classes.has('oculto'));
+ok('y la aclaración ya dice 4 pm', texto('rep-aclara').startsWith('Mañana: sales a las 4 pm o antes'));
+run("cambiarCorteTarde('15:00')");
+
+/* Tu año. Todos los turnos de la prueba son de 2026 (cuatro en julio y
+   agosto, uno en marzo). Escrito a mano: propinas netas 3 × 180 + 100 + 600
+   = 1,240 (tip-out 0); horas 3 × 6 + 5 + 6 = 29; por hora 1,240 / 29 = 42.76. */
+ok('"Tu año" sale con turnos', !d.getElementById('rep-anio')._classes.has('oculto'));
+ok('con el año calendario en la etiqueta', texto('anio-etiqueta') === 'Neto de 2026');
+ok('el neto del año, sin sueldo como el resto', texto('anio-total') === '$1,240.00');
+ok('turnos, horas y por hora', texto('anio-contra') === '5 turnos · 29 h · $42.76 por hora');
+ok('con un solo año no se ofrecen años para elegir', d.getElementById('rep-anios')._classes.has('oculto'));
+const htmlAnio = () => d.getElementById('anio-meses').innerHTML;
+ok('siempre doce meses más los títulos', (htmlAnio().match(/class="anio-fila/g) || []).length === 13);
+ok('marzo con lo suyo', /Marzo<\/span><span>\$600<\/span>/.test(htmlAnio()));
+ok('y un mes sin turnos con guion, no con $0', /Enero<\/span><span>—<\/span>/.test(htmlAnio()));
+ok('el tip-out pagado del año está a la vista',
+   d.getElementById('anio-metricas').innerHTML.includes(run("t('tipOutPagado')")));
+ok('y dice que no es un documento de impuestos',
+   run("t('anioAviso')").includes('No es un documento de impuestos'));
+
+// Con turnos de otro año, se puede elegir.
+run(`datos.turnos.push({ id: 'y25', fecha: '2025-11-20', entrada: '17:00', salida: '23:00',
+     ventas: 500, efectivo: 30, tarjeta: 70, tarifaHora: 10, tipOut: 0 }); pintar()`);
+const aniosChips = () => d.getElementById('rep-anios').children;
+ok('con dos años salen los dos, el más nuevo primero y marcado',
+   !d.getElementById('rep-anios')._classes.has('oculto')
+   && aniosChips().map(c => c.textContent).join() === '2026,2025'
+   && aniosChips()[0]._classes.has('activo'));
+aniosChips()[1].click();
+ok('tocar 2025 enseña 2025', texto('anio-etiqueta') === 'Neto de 2025' && texto('anio-total') === '$100.00');
+
+/* La hoja para Excel: la del año que se está mirando. */
+let hojaExcel = null, tipoExcel = null;
+const BlobAntesExcel = ctx.Blob;
+ctx.Blob = function (partes, opciones) { hojaExcel = partes.join(''); tipoExcel = opciones && opciones.type; };
+avisos.length = 0;
+run('exportarCSV()');
+ok('descarga una hoja CSV', tipoExcel === 'text/csv' && hojaExcel.charCodeAt(0) === 0xFEFF);
+ok('con los encabezados en el idioma de la app', hojaExcel.slice(1).startsWith('Fecha,Entrada,Salida'));
+ok('y solo los turnos del año elegido', hojaExcel.split('\r\n').filter(Boolean).length === 2
+   && hojaExcel.includes('2025-11-20') && !hojaExcel.includes('2026-'));
+ok('el incentivo se llama como lo llamó la persona', hojaExcel.includes(',' + run('nombreIncentivo()') + ','));
+ok('sin avisos de por medio', avisos.length === 0);
+ctx.Blob = BlobAntesExcel;
+
+// Si algo falla, se dice.
+run('const turnosACSVBueno = turnosACSV; turnosACSV = () => { throw new Error("sin memoria"); }');
+avisos.length = 0;
+run('exportarCSV()');
+ok('si la hoja no se puede crear, avisa una vez', avisos.length === 1
+   && avisos[0].startsWith(run("t('errorExcel')")) && avisos[0].includes('sin memoria'));
+run('turnosACSV = turnosACSVBueno; anioReporte = null');
 
 // Contando el sueldo cambian la cifra y la etiqueta, en todos los sitios a la vez.
 run('datos.prefs.contarSueldo = true; pintar()');
