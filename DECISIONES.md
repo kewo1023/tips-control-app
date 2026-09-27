@@ -877,3 +877,23 @@ porque M y X solas se pueden dudar.
 nombre del incentivo entraba crudo en `innerHTML`: unas comillas rompían el
 `aria-label`, un "<" se comía el nombre, y un respaldo manipulado podía colar
 código. Donde se pueda, `textContent`.
+
+### Primer uso visto desde fuera (27 de septiembre de 2026)
+
+Tres cosas que salieron al probar la app como usuario nuevo, en un Android y
+en un iPhone:
+
+- **Sin turnos no se sugieren horas.** Los atajos de fábrica (10 am, 11 am,
+  4 pm…) eran el horario de un restaurante concreto. A alguien de otro sitio
+  le proponían un horario que no es el suyo; un atajo equivocado es peor que
+  ninguno. Desde el primer turno guardado, los atajos salen de sus turnos.
+- **Los roles sin porcentaje no salen en el turno.** Al empezar, los que se
+  dejaron en blanco se quitan (la bienvenida ya dice "quita los que no
+  existan"; dejarlo vacío es la forma natural de hacerlo). Y en el formulario
+  solo aparecen los roles con porcentaje mayor que cero (`rolesQueCobran()`):
+  uno vacío salía marcado y escrito "null%". En Ajustes siguen todos, para
+  poder rellenarlos.
+- **Dos toques no hacen zoom** (`touch-action: manipulation` en la raíz y en la
+  hoja de ayuda, que tiene scroll propio). El pellizco para ampliar se deja a
+  propósito: quitarlo es una barrera para quien lo necesita para leer.
+

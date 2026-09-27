@@ -252,6 +252,45 @@ almacen.tipsControl = JSON.stringify({
 run('cargar()');
 ok('quien no tiene ni turnos ni tarifa sí la ve', D().configurado === false);
 
+/* Alguien nuevo que solo rellena dos roles (el caso real que lo destapó, en
+   un Android). Los otros dos se quedaban guardados vacíos y salían en cada
+   turno como "Busser null%", ya marcados. Y los atajos de hora sugerían el
+   horario de otro restaurante. */
+run(`datos.configurado = false; datos.turnos = [];
+     datos.trabajo = { ...TRABAJO_POR_DEFECTO, nombre: 'Nuevo', tarifaHora: 0 };
+     datos.roles = [
+       { id: 'n1', nombre: 'Busser', porcentaje: null },
+       { id: 'n2', nombre: 'Barra',  porcentaje: 1 },
+       { id: 'n3', nombre: 'Runner', porcentaje: 1 },
+       { id: 'n4', nombre: 'Bakery', porcentaje: null }
+     ];
+     irA('bienvenida');`);
+d.getElementById('b-sin-tipout').checked = false;
+d.getElementById('b-tarifa').value = '5';
+run('terminarBienvenida()');
+ok('al empezar, los roles que se dejaron en blanco se quitan',
+   D().roles.map(r => r.nombre).join() === 'Barra,Runner');
+
+run("irA('semana')");
+dias()[0].click();
+const chipsTurno = () => d.querySelectorAll('#tramos .chip');
+ok('el primer turno ofrece solo esos dos', chipsTurno().length === 2);
+ok('los dos ya marcados', chipsTurno().every(c => c._classes.has('activo')));
+ok('y ninguno dice "null"', !texto('tramos').includes('null'));
+ok('sin turnos no se sugieren horas de entrada', hijos('horas-entrada').length === 0);
+ok('ni de salida', hijos('horas-salida').length === 0);
+run('cerrarTurno()');
+
+/* Un rol que se agrega en Ajustes y todavía no tiene porcentaje: sale en
+   Ajustes para rellenarlo, pero no en el turno, donde no cambia nada. */
+run(`datos.roles.push({ id: 'n5', nombre: 'Host', porcentaje: null }); irA('ajustes')`);
+ok('el rol sin porcentaje sigue en Ajustes', d.querySelectorAll('#roles .rol-fila').length === 3);
+run("irA('semana')");
+dias()[0].click();
+ok('pero no en el turno', chipsTurno().length === 2 && !texto('tramos').includes('Host'));
+ok('ni queda marcado por debajo, donde no se vería', !run('rolesActivos').includes('Host'));
+run('cerrarTurno()');
+
 // Dejar el estado como lo esperan las pruebas siguientes.
 run(`datos.configurado = true;
      datos.turnos = [];
@@ -2311,6 +2350,10 @@ ok('la pestaña activa lleva la píldora', /background: var\(--verde-suave\)/.te
    tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
    (html.match(/color: var\(--tinta-3\)/g) || []).length === 3);
+ok('dos toques no hacen zoom: manipulation en la raíz y en la hoja, que tiene scroll propio',
+   /touch-action: manipulation/.test(regla('html')) && /touch-action: manipulation/.test(regla('.hoja')));
+ok('y el pellizco para ampliar no se bloquea',
+   !/user-scalable\s*=\s*no|maximum-scale\s*=\s*1\b/.test(html));
 ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
 ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
    /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));

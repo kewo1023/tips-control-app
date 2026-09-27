@@ -181,7 +181,15 @@
    son las que la contienen —el alto de cada día, los círculos de ayuda, el
    hueco de la barra de abajo—, porque si no la cortarían.
    -------------------------------------------------------------------------- */
-html { font-size: 100%; }
+/* Sin zoom al tocar dos veces. En el teléfono, dos toques rápidos en una zona
+   sin botón (entre tarjetas, en un número) agrandaban la página entera, y
+   con una mano y de pie cuesta volver. `manipulation` quita solo el doble
+   toque: el pellizco para ampliar se queda a propósito, porque hay quien lo
+   necesita para leer y quitárselo es una barrera de accesibilidad.
+   No se hereda: el navegador cruza el valor del elemento tocado con el de sus
+   antepasados hasta el primero que hace scroll. Por eso va también en la hoja
+   de ayuda, que tiene scroll propio. */
+html { font-size: 100%; touch-action: manipulation; }
 
 /* La franja muerta de iOS 26 (WebKit 301108).
 
@@ -502,6 +510,7 @@ body {
 }
 .hoja {
   width: 100%; max-height: 82vh; overflow-y: auto; box-sizing: border-box;
+  touch-action: manipulation;   /* ver `html`: sin zoom de doble toque */
   background: var(--tarjeta); border-top: 1px solid var(--linea);
   border-radius: 18px 18px 0 0;
   padding: 8px 16px calc(14px + env(safe-area-inset-bottom));
@@ -1575,7 +1584,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v35';
+const VERSION_APP = 'v36';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1749,13 +1758,6 @@ const IDIOMAS = [
   { id: 'es', nombre: 'Español' },
   { id: 'en', nombre: 'English' }
 ];
-
-/* Horarios que se ofrecen como atajo mientras no haya turnos de los que
-   aprender. En cuanto haya historial, mandan los suyos. */
-const HORAS_POR_DEFECTO = {
-  entrada: ['10:00', '11:00', '16:00', '17:00'],
-  salida:  ['15:00', '16:00', '22:00', '23:00']
-};
 
 /* Estado de pantalla: no se guarda, se pierde al cerrar y está bien. */
 let pantalla = 'semana';
@@ -2193,8 +2195,20 @@ function cerrarTurno() { irA('semana'); }
  * Casi siempre el equipo se repite, así que en el caso normal no hay que tocar
  * nada. La primera vez se marcan todos los roles configurados.
  */
+/**
+ * Los roles que se ofrecen en el turno: los que tienen un porcentaje de verdad.
+ *
+ * Un rol sin porcentaje (o al 0%) no cambia ni un centavo, así que en el
+ * formulario solo sería ruido, y encima se pintaba como "null%". Sigue en
+ * Ajustes, con su campo vacío, por si falta rellenarlo.
+ */
+function rolesQueCobran() {
+  return datos.roles.filter(r => typeof r.porcentaje === 'number' && r.porcentaje > 0);
+}
+
 function rolesDelUltimoTurno() {
-  if (datos.turnos.length === 0) return datos.roles.map(r => r.nombre);
+  const cobran = rolesQueCobran();
+  if (datos.turnos.length === 0) return cobran.map(r => r.nombre);
   // Ordenamos por fecha y tomamos el último. No hace falta desempatar por id
   // porque solo puede haber un turno por día.
   const ultimo = [...datos.turnos]
@@ -2209,7 +2223,7 @@ function rolesDelUltimoTurno() {
     ? (tramos[tramos.length - 1].roles || [])
     : (ultimo.tipoutDetalle || []).map(d => d.rol);
 
-  return nombres.filter(n => datos.roles.some(r => r.nombre === n));
+  return nombres.filter(n => cobran.some(r => r.nombre === n));
 }
 
 
@@ -2557,6 +2571,12 @@ function terminarBienvenida() {
   // cada turno, pidiendo una decisión que no cambia nada. La lista vacía dice
   // la verdad, que es que ahí no se reparte.
   if (sinTipOut) datos.roles = [];
+  /* Y los roles que se dejaron sin porcentaje se quitan: la pantalla dice
+     "quita los que no existan en tu restaurante", y dejarlo en blanco teniendo
+     otros rellenos es la forma natural de decirlo. Si fue un olvido, se
+     agregan en Ajustes en un momento; guardados vacíos, salían en cada turno
+     como "null%". */
+  else datos.roles = datos.roles.filter(r => typeof r.porcentaje === 'number');
 
   if (!datos.trabajo.nombre) datos.trabajo.nombre = t('miRestaurante');
 
@@ -3824,7 +3844,7 @@ function pintarTramos() {
   // escribirle encima sería pintar en un sitio que nadie ve.
   restoVisible = null;
 
-  if (datos.roles.length === 0) {
+  if (rolesQueCobran().length === 0) {
     caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-2)">'
                    + t('rolesEnAjustes') + '</span>';
     // Sin roles no hay nada que repartir, así que tampoco nada que partir en
@@ -3905,7 +3925,7 @@ function bloqueTramo(i, cuantos) {
   const chips = document.createElement('div');
   chips.className = 'chips';
 
-  datos.roles.forEach(rol => {
+  rolesQueCobran().forEach(rol => {
     const lista = esUltimo ? rolesActivos : cortes[i].roles;
     const activo = lista.includes(rol.nombre);
     const chip = document.createElement('div');
@@ -3949,8 +3969,11 @@ function pintarResto() {
  */
 function pintarAtajosHora(campo) {
   const caja = document.getElementById('horas-' + campo);
-  const propias = horasFrecuentes(datos.turnos, campo, 4);
-  const opciones = propias.length > 0 ? propias : HORAS_POR_DEFECTO[campo];
+  /* Solo las horas de la persona. Antes, sin turnos, se ofrecían unas horas de
+     fábrica que eran las de un restaurante concreto: a alguien de otro sitio
+     le sugerían un horario que no es el suyo, y un atajo equivocado es peor
+     que ninguno. Desde el primer turno guardado ya hay de dónde aprender. */
+  const opciones = horasFrecuentes(datos.turnos, campo, 4);
   const actual = val('f-' + campo);
 
   caja.innerHTML = '';
