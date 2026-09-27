@@ -29,6 +29,12 @@ mano. No es una app pública. Consecuencias:
 - **Los valores por defecto son para los demás**, no para quien la hizo.
 - **RLS desde el día que exista base de datos**, no como arreglo posterior.
 
+**Actualización (27 de septiembre de 2026): se va a compartir fuera del
+restaurante donde nació.** Lo de arriba sigue valiendo y se agrava: el
+mantenedor ya no conoce a cada usuario ni puede explicarle nada en persona, y
+las reglas de cada restaurante dejan de ser las de uno. De ahí la semana de
+pago configurable (sección 18) y la ayuda dentro de cada pantalla.
+
 ---
 
 ## 2. Instalación en el teléfono
@@ -338,7 +344,18 @@ netoPropinas`.
 Archivo `tips-control-AAAA-MM-DD.json` con `datos` entero.
 
 **La importación fusiona**: lo que está en el teléfono nunca se toca; el
-archivo solo llena días vacíos (`fusionarTurnos()`). Tan conservador porque los
+archivo solo llena días vacíos (`fusionarTurnos()`).
+
+**Los ajustes del archivo solo entran en un teléfono sin turnos** (vigente
+desde el 27 de septiembre de 2026; reemplaza a "los ajustes se reemplazan por
+los del respaldo"). Antes el archivo pisaba siempre el sueldo, los roles con
+sus porcentajes y las preferencias, con el argumento de que cada turno guarda
+congelados su tarifa y su tip-out. Eso protege los turnos viejos, pero no los
+que se registran después: importar un respaldo de junio para recuperar un día
+devolvía los porcentajes de junio, y los turnos siguientes salían con el
+tip-out equivocado. Con turnos en el teléfono, sus ajustes son los vigentes;
+sin turnos, es un teléfono nuevo que se está restaurando y el archivo manda.
+La pregunta de antes de importar dice cuál de los dos casos es. Tan conservador porque los
 turnos no guardan cuándo se modificaron, y sin ese dato cualquier regla de "gana
 el archivo" adivina. Reemplazar sigue siendo posible: Borrar todo → Importar,
 que obliga a hacer explícito que se destruye algo. Al terminar, la app dice
@@ -481,7 +498,8 @@ Volver a verificar la documentación antes de implementarlo.
 ### Abiertas
 
 - **Partir `index.html`**: el umbral acordado eran 2,000 líneas y está muy por
-  encima.
+  encima. Primer corte hecho el 27 de septiembre de 2026: los textos
+  (`TEXTOS`) viven en `textos.js` (sección 18).
 - Activar la tabla `trabajos` si aparece un segundo trabajo.
 - Incentivo con lista de productos, si lo siguen pidiendo.
 - Más de 3 cambios de equipo por turno.
@@ -746,3 +764,79 @@ El precio: la franja de color de la barra bajo las etiquetas se queda siempre,
 también cuando iOS da la pantalla entera. Se prefirió una barra quieta con
 espacio debajo a una barra que salta. `mini-dom.js` aprendió
 `style.setProperty` para poder probarlo.
+
+
+---
+
+## 18. Salir del restaurante de origen (27 de septiembre de 2026)
+
+**La semana de pago empieza el día que diga el restaurante**
+(`trabajo.inicioSemana`, 0 domingo … 6 sábado, lunes de fábrica). La semana
+que importa es la del cheque; si el restaurante la corta en domingo, un "neto
+de la semana" de lunes a domingo no cuadra nunca y la persona desconfía de todo
+lo demás. Pasa la prueba de la casilla: dos restaurantes razonables cortan la
+semana en días distintos.
+
+- Va en `trabajo` y no en `prefs`: lo decide quien paga, no el gusto de la
+  persona. Campo suelto, como los demás.
+- `inicioDeSemana(fecha, dia)` en `logica.js`. `lunesDeLaSemana` se queda para
+  los Reportes, que agrupan por día de la semana y no por semana de pago.
+- Las letras de los días salen de la fecha (`numeroDelDia`), no de la
+  posición: con semana de domingo la primera celda es una D.
+- La tabla de Reportes sigue el orden de la semana de pago.
+- Al cambiarlo mirando la semana en curso, la vista se ancla en HOY: pasar a
+  semana de jueves un jueves no puede dejar a la persona mirando la semana
+  pasada.
+- No se pregunta en la bienvenida: cada bloque de más está entre alguien y su
+  primer turno, y el lunes sirve a la mayoría.
+
+**El tip-out sigue siendo un % de las ventas.** Se consideró una base por rol
+(ventas de alcohol, propinas, monto fijo) mirando otras apps de propinas, y se
+descartó: en los restaurantes que conoce el autor, el bar cobra sobre las
+ventas generales. Se revisa si alguien de fuera lo pide.
+
+**`textos.js`: primer corte de `index.html`.** Los textos eran la parte más
+larga del script y la que más crece. Partir abre un riesgo que antes no
+existía, el del 8 de agosto con otra cara: un `index.html` nuevo con un
+`textos.js` viejo. Tres defensas, cada una con su prueba:
+
+- Todo `<script src>` de la página tiene que estar en la copia del service
+  worker.
+- `t()` con una clave que no existe ni en español avisa una vez
+  (`appAMedias`) y devuelve texto vacío, en vez de pintar "undefined".
+- Si `textos.js` no llegó, el arranque se detiene con un aviso fijo en los dos
+  idiomas: el único texto suelto del código, por la misma razón que el trocito
+  del tema en la cabecera.
+
+**Ayuda en cada pantalla (elegida sobre una vista previa: opción 1b).** Una
+píldora "Ayuda" en la cabecera de Semana, Turno, Reportes y Ajustes abre una
+hoja desde abajo con las preguntas de esa pantalla (`AYUDA_POR_PANTALLA`) y
+"Ver todas las preguntas".
+
+- Palabra y no "?": la píldora tiene la forma de "Hoy", así que se lee como
+  algo que se toca, y una palabra no depende de conocer un ícono.
+- Las preguntas salen de la lista de la Ayuda completa: cada respuesta se
+  escribe una vez. Sigue sin ser un tour: no señala ni se ancla a nada.
+- Zona de toque de 44 puntos (lo que pide Apple) con `::after`, sin agrandar
+  el dibujo. El botón (i) de las métricas, igual: 20 px de dibujo y 44 de
+  toque, y pasa a tinta-2 porque con tinta-3 casi no se veía.
+- La regla "nombrar, no ubicar" ahora se prueba en TODAS las respuestas, en los
+  dos idiomas. La de registrar un turno la rompía ("la fila de arriba").
+- Preguntas nuevas: ventas (netas, sin impuestos ni propinas), el equipo
+  cambió, qué día empieza la semana, quién ve mis datos.
+
+**Aviso de respaldo en la Semana (opción 3a).** Con 5 turnos o más, si nunca
+se respaldó o el último tiene 30 días, sale una tarjeta con "Exportar ahora".
+"Ahora no" lo esconde 7 días y se guarda (`datos.respaldoPospuesto`): un aviso
+que vuelve cada vez que se abre la app se aprende a ignorar. Se aparta
+mientras esté el aviso de instalar. Cuándo sale lo decide `avisoRespaldo()`,
+en `logica.js`; en la duda (fechas ilegibles), avisa.
+
+**El día de inicio en Ajustes (opción 4a):** siete letras en el orden de la
+fila de la semana y una frase que confirma el rango ("De domingo a sábado"),
+porque M y X solas se pueden dudar.
+
+**Texto de la persona dentro de HTML armado a mano: `escaparHTML()`.** El
+nombre del incentivo entraba crudo en `innerHTML`: unas comillas rompían el
+`aria-label`, un "<" se comía el nombre, y un respaldo manipulado podía colar
+código. Donde se pueda, `textContent`.

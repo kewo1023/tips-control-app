@@ -19,13 +19,14 @@
       prueba en `pruebas-app.js` que los compara y falla si no coinciden.
    ========================================================================== */
 
-const VERSION = 'v33';
+const VERSION = 'v34';
 const CACHE = 'tips-control-' + VERSION;
 
 const ARCHIVOS = [
   './',
   './index.html',
   './logica.js',
+  './textos.js',
   './manifest.json',
   './icono-180.png',
   './icono-192.png',

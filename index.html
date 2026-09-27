@@ -293,11 +293,24 @@ body {
    (`.barra-titulo .fecha`). Era pequeño y gris, y se leía como un comentario. */
 .cabecera .lugar { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em;
                    color: var(--tinta); }
-.cabecera .hoy {
-  font-size: 0.75rem; color: var(--verde); font-weight: 600;
+/* Las píldoras de la cabecera: "Hoy" y "Ayuda". "Ayuda" va en palabra y no
+   en un "?" porque la píldora ya se lee como algo que se toca (es la forma de
+   "Hoy"), y una palabra no depende de que la persona sepa qué significa un
+   ícono. El selector lleva la cabecera delante para ganarle a
+   `.barra-titulo button`, que le quitaría el borde. */
+.cabecera-der { display: flex; align-items: center; gap: 6px; }
+.cabecera .pildora, .barra-titulo .pildora {
+  position: relative;
+  font-size: 0.75rem; color: var(--tinta-2); font-weight: 600; font-family: inherit;
   padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
   background: none; cursor: pointer;
 }
+.cabecera .hoy { color: var(--verde); }
+/* La zona de toque crece por fuera sin agrandar el dibujo: la píldora mide
+   unos 30 puntos de alto y Apple pide 44. De lado crece poco para no pisar a
+   la de al lado. Es la misma idea que los días libres: la caja que se ve y la
+   que se toca van por separado. */
+.pildora::after { content: ''; position: absolute; inset: -9px -3px; }
 
 .semana-nav {
   display: flex; align-items: center; justify-content: space-between;
@@ -422,13 +435,20 @@ body {
 .metrica .cabeza { display: flex; align-items: center;
                    justify-content: space-between; gap: 6px; }
 
+/* El botón (i). Medía 16 px y había que atinarle; Apple pide 44 puntos de
+   zona de toque. El dibujo sube a 20 px y la zona crece por fuera con
+   `::after` (12 px por lado), sin mover nada de la tarjeta. La tinta pasa a
+   tinta-2: con tinta-3 casi no se veía, y es lo que alguien nuevo tiene que
+   encontrar para entender un número. */
 .info {
-  flex: none; width: 1rem; height: 1rem; padding: 0;
+  position: relative;
+  flex: none; width: 1.25rem; height: 1.25rem; padding: 0;
   border: 1px solid var(--linea-alta); border-radius: 50%;
-  background: none; color: var(--tinta-3);
-  font-size: 0.625rem; font-weight: 600; font-style: italic; line-height: 1;
+  background: none; color: var(--tinta-2);
+  font-size: 0.6875rem; font-weight: 600; font-style: italic; line-height: 1;
   cursor: pointer;
 }
+.info::after { content: ''; position: absolute; inset: -12px; }
 
 /* La diferencia contra la semana pasada va SIEMPRE en su propio renglón,
    debajo de la cifra. Antes iba al lado y quedaba a merced del ancho: en las
@@ -466,6 +486,35 @@ body {
   color: var(--tinta-2); font-size: 0.8125rem; cursor: pointer;
 }
 .dato-suelto { font-size: 0.8125rem; color: var(--tinta-2); padding: 12px 2px 0; }
+
+/* ----------------------------------------------------------------------------
+   La hoja de ayuda de cada pantalla.
+
+   Sube desde abajo porque ahí llega el pulgar. Por encima de las pestañas
+   (10) y por debajo del diálogo (50): si algo falla con la hoja abierta, el
+   aviso tiene que verse encima. Alto máximo para que con la letra en
+   Mayor siga quedando fondo que tocar para cerrarla.
+   -------------------------------------------------------------------------- */
+.hoja-fondo {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(0, 0, 0, .38);
+  display: flex; align-items: flex-end;
+}
+.hoja {
+  width: 100%; max-height: 82vh; overflow-y: auto; box-sizing: border-box;
+  background: var(--tarjeta); border-top: 1px solid var(--linea);
+  border-radius: 18px 18px 0 0;
+  padding: 8px 16px calc(14px + env(safe-area-inset-bottom));
+}
+.hoja .asa { width: 36px; height: 4px; border-radius: 4px;
+             background: var(--linea-alta); margin: 0 auto 8px; }
+.hoja-cabeza { display: flex; align-items: center; justify-content: space-between; }
+.hoja-cabeza span { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.hoja-cabeza button { border: none; background: none; color: var(--tinta-2);
+                      font-size: 0.9375rem; font-family: inherit; padding: 10px 4px; }
+.hoja-todas { display: block; width: 100%; margin-top: 4px; padding: 13px;
+              border: none; background: none; color: var(--verde);
+              font-size: 0.875rem; font-weight: 600; font-family: inherit; }
 
 /* ============================================================================
    SECCIÓN E2 — Reportes: qué turno conviene
@@ -718,6 +767,19 @@ button { font-family: inherit; }
 /* Igual que `.chip.activo`: la misma selección se ve igual en toda la app. */
 .segmentado button.activo { border-color: var(--verde); background: var(--verde-suave);
                             color: var(--verde); font-weight: 600; }
+
+/* El día en que empieza la semana de pago: siete letras, la misma apariencia
+   de selección que todo lo demás. 2.75rem de alto para llegar a los 44 puntos
+   de toque; el ancho lo pone la pantalla. */
+.siete { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.siete button {
+  height: 2.75rem; padding: 0; border: 1px solid var(--linea); border-radius: 999px;
+  background: var(--papel); color: var(--tinta-2); font-family: inherit;
+  font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+}
+.siete button.activo { border-color: var(--verde); background: var(--verde-suave);
+                       color: var(--verde); }
+.confirma { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0; }
 
 /* ----------------------------------------------------------------------------
    La Ayuda: preguntas que se despliegan.
@@ -999,9 +1061,26 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
     </div>
   </div>
 
+  <!-- El aviso de respaldo. Mismo molde que el de instalar, y debajo de él:
+       mientras la app no esté instalada, instalarla es lo primero. -->
+  <div class="instalar oculto" id="aviso-respaldo">
+    <div class="etiqueta" id="respaldo-titulo"></div>
+    <p id="respaldo-texto"></p>
+    <div class="instalar-botones">
+      <button class="instalar-accion" data-t="respaldoExportar"
+              onclick="exportar()">Exportar ahora</button>
+      <button class="instalar-luego" data-t="instLuego"
+              onclick="posponerRespaldo()">Ahora no</button>
+    </div>
+  </div>
+
   <div class="cabecera">
     <span class="lugar" id="lugar"></span>
-    <button class="hoy oculto" id="btn-hoy" data-t="hoy" onclick="irAHoy()">Hoy</button>
+    <span class="cabecera-der">
+      <button class="hoy pildora oculto" id="btn-hoy" data-t="hoy" onclick="irAHoy()">Hoy</button>
+      <button class="pildora" data-t="ayudaBoton"
+              onclick="abrirHojaAyuda('semana')">Ayuda</button>
+    </span>
   </div>
 
   <div class="semana-nav">
@@ -1035,6 +1114,8 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
 <section id="p-reportes" class="oculto">
   <div class="cabecera">
     <span class="lugar" data-t="reportes">Reportes</span>
+    <button class="pildora" data-t="ayudaBoton"
+            onclick="abrirHojaAyuda('reportes')">Ayuda</button>
   </div>
   <div class="chips rep-periodos" id="rep-periodos"></div>
 
@@ -1062,7 +1143,11 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
 <section id="p-turno" class="oculto">
   <div class="barra-titulo">
     <span class="fecha" id="turno-fecha"></span>
-    <button data-t="cerrar" onclick="cerrarTurno()">Cerrar</button>
+    <span class="cabecera-der">
+      <button class="pildora" data-t="ayudaBoton"
+              onclick="abrirHojaAyuda('turno')">Ayuda</button>
+      <button data-t="cerrar" onclick="cerrarTurno()">Cerrar</button>
+    </span>
   </div>
 
   <div class="tarjeta">
@@ -1141,7 +1226,11 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
      SECCIÓN K — Pantalla: AJUSTES
      ====================================================================== -->
 <section id="p-ajustes" class="oculto">
-  <div class="barra-titulo"><span class="fecha" data-t="ajustes">Ajustes</span></div>
+  <div class="barra-titulo">
+    <span class="fecha" data-t="ajustes">Ajustes</span>
+    <button class="pildora" data-t="ayudaBoton"
+            onclick="abrirHojaAyuda('ajustes')">Ayuda</button>
+  </div>
 
   <h2 class="seccion" data-t="trabajo">Trabajo</h2>
   <div class="tarjeta">
@@ -1153,6 +1242,15 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
       <label class="etiqueta" data-t="sueldoHora" for="a-tarifa">Sueldo por hora</label>
       <input type="text" id="a-tarifa" inputmode="decimal"
              onchange="guardarAjustes()" placeholder="0.00">
+    </div>
+    <!-- Siete letras en vez de un selector: elegir es un toque y se ven las
+         siete a la vez. La frase de debajo confirma el rango entero, porque
+         una letra sola (M, X) puede dudarse. -->
+    <div class="campo">
+      <span class="etiqueta" data-t="inicioSemana"
+            style="display:block; margin-bottom:7px">La semana de pago empieza el</span>
+      <div class="siete" id="a-inicio-semana"></div>
+      <p class="confirma" id="a-inicio-confirma"></p>
     </div>
 
     <label class="check">
@@ -1356,6 +1454,22 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
      escondidos que mantener sincronizados. -->
 <div class="globo oculto" id="globo" role="tooltip"></div>
 
+<!-- La hoja de ayuda de cada pantalla. Una sola para toda la app, igual que el
+     globo y el diálogo: se le cambian las preguntas según la pantalla que la
+     abrió. Tocar el fondo la cierra. -->
+<div class="hoja-fondo oculto" id="hoja-ayuda" onclick="if (event.target === this) cerrarHojaAyuda()">
+  <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+    <div class="asa" aria-hidden="true"></div>
+    <div class="hoja-cabeza">
+      <span id="hoja-titulo"></span>
+      <button data-t="cerrar" onclick="cerrarHojaAyuda()">Cerrar</button>
+    </div>
+    <div id="hoja-lista"></div>
+    <button class="hoja-todas" data-t="verTodas"
+            onclick="verTodaLaAyuda()">Ver todas las preguntas</button>
+  </div>
+</div>
+
 <!-- El diálogo. Uno solo para toda la app: se le cambia el texto y los botones.
      Va fuera de las pantallas para que se vea desde cualquiera de ellas. -->
 <div class="dialogo-fondo oculto" id="dialogo" role="dialog" aria-modal="true">
@@ -1378,6 +1492,7 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
 
 
 <script src="logica.js"></script>
+<script src="textos.js"></script>
 <script>
 /* ============================================================================
    SECCIÓN M — Los datos
@@ -1392,412 +1507,12 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
    ========================================================================== */
 
 /* ============================================================================
-   SECCIÓN M0 — Los textos en los dos idiomas
+   SECCIÓN M0 — Los textos en los dos idiomas: viven en textos.js
    ----------------------------------------------------------------------------
-   Aquí no hay ningún traductor automático. Cada frase está escrita a mano en
-   los dos idiomas, y por eso el vocabulario del oficio queda bien: un
-   traductor automático convertiría "tip-out" en "propina fuera" y "busser" en
-   cualquier cosa.
-
-   Regla para el futuro: **ningún texto que vea el usuario se escribe suelto en
-   el código.** Se le pone una clave aquí y se llama con `t('clave')`. Si un
-   texto se cuela sin traducir, la app se ve mitad en español y mitad en
-   inglés, que es peor que estar entera en el idioma equivocado.
-
-   Los nombres de los roles (Busser, Barra…) NO se traducen: son datos que
-   escribe el usuario, no textos de la app.
+   La tabla `TEXTOS` se mudó a su propio archivo. La regla sigue igual:
+   **ningún texto que vea el usuario se escribe suelto en el código.** Se le
+   pone una clave en textos.js, en los dos idiomas, y se llama con `t('clave')`.
    ========================================================================== */
-
-const TEXTOS = {
-  es: {
-    // Pantalla de la semana
-    semana: 'Semana', ajustes: 'Ajustes', hoy: 'Hoy',
-    netoSemana: 'Neto de la semana',
-    pista: 'Toca un día para registrar el turno.',
-    sinTurnos: 'Sin turnos esta semana',
-    turno: 'turno', turnos: 'turnos',
-    queSemanaPasada: 'que la semana pasada',
-    mostrarMas: 'Mostrar más estadísticas', mostrarMenos: 'Mostrar menos',
-    mejorDia: 'Mejor día', conEn: 'con', enHoras: 'en',
-    semanaAnterior: 'Semana anterior', semanaSiguiente: 'Semana siguiente',
-    letrasDias: ['L','M','X','J','V','S','D'],
-    reportes: 'Reportes',
-    diagnostico: 'Medidas de la pantalla. Mándale una captura de esto a quien te pasó la app:',
-    repPorDia: 'Por día de la semana', repFranjas: 'Mañana o tarde',
-    rep30: '30 días', rep90: '90 días', repAno: '1 año', repTodo: 'Todo',
-    repDia: 'Día', repPorHora: 'Por hora', repTurnos: 'Turnos', repPorTurno: 'Por turno',
-    repEtiquetaPropina: 'Tu mejor día · propina por hora',
-    repEtiquetaTotal: 'Tu mejor día · total por hora',
-    repContra: 'Los %1, en %2 turnos',
-    repPocosDatos: 'pocos datos',
-    repSinMejor: 'Todavía no hay un día con 3 turnos o más en este período. Con menos, comparar días es adivinar.',
-    repSinTurnos: 'No hay turnos en este período.',
-    repPorHoraTurnos: 'por hora · %1 turnos',
-    repAclara: 'Mañana: sales a las 3 pm o antes. Tarde: sales después, dobles incluidos.',
-    repSinHora: '%1 turnos sin hora de salida no entran en mañana o tarde.',
-    nombresDias: ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
-    diasPlural: ['lunes','martes','miércoles','jueves','viernes','sábados','domingos'],
-    franjaManana: 'Mañana', franjaTarde: 'Tarde',
-
-    // Los botones del diálogo
-    dlgAceptar: 'Aceptar', dlgCancelar: 'Cancelar', dlgEntendido: 'Entendido',
-
-    // Aviso y pantalla de instalación
-    instTitulo: 'Instala la app',
-    instEntradilla: 'Tips Control funciona como una app de tu teléfono. Instálala primero: solo toma unos segundos.',
-    instSalida: 'Prefiero usarla en el navegador',
-    instSalidaPregunta: 'Sin instalar, lo que registres se queda en el navegador y NO aparecerá en la app cuando la instales. Además el teléfono puede borrarlo si pasas una semana sin abrirla. ¿Seguir así?',
-    instIOS: 'Se abre como una app normal, sin la barra del navegador.',
-    instPaso1a: 'Toca',
-    instPaso1b: 'en la barra de Safari (abajo del todo).',
-    /* Chrome y Firefox de iPhone son Safari por dentro, pero el botón de
-       compartir lo tienen arriba a la derecha y no abajo. Es la clase de detalle
-       que convierte un paso a paso en un mensaje de WhatsApp. */
-    instPaso1bOtro: 'arriba a la derecha, en la barra del navegador.',
-    instPaso2: 'Baja y toca <b>«Añadir a pantalla de inicio»</b> (en inglés, <b>Add to Home Screen</b>).',
-    instPaso3: 'Toca <b>«Añadir»</b> arriba a la derecha. Listo.',
-    instBoton: 'Instalar la app',
-    instAndroid: 'Se abre como una app normal, sin la barra del navegador.',
-    instOtro: 'Estás viendo la app dentro de otra aplicación (WhatsApp, Instagram…) y desde aquí no se puede instalar. Copia la dirección y ábrela en <b>Safari</b>.',
-    instCopiar: 'Copiar dirección',
-    instCopiada: '¡Copiada!',
-    instCopiarMal: 'No se pudo copiar sola. Esta es la dirección:',
-    instLuego: 'Ahora no',
-    /* Este es el texto que hace que el banner no se lea como un capricho. Sin
-       él, "instálala" es una molestia; con él, es la diferencia entre conservar
-       tus turnos y perderlos. */
-    instAviso: 'Importante: instálala antes de registrar turnos. Lo que apuntes aquí en el navegador no pasa a la app instalada, y el teléfono puede borrarlo si pasas una semana sin abrirla.',
-
-    // Métricas y su explicación
-    mHoras: 'Horas',        nHoras: 'Suma de la duración de cada turno.',
-    mPorHora: 'Por hora',   nPorHora: 'Todo lo que te llevas ÷ horas trabajadas.',
-    mEfectivo: 'Efectivo',  nEfectivo: 'Propina en billetes. Va a tu bolsillo esa noche.',
-    /* Nombre distinto porque es un número distinto. Si se hubiera quedado
-       llamándose "Efectivo" a secas, quien lleva semanas mirando esa cifra la
-       vería bajar de golpe y lo leería como que la app se rompió. */
-    mEfectivoNeto: 'Efectivo neto',
-    nEfectivoNeto: 'Los billetes que te quedan después de pagar el tip-out. Puede salir negativo: es la noche en que pusiste de tu cartera.',
-    mTarjeta: 'Tarjeta',    nTarjeta: 'Propina en tarjeta. Llega en el cheque.',
-    mPropinas: 'Propinas',  nPropinas: 'Efectivo + tarjeta, antes del tip-out.',
-    mTipOut: 'Tip-out',     nTipOut: 'Lo que repartiste a los ayudantes.',
-    mVentas: 'Ventas',      nVentas: 'Lo que vendiste en total.',
-    mPropVtas: 'Prop/vtas', nPropVtas: 'Propinas ÷ ventas. Qué tan bien te fue con los clientes.',
-    mSueldo: 'Sueldo',      nSueldo: 'Horas × tu tarifa por hora.',
-    mPorTurno: 'Por turno', nPorTurno: 'Promedio de lo que te llevas cada turno.',
-
-    // Formulario
-    cerrar: 'Cerrar', entrada: 'Entrada', salida: 'Salida',
-    ventasTurno: 'Ventas del turno',
-    propEfectivo: 'Propina efectivo', propTarjeta: 'Propina tarjeta',
-    ayudantes: 'Ayudantes del turno', nota: 'Nota',
-    notaEjemplo: 'Sección 3, evento privado…',
-    guardarTurno: 'Guardar turno', borrarTurno: 'Borrar este turno',
-    ayudante: 'ayudante', ayudantesPl: 'ayudantes',
-    sueldoRecibo: 'Sueldo',
-    propinasDe: 'Efectivo + tarjeta',
-    /* Antes decía "Propina sobre ventas". Es exacto y suena a contabilidad.
-       No se puso "Propina promedio" porque ese 18% no es un promedio de nada
-       —es una división, propinas ÷ ventas— y porque "promedio" ya significa
-       otra cosa en esta app: la métrica "Por turno" de la semana sí es un
-       promedio, y sí está en dólares. Una palabra, un significado. */
-    propinaDejada: 'Te dejaron de propina',
-    /* Dos nombres para la misma línea, y la que se pinta depende de si el
-       sueldo entra en la cuenta. Es la misma regla que ya cambia "Efectivo"
-       por "Efectivo neto": la etiqueta cambia con la cifra.
-       Con el sueldo apagado, ese número NO es el total del turno —el sueldo
-       aparece debajo, fuera de la suma—, así que llamarlo "Total del turno"
-       se leería como una resta que no cuadra. */
-    totalTurno: 'Total del turno',
-    teLlevas: 'Total que te llevas',
-    porHoraRecibo: 'Por hora',
-    /* Sirve para los dos casos que llevan a no tener roles: quien marcó en la
-       bienvenida que en su restaurante no se reparte, y quien los borró todos
-       sin querer. Al primero, "agrega tus roles en Ajustes" a secas lo dejaba
-       pensando que le faltaba algo por hacer. */
-    rolesEnAjustes: 'Este turno va sin tip-out. Si en tu restaurante sí se reparte, agrega los roles en Ajustes.',
-
-    // Ajustes
-    trabajo: 'Trabajo', restaurante: 'Restaurante', sueldoHora: 'Sueldo por hora',
-    idioma: 'Idioma', apariencia: 'Apariencia',
-    ayudantesTipout: 'Ayudantes y tip-out', agregarRol: '+ Agregar rol',
-    sobreVentas: 'Porcentaje sobre las ventas del turno. Con todos:',
-    respaldo: 'Respaldo',
-    soloTelefono: 'Los datos viven solo en este teléfono. Exporta de vez en cuando.',
-    ultimoRespaldoNunca: 'Todavía no has hecho ningún respaldo en este teléfono.',
-    ultimoRespaldoHoy: 'Último respaldo: hoy.',
-    ultimoRespaldoAyer: 'Último respaldo: ayer.',
-    ultimoRespaldoDias: 'Último respaldo: hace %1 días.',
-    errorExportar: 'No se pudo hacer el respaldo. Tus turnos siguen guardados en el teléfono; vuelve a intentarlo. Si se repite, manda esta pantalla por WhatsApp:',
-    exportar: 'Exportar', importar: 'Importar',
-    borrarTodo: 'Borrar todos los datos',
-    pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. Todos los derechos reservados.',
-    temaAuto: 'Automático', temaClaro: 'Claro', temaOscuro: 'Oscuro',
-    miRestaurante: 'Mi restaurante', nuevoRol: 'Nuevo rol',
-
-    // Avisos
-    faltaHora: 'Falta la hora de entrada o la de salida. Sin las dos no se puede calcular cuánto ganaste por hora.',
-    /* El nombre del campo va dentro del mensaje. Sin él, quien lo lea tiene
-       que revisar los tres números para encontrar cuál es. */
-    numeroIlegible: 'No se entendió lo que escribiste en “%1”, así que no se guardó. Lo demás está a salvo. Escribe solo números; para los centavos usa la coma o el punto, el que te dé tu teclado. Por ejemplo: 1234,50',
-    campoPorcentaje: 'Porcentaje del ayudante',
-    ventasCambio: 'Ventas hasta el cambio de equipo',
-    // Los cambios de equipo a mitad de turno
-    equipoCambio: '+ El equipo cambió durante el turno',
-    tramoHasta: 'Hasta el cambio %1',
-    tramoResto: 'Lo que queda',
-    alPorciento: 'al',
-    cambioEquipo: 'cambio', cambiosEquipoPl: 'cambios',
-    corteFalta: 'Falta escribir las ventas de un cambio de equipo. Si al final no hubo cambio, quita la línea con la ✕.',
-    corteOrden: 'Las ventas de cada cambio tienen que ser mayores que las del cambio anterior, y mayores que cero. Son las ventas acumuladas del turno hasta ese momento, tal como salen en el recibo.',
-    cortePasa: 'Un cambio de equipo no puede tener más ventas que el turno entero (%1). Revisa las ventas del turno o el número del cambio.',
-    // El incentivo
-    incentivoActivar: 'Llevar la cuenta de un incentivo',
-    incentivoNota: 'Añade un campo opcional en cada turno y su total en la semana, dentro de más estadísticas. Para los puntos que dan por vender ciertos productos.',
-    incentivoNombre: 'Cómo se llama',
-    incentivoPorDefecto: 'Puntos',
-    incentivoEnTurnos: 'en %1 de %2 turnos',
-    nIncentivo: 'La suma de lo que anotaste en cada turno de la semana. El campo es opcional: los turnos donde no anotaste nada no suman, y por eso debajo dice en cuántos lo anotaste.',
-    faltaPlata: 'Escribe al menos las ventas o la propina del turno. Un turno sin ninguna cifra no se puede guardar.',
-    confirmBorrarTurno: 'Se va a borrar el turno del',
-    confirmBorrarTurno2: 'No se puede deshacer.',
-    confirmQuitarRol: '¿Quitar "%s"? Los turnos ya guardados no cambian.',
-    confirmImportar: 'El respaldo trae %1 turnos. Se agregan solo los días que hoy tienes vacíos: nada de lo que ya está guardado se borra. Tus ajustes sí se reemplazan por los del respaldo. ¿Seguir?',
-    resumenImportar: 'Listo: %1 turnos agregados, %2 omitidos porque ese día ya tenía turno.',
-    resumenIgnorados: 'Otros %1 no se pudieron leer y se dejaron fuera.',
-    errorImportar: 'Algo falló al importar y no se cambió nada. Manda esta pantalla por WhatsApp:',
-    appAMedias: 'La app se actualizó a medias y no puede abrir sin riesgo. Tus turnos están a salvo: no se ha tocado nada. Ciérrala del todo (deslízala hacia arriba) y vuelve a abrirla.',
-    bienvenida: 'Bienvenido',
-    bienvenidaIntro: 'Antes de empezar, dos datos de tu trabajo. Sin ellos las cuentas saldrían con los valores de otro restaurante.',
-    bienvenidaTipout: 'El porcentaje de tus ventas que le pagas a cada rol. Los nombres son los más comunes: cámbialos o quita los que no existan en tu restaurante.',
-    sinTipout: 'En mi restaurante no se paga tip-out',
-    empezar: 'Empezar',
-    faltaTarifa: 'Pon tu sueldo por hora. Si te pagan solo con propinas, escribe 0.',
-    faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
-    sumarSueldo: 'Sumar el sueldo por hora al total',
-    sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
-    /* Esta casilla no es un gusto: es un dato del restaurante, como el sueldo
-       por hora. Por eso vive en Trabajo y no en Apariencia. */
-    tipOutEfectivo: 'El tip-out se paga en efectivo',
-    tipOutEfectivoNota: 'Encendido, el tip-out se descuenta del efectivo, que es de donde sale: los billetes se entregan en la mano al terminar. Apágalo si en tu restaurante lo descuentan del cheque. El total del turno no cambia en ninguno de los dos casos.',
-    verComparaciones: 'Comparar con la semana anterior',
-    tamanoLetra: 'Tamaño de la letra',
-    escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
-
-    verAyuda: 'Cómo funciona la app',
-    ayuda: 'Cómo funciona',
-
-    ayudaRegistrarP: '¿Cómo registro un turno?',
-    ayudaRegistrarR: 'Toca el día en la fila de arriba, la de los siete cuadros. Se abre el formulario de ese día: pones la hora de entrada y la de salida, las ventas, y cuánto te dieron en efectivo y en tarjeta. Marcas qué ayudantes trabajaron y guardas. No hay que escribir la fecha en ningún sitio: la fecha es el día que tocaste.',
-
-    ayudaCorregirP: '¿Puedo corregir un turno ya guardado?',
-    ayudaCorregirR: 'Sí. Toca otra vez ese mismo día y se abre con lo que habías puesto. Cambias lo que haga falta y guardas. No se crea un turno nuevo: se corrige el que había. Ahí mismo está el botón para borrarlo, si lo registraste por error.',
-
-    ayudaTipoutP: '¿Cómo calcula la app el tip-out?',
-    ayudaTipoutR: 'Cada ayudante tiene un porcentaje fijo, y ese porcentaje se aplica sobre las VENTAS del turno, no sobre tus propinas. Si esa noche no hubo bakery, su porcentaje simplemente no se cuenta y los demás no reciben más por eso. Por eso hay que marcar quién trabajó: la app suma solo los porcentajes de los que marcaste. Los porcentajes se cambian en Ajustes.',
-
-    ayudaSueldoP: '¿Por qué el total no suma mi sueldo por hora?',
-    ayudaSueldoR: 'Porque el sueldo por hora no te lo llevas esa noche: llega en el cheque, más tarde y con las retenciones ya descontadas. Sumarlo al total del turno da un número que nunca ves entero. Igual se sigue mostrando, debajo del total y sin sumarse, para que sepas cuánto va al cheque. Si prefieres verlo sumado, se enciende en Ajustes.',
-
-    ayudaPorHoraP: '¿Qué significa "por hora"?',
-    ayudaPorHoraR: 'Lo que te dejó cada hora que estuviste ahí: el total dividido entre las horas trabajadas. Es el número que sirve para decidir qué turnos te convienen. Un turno de $150 en 4 horas te deja más que uno de $180 en 8, aunque el segundo suene mejor.',
-
-    ayudaFuturoP: '¿Por qué no puedo pasar a la semana que viene?',
-    ayudaFuturoR: 'Porque todavía no ha pasado y no hay nada que apuntar. La flecha se activa cuando llega. Hacia atrás sí puedes ir todo lo que quieras.',
-
-    ayudaReportesP: '¿Cómo leo los Reportes?',
-    ayudaReportesR: 'Reportes junta tus turnos por día de la semana y te dice cuál te deja más por hora. Ese "por hora" es todo lo que ganaste ese día dividido entre todas las horas, así que un doble pesa lo que duró. Un día solo compite si tiene 3 turnos o más en el período; con menos sale "pocos datos", porque dos viernes buenos no dicen que el viernes pague más. Mañana es cuando sales a las 3 pm o antes; tarde, cuando sales después, dobles incluidos. Puedes mirar los últimos 30 días, 90 días, 1 año o todo.',
-
-    ayudaCambioPctP: 'Me cambiaron los porcentajes del tip-out, ¿qué hago?',
-    ayudaCambioPctR: 'Cámbialos en Ajustes y listo. Los turnos que ya tienes guardados NO se recalculan: cada uno se queda con el porcentaje que se pagó ese día, que es lo correcto. Lo nuevo empieza a usar el porcentaje nuevo.',
-
-    ayudaDatosP: '¿Dónde están mis datos? ¿Y si cambio de teléfono?',
-    ayudaDatosR: 'Tus turnos están guardados solo en este teléfono, no en internet: nadie más los ve, pero tampoco hay copia en ningún lado. Por eso, cada cierto tiempo entra en Ajustes y toca Exportar: sale un archivo con todo. En el iPhone, con la app instalada, se abre el menú de compartir: elige Guardar en Archivos. Guárdalo donde no lo pierdas; en Ajustes ves cuándo fue tu último respaldo. En el teléfono nuevo instalas la app y tocas Importar. Si no exportas y pierdes el teléfono, los turnos no se pueden recuperar.',
-    archivoMalo: 'Ese archivo no parece un respaldo de Tips Control. Busca el que empieza por "tips-control-" y termina en .json, el que sale al tocar Exportar. Tus turnos no se han tocado.',
-    datosIlegibles: 'No se pudieron leer los datos guardados en este teléfono. Se guardó una copia de lo que había por si se puede recuperar, así que NO borres la app ni sus datos. Manda una captura de esta pantalla antes de seguir usándola.',
-    noSeGuardo: 'No se pudo guardar en este teléfono. Puede que no quede espacio, o que estés navegando en modo privado. Lo que escribiste sigue en pantalla: apúntalo en otro sitio antes de cerrar, o libera espacio y vuelve a intentarlo.',
-    ofrecerRespaldo: 'Tienes %1 turnos guardados. ¿Quieres descargar un respaldo antes de borrarlos?',
-    respaldoAntesDeBorrar: 'Listo el respaldo. Guárdalo donde lo puedas encontrar y vuelve a tocar Borrar todos los datos cuando quieras seguir.',
-    confirmBorrarTodo: 'Se van a borrar %1 turnos de este teléfono. ¿Seguro?',
-    confirmBorrarTodo2: 'No se puede deshacer y no hay forma de recuperarlos. ¿De verdad?'
-  },
-
-  en: {
-    semana: 'Week', ajustes: 'Settings', hoy: 'Today',
-    netoSemana: 'Week take-home',
-    pista: 'Tap a day to log your shift.',
-    sinTurnos: 'No shifts this week',
-    turno: 'shift', turnos: 'shifts',
-    queSemanaPasada: 'vs. last week',
-    mostrarMas: 'Show more stats', mostrarMenos: 'Show less',
-    mejorDia: 'Best day', conEn: 'with', enHoras: 'in',
-    semanaAnterior: 'Previous week', semanaSiguiente: 'Next week',
-    letrasDias: ['M','T','W','T','F','S','S'],
-    reportes: 'Reports',
-    diagnostico: 'Screen measurements. Send a screenshot of this to whoever shared the app with you:',
-    repPorDia: 'By day of the week', repFranjas: 'Morning or evening',
-    rep30: '30 days', rep90: '90 days', repAno: '1 year', repTodo: 'All',
-    repDia: 'Day', repPorHora: 'Per hour', repTurnos: 'Shifts', repPorTurno: 'Per shift',
-    repEtiquetaPropina: 'Your best day · tips per hour',
-    repEtiquetaTotal: 'Your best day · total per hour',
-    repContra: '%1, over %2 shifts',
-    repPocosDatos: 'not enough data',
-    repSinMejor: 'No day has 3 or more shifts in this period yet. With fewer, comparing days is guessing.',
-    repSinTurnos: 'No shifts in this period.',
-    repPorHoraTurnos: 'per hour · %1 shifts',
-    repAclara: 'Morning: you leave at 3 pm or earlier. Evening: you leave later, doubles included.',
-    repSinHora: '%1 shifts without a clock-out time are not counted as morning or evening.',
-    nombresDias: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
-    diasPlural: ['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'],
-    franjaManana: 'Morning', franjaTarde: 'Evening',
-
-    mHoras: 'Hours',       nHoras: 'Total length of every shift.',
-    mPorHora: 'Per hour',  nPorHora: 'Everything you take home ÷ hours worked.',
-    mEfectivo: 'Cash',     nEfectivo: 'Cash tips. Straight to your pocket that night.',
-    mEfectivoNeto: 'Net cash',
-    nEfectivoNeto: 'The bills you keep after paying tip-out. It can go negative: that is the night you paid out of your own pocket.',
-    mTarjeta: 'Card',      nTarjeta: 'Credit card tips. They come on your paycheck.',
-    mPropinas: 'Tips',     nPropinas: 'Cash + card, before tip-out.',
-    mTipOut: 'Tip-out',    nTipOut: 'What you paid out to support staff.',
-    mVentas: 'Sales',      nVentas: 'Your total sales.',
-    mPropVtas: 'Tip %',    nPropVtas: 'Tips ÷ sales. How well your guests treated you.',
-    mSueldo: 'Wages',      nSueldo: 'Hours × your hourly rate.',
-    mPorTurno: 'Per shift', nPorTurno: 'Average take-home per shift.',
-
-    cerrar: 'Close', entrada: 'Clock in', salida: 'Clock out',
-    ventasTurno: 'Shift sales',
-    propEfectivo: 'Cash tips', propTarjeta: 'Card tips',
-    ayudantes: 'Support staff', nota: 'Note',
-    notaEjemplo: 'Section 3, private party…',
-    guardarTurno: 'Save shift', borrarTurno: 'Delete this shift',
-    ayudante: 'person', ayudantesPl: 'people',
-    sueldoRecibo: 'Wages',
-    propinasDe: 'Cash + card',
-    propinaDejada: 'Your guests tipped',
-    totalTurno: 'Shift total',
-    teLlevas: 'Your take-home',
-    porHoraRecibo: 'Per hour',
-    rolesEnAjustes: 'This shift has no tip-out. If your restaurant does share tips, add the roles in Settings.',
-
-    trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
-    // Dialog buttons
-    dlgAceptar: 'OK', dlgCancelar: 'Cancel', dlgEntendido: 'Got it',
-
-    // Install prompt and screen
-    instTitulo: 'Install the app',
-    instEntradilla: 'Tips Control works like an app on your phone. Install it first: it only takes a few seconds.',
-    instSalida: 'I would rather use it in the browser',
-    instSalidaPregunta: 'Without installing, whatever you log stays in the browser and will NOT show up in the app once you install it. Your phone may also delete it if you go a week without opening it. Continue anyway?',
-    instIOS: 'It opens like a normal app, with no browser bar.',
-    instPaso1a: 'Tap',
-    instPaso1b: 'in the Safari bar (at the very bottom).',
-    instPaso1bOtro: 'in the top right of the browser bar.',
-    instPaso2: 'Scroll down and tap <b>Add to Home Screen</b>.',
-    instPaso3: 'Tap <b>Add</b> in the top right. Done.',
-    instBoton: 'Install the app',
-    instAndroid: 'It opens like a normal app, with no browser bar.',
-    instOtro: 'You are viewing the app inside another application (WhatsApp, Instagram…) and it cannot be installed from here. Copy the address and open it in <b>Safari</b>.',
-    instCopiar: 'Copy address',
-    instCopiada: 'Copied!',
-    instCopiarMal: 'Could not copy it. Here is the address:',
-    instLuego: 'Not now',
-    instAviso: 'Important: install it before logging any shifts. What you enter here in the browser does not carry over to the installed app, and your phone may delete it if you go a week without opening it.',
-
-    idioma: 'Language', apariencia: 'Appearance',
-    ayudantesTipout: 'Support staff and tip-out', agregarRol: '+ Add role',
-    sobreVentas: 'Percentage of shift sales. With everyone:',
-    respaldo: 'Backup',
-    soloTelefono: 'Your data lives only on this phone. Export it now and then.',
-    ultimoRespaldoNunca: 'You have not made a backup on this phone yet.',
-    ultimoRespaldoHoy: 'Last backup: today.',
-    ultimoRespaldoAyer: 'Last backup: yesterday.',
-    ultimoRespaldoDias: 'Last backup: %1 days ago.',
-    errorExportar: 'The backup could not be made. Your shifts are still saved on this phone; try again. If it happens again, send this screen over WhatsApp:',
-    exportar: 'Export', importar: 'Import',
-    borrarTodo: 'Delete all data',
-    pieDerechos: 'Tips Control %1\n© 2026 Kevin Rincón. All rights reserved.',
-    temaAuto: 'Automatic', temaClaro: 'Light', temaOscuro: 'Dark',
-    miRestaurante: 'My restaurant', nuevoRol: 'New role',
-
-    faltaHora: 'Clock-in or clock-out time is missing. Without both, hourly earnings can’t be calculated.',
-    numeroIlegible: 'What you typed in “%1” wasn’t understood, so it wasn’t saved. Everything else is safe. Use numbers only; for cents use a comma or a period, whichever your keyboard gives you. For example: 1234.50',
-    campoPorcentaje: 'Helper percentage',
-    ventasCambio: 'Sales up to the team change',
-    equipoCambio: '+ The team changed during the shift',
-    tramoHasta: 'Up to change %1',
-    tramoResto: 'What is left',
-    alPorciento: 'at',
-    cambioEquipo: 'change', cambiosEquipoPl: 'changes',
-    corteFalta: 'One team change is missing its sales figure. If there was no change after all, remove the line with the ✕.',
-    corteOrden: 'Each change must have higher sales than the previous one, and above zero. These are the shift sales accumulated up to that moment, as printed on the receipt.',
-    cortePasa: 'A team change cannot have more sales than the whole shift (%1). Check the shift sales or the change figure.',
-    incentivoActivar: 'Track an incentive count',
-    incentivoNota: 'Adds an optional field on every shift and its weekly total, inside more stats. For the points earned by selling certain products.',
-    incentivoNombre: 'What to call it',
-    incentivoPorDefecto: 'Points',
-    incentivoEnTurnos: 'on %1 of %2 shifts',
-    nIncentivo: 'The sum of what you entered on each shift this week. The field is optional: shifts where you entered nothing do not add up, which is why it says how many you filled in.',
-    faltaPlata: 'Enter at least the sales or the tips for this shift. A shift with no figures can’t be saved.',
-    confirmBorrarTurno: 'This will delete the shift from',
-    confirmBorrarTurno2: 'It cannot be undone.',
-    confirmQuitarRol: 'Remove "%s"? Saved shifts stay as they are.',
-    confirmImportar: 'The backup has %1 shifts. Only days that are empty right now will be added: nothing already saved gets deleted. Your settings will be replaced by the ones in the backup. Continue?',
-    resumenImportar: 'Done: %1 shifts added, %2 skipped because that day already had a shift.',
-    resumenIgnorados: 'Another %1 could not be read and were left out.',
-    errorImportar: 'Something failed during the import and nothing was changed. Send this screen over WhatsApp:',
-    appAMedias: 'The app updated halfway and cannot open safely. Your shifts are fine: nothing was touched. Close it completely (swipe it up) and open it again.',
-    bienvenida: 'Welcome',
-    bienvenidaIntro: 'Before you start, two things about your job. Without them the math would use another restaurant’s numbers.',
-    bienvenidaTipout: 'The percentage of your sales you pay each role. These are the most common names: change them or remove the ones your restaurant doesn’t have.',
-    sinTipout: 'My restaurant has no tip-out',
-    empezar: 'Start',
-    faltaTarifa: 'Enter your hourly wage. If you are paid in tips only, type 0.',
-    faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
-    sumarSueldo: 'Add hourly wage to the total',
-    sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
-    tipOutEfectivo: 'Tip-out is paid in cash',
-    tipOutEfectivoNota: 'When on, tip-out comes out of your cash, which is where it actually comes from: the bills are handed over at the end of the shift. Turn it off if your restaurant deducts it from your paycheck. Either way, the shift total stays the same.',
-    verComparaciones: 'Compare with last week',
-    tamanoLetra: 'Text size',
-    escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',
-
-    verAyuda: 'How the app works',
-    ayuda: 'How it works',
-
-    ayudaRegistrarP: 'How do I log a shift?',
-    ayudaRegistrarR: 'Tap the day in the row of seven boxes at the top. That day’s form opens: enter your clock-in and clock-out times, the sales, and how much you got in cash and on cards. Mark which helpers worked and save. You never type a date anywhere: the date is the day you tapped.',
-
-    ayudaCorregirP: 'Can I fix a shift I already saved?',
-    ayudaCorregirR: 'Yes. Tap that same day again and it opens with what you entered. Change what you need and save. It does not create a second shift: it corrects the one that was there. The button to delete it is right there too, if you logged it by mistake.',
-
-    ayudaTipoutP: 'How does the app calculate tip-out?',
-    ayudaTipoutR: 'Each helper has a fixed percentage, and that percentage applies to the SALES of the shift, not to your tips. If there was no bakery that night, their percentage simply isn’t counted, and the others don’t get more because of it. That’s why you mark who worked: the app only adds up the percentages you marked. You change the percentages in Settings.',
-
-    ayudaSueldoP: 'Why doesn’t the total include my hourly wage?',
-    ayudaSueldoR: 'Because you don’t take the hourly wage home that night: it arrives in your paycheck, later and with withholdings already taken out. Adding it to the shift total gives you a number you never see whole. It’s still shown, below the total and not added in, so you know what goes to the check. If you prefer it added, you can turn that on in Settings.',
-
-    ayudaPorHoraP: 'What does "per hour" mean?',
-    ayudaPorHoraR: 'What each hour you were there left you: the total divided by hours worked. It’s the number that tells you which shifts are worth taking. A $150 shift in 4 hours leaves you more than a $180 one in 8, even though the second sounds better.',
-
-    ayudaFuturoP: 'Why can’t I move to next week?',
-    ayudaFuturoR: 'Because it hasn’t happened yet and there’s nothing to log. The arrow turns on when it arrives. You can go back as far as you like.',
-
-    ayudaReportesP: 'How do I read Reports?',
-    ayudaReportesR: 'Reports groups your shifts by day of the week and tells you which one pays you the most per hour. That "per hour" is everything you made that day divided by all the hours, so a double counts for as long as it lasted. A day only competes if it has 3 or more shifts in the period; with fewer it says "not enough data", because two good Fridays don’t mean Friday pays more. Morning is when you leave at 3 pm or earlier; evening, when you leave later, doubles included. You can look at the last 30 days, 90 days, 1 year or everything.',
-
-    ayudaCambioPctP: 'My tip-out percentages changed. What do I do?',
-    ayudaCambioPctR: 'Change them in Settings and that’s it. Shifts you already saved are NOT recalculated: each one keeps the percentage that was actually paid that day, which is the correct behavior. New shifts start using the new percentage.',
-
-    ayudaDatosP: 'Where is my data? What if I change phones?',
-    ayudaDatosR: 'Your shifts are saved only on this phone, not on the internet: nobody else sees them, but there’s no copy anywhere either. So every once in a while go to Settings and tap Export: you get a file with everything. On an iPhone, with the app installed, the share menu opens: choose Save to Files. Keep it somewhere safe; Settings shows when your last backup was. On the new phone you install the app and tap Import. If you don’t export and you lose the phone, the shifts cannot be recovered.',
-    archivoMalo: 'That file doesn’t look like a Tips Control backup. Look for the one starting with "tips-control-" and ending in .json, the one you get from Export. Your shifts were not touched.',
-    datosIlegibles: 'The data saved on this phone could not be read. A copy of what was there has been kept in case it can be recovered, so do NOT delete the app or its data. Send a screenshot of this message before you keep using it.',
-    noSeGuardo: 'Could not save on this phone. You may be out of space, or browsing in private mode. What you typed is still on screen: write it down somewhere before closing, or free up space and try again.',
-    ofrecerRespaldo: 'You have %1 shifts saved. Do you want to download a backup before deleting them?',
-    respaldoAntesDeBorrar: 'Backup done. Save it somewhere you can find it, then tap Delete all data again when you are ready.',
-    confirmBorrarTodo: 'This will delete %1 shifts from this phone. Sure?',
-    confirmBorrarTodo2: 'It cannot be undone and there is no way to get them back. Really?'
-  }
-};
 
 /** Devuelve el texto de una clave en el idioma activo. */
 function t(clave) {
@@ -1806,7 +1521,29 @@ function t(clave) {
   // Si a un idioma le falta una clave, cae al español en vez de mostrar la
   // clave cruda: es preferible una palabra en el idioma equivocado a ver
   // "mPorHora" en pantalla.
-  return tabla[clave] !== undefined ? tabla[clave] : TEXTOS.es[clave];
+  const texto = tabla[clave] !== undefined ? tabla[clave] : TEXTOS.es[clave];
+  if (texto === undefined) return faltaTexto(clave);
+  return texto;
+}
+
+/* Si falta un texto.
+
+   Que no esté ni en español es que textos.js llegó más viejo que index.html:
+   la caché del teléfono le dio uno y no el otro, igual que le pasó a logica.js
+   el 8 de agosto. Antes de partir el archivo eso no podía pasar; ahora sí, y
+   sin esto la pantalla diría "undefined" sin que nadie supiera por qué.
+
+   Se avisa UNA vez (la bandera va antes de `avisar`, que también llama a
+   `t()`) y se devuelve texto vacío: un hueco se nota menos que "undefined", y
+   el aviso ya explicó qué hacer. */
+let avisoFaltaTexto = false;
+function faltaTexto(clave) {
+  console.error('Falta el texto:', clave);
+  if (!avisoFaltaTexto) {
+    avisoFaltaTexto = true;
+    avisar(TEXTOS.es.appAMedias !== undefined ? t('appAMedias') : String(clave));
+  }
+  return '';
 }
 
 /** Singular o plural, en el idioma activo. */
@@ -1834,7 +1571,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v33';
+const VERSION_APP = 'v34';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1916,7 +1653,14 @@ const TRABAJO_POR_DEFECTO = {
      resuelve al pintarlo. Un nombre guardado en español no debe cambiar
      porque alguien mire la app en inglés, pero uno que nadie ha escrito sí. */
   incentivoActivo: false,
-  incentivoNombre: ''
+  incentivoNombre: '',
+
+  /* El día en que empieza la semana de pago, con la numeración de `getDay()`:
+     0 domingo, 1 lunes… 6 sábado. Lunes de fábrica porque es lo que la app
+     hizo siempre. Va en el trabajo y no en las preferencias porque no es un
+     gusto de la persona: lo decide quien paga, y con dos trabajos cada uno
+     tendría el suyo. Campo SUELTO, por la misma razón que los dos de arriba. */
+  inicioSemana: 1
 };
 
 /** Cómo se llama el contador del incentivo en esta app. */
@@ -1966,8 +1710,21 @@ const TEMAS = [
    las últimas son las que aparecen meses después ("me cambiaron los
    porcentajes", "cambié de teléfono"). Ordenarlas por antigüedad del usuario y
    no por tema hace que casi nadie tenga que bajar hasta el final. */
-const AYUDA = ['registrar', 'corregir', 'tipout', 'sueldo',
-               'porHora', 'futuro', 'reportes', 'cambioPct', 'datos'];
+const AYUDA = ['registrar', 'corregir', 'ventas', 'tipout', 'sueldo',
+               'porHora', 'privacidad', 'futuro', 'equipo', 'semanaPago',
+               'reportes', 'cambioPct', 'datos'];
+
+/* Las preguntas que salen en la hoja de ayuda de cada pantalla: las que
+   alguien se hace MIRANDO esa pantalla. Salen de la lista de arriba, así que
+   una respuesta se escribe una sola vez aunque aparezca en dos hojas. En
+   Ajustes va primero "¿Quién ve mis datos?": es lo que pregunta alguien a
+   quien le llegó la app de un desconocido. */
+const AYUDA_POR_PANTALLA = {
+  semana:   ['registrar', 'corregir', 'porHora', 'futuro'],
+  turno:    ['ventas', 'tipout', 'equipo', 'corregir'],
+  reportes: ['reportes', 'porHora'],
+  ajustes:  ['privacidad', 'semanaPago', 'sueldo', 'cambioPct', 'datos']
+};
 
 /* Tres tamaños, no un deslizador.
    Un deslizador tiene infinitas posiciones y no se pueden probar todas: alguna
@@ -1998,7 +1755,7 @@ const HORAS_POR_DEFECTO = {
 
 /* Estado de pantalla: no se guarda, se pierde al cerrar y está bien. */
 let pantalla = 'semana';
-let lunes = '';           // el lunes de la semana que se está viendo
+let semanaVista = '';     // el primer día de la semana que se está viendo
 let fechaAbierta = '';    // el día que se está editando
 let rolesActivos = [];
 
@@ -2156,6 +1913,20 @@ function locale() {
 function $(n)  { return USD.format(Number(n) || 0); }
 function $0(n) { return USD0.format(Number(n) || 0); }
 
+/**
+ * Texto de la persona listo para meterlo en HTML armado a mano.
+ * Lo que escribe alguien (el nombre del incentivo) no puede ir tal cual dentro
+ * de un `innerHTML`: unas comillas cerraban el `aria-label` antes de tiempo, un
+ * "<" se comía el resto del nombre, y un respaldo manipulado podía colar
+ * código. Donde se pueda, mejor `textContent`; esto es para cuando el HTML se
+ * arma como texto.
+ */
+function escaparHTML(texto) {
+  return String(texto).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
 function hoy() {
   const f = new Date();
   return `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}`
@@ -2200,14 +1971,24 @@ function soloDia(texto) {
    SECCIÓN O — Navegación
    ========================================================================== */
 
-function irA(nombre) { pantalla = nombre; pintar(); window.scrollTo(0, 0); }
+function irA(nombre) {
+  pantalla = nombre;
+  hojaAyuda = null;   // cambiar de pantalla cierra la hoja de la anterior
+  pintar();
+  window.scrollTo(0, 0);
+}
 
 function cambiarSemana(cuantas) {
-  lunes = sumarDias(lunes, cuantas * 7);
+  semanaVista = sumarDias(semanaVista, cuantas * 7);
   pintar();
 }
 
-function irAHoy() { lunes = lunesDeLaSemana(hoy()); pintar(); }
+function irAHoy() { semanaVista = inicioDeEstaSemana(hoy()); pintar(); }
+
+/** El primer día de la semana de pago de una fecha, con el corte de Ajustes. */
+function inicioDeEstaSemana(fecha) {
+  return inicioDeSemana(fecha, datos.trabajo.inicioSemana);
+}
 
 /**
  * Aplica el tema elegido poniendo `data-tema` en la etiqueta <html>.
@@ -2303,6 +2084,23 @@ function cambiarContarSueldo() {
 function cambiarTipOutEnEfectivo() {
   datos.trabajo.tipOutEnEfectivo =
     !!document.getElementById('a-tipout-efectivo').checked;
+  guardar();
+  pintar();
+}
+
+/**
+ * Cambia el día en que empieza la semana de pago (0 domingo … 6 sábado).
+ *
+ * La vista no puede quedarse apuntando a una fecha que ya no es principio de
+ * semana, así que se recoloca en la semana nueva que contiene lo que se
+ * estaba mirando. Si se estaba mirando la semana en curso, el ancla es HOY y
+ * no el primer día viejo: pasar de lunes a jueves un jueves dejaría a la
+ * persona mirando la semana pasada sin haber tocado las flechas.
+ */
+function cambiarInicioSemana(dia) {
+  const ancla = semanaVista === inicioDeEstaSemana(hoy()) ? hoy() : semanaVista;
+  datos.trabajo.inicioSemana = dia;
+  semanaVista = inicioDeEstaSemana(ancla);
   guardar();
   pintar();
 }
@@ -2595,7 +2393,7 @@ function guardarTurno() {
   if (!guardar()) return;
   // Al guardar, saltamos a la semana de ese turno: si corregiste un día de
   // otra semana, quieres verlo, no volver a donde estabas.
-  lunes = lunesDeLaSemana(turno.fecha);
+  semanaVista = inicioDeEstaSemana(turno.fecha);
   irA('semana');
 }
 
@@ -2935,9 +2733,14 @@ function descargar(texto, nombre) {
  * turnos TRAÍA el archivo, nunca cuántos iba a destruir. Ahora se fusiona: el
  * archivo solo puede llenar días vacíos (ver `fusionarTurnos` en logica.js).
  *
- * Los ajustes sí se reemplazan por los del respaldo, y eso es seguro porque
- * cada turno guarda congelados su tarifa y su tip-out: cambiar los porcentajes
- * de hoy no mueve ni un centavo de lo ya registrado.
+ * Los ajustes (sueldo, ayudantes, porcentajes, preferencias) solo se traen
+ * del archivo si el teléfono todavía no tiene turnos: es el teléfono nuevo que
+ * se está restaurando. Con turnos, se quedan los del teléfono. Antes se
+ * reemplazaban siempre, con el argumento de que cada turno guarda congelados
+ * su tarifa y su tip-out; eso protege los turnos viejos, pero no los que se
+ * registran DESPUÉS: importar un respaldo de junio para recuperar un día
+ * devolvía los porcentajes de junio, y los turnos siguientes salían con el
+ * tip-out equivocado. Ver DECISIONES.md, sección 8.
  */
 function importar(evento) {
   const archivo = evento.target.files[0];
@@ -2960,7 +2763,8 @@ function importar(evento) {
       return;
     }
 
-    preguntar(rellenar(t('confirmImportar'), leido.turnos.length),
+    const clave = datos.turnos.length === 0 ? 'confirmImportarNuevo' : 'confirmImportar';
+    preguntar(rellenar(t(clave), leido.turnos.length),
               () => hacerImportacion(leido));
   };
 
@@ -2984,6 +2788,8 @@ function hacerImportacion(leido) {
   // Un error que se anuncia es un problema; un error mudo es un misterio, y
   // los misterios con dinero de por medio destruyen la confianza en la app.
   try {
+    // Se pregunta ANTES de fusionar: después, el teléfono ya tiene turnos.
+    const traerAjustes = datos.turnos.length === 0;
     const fusion = fusionarTurnos(datos.turnos, leido.turnos);
     /* La fecha del último respaldo no se copia del archivo a ciegas: se queda
        la más reciente de las dos. Importar un respaldo de junio en un teléfono
@@ -2994,7 +2800,9 @@ function hacerImportacion(leido) {
     const ultimo = [datos.ultimoRespaldo, leido.ultimoRespaldo]
       .filter(f => /^\d{4}-\d{2}-\d{2}$/.test(String(f)))
       .sort().pop();
-    datos = { ...datos, ...leido, turnos: fusion.turnos };
+    datos = traerAjustes
+      ? { ...datos, ...leido, turnos: fusion.turnos }
+      : { ...datos, turnos: fusion.turnos };
     if (ultimo) datos.ultimoRespaldo = ultimo;
     else delete datos.ultimoRespaldo;
     /* Las dos mezclas van también aquí, y este es el camino por el que ya se
@@ -3424,6 +3232,44 @@ const ICONO_COMPARTIR =
   '<path d="M12 15V3"/><path d="m8 7 4-4 4 4"/>' +
   '<path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 
+/** Si el aviso de instalar de la semana está a la vista. Lo mira también el
+    aviso de respaldo, que se aparta mientras este esté puesto. */
+function bannerInstalarVisible() {
+  return debeInstalar() || (instalarOculto && !estaInstalada() && esIOS());
+}
+
+/* El aviso de respaldo en la semana.
+
+   La línea "Último respaldo" de Ajustes solo la ve quien entra a Ajustes, y
+   alguien a quien le pasaron la app no va a entrar a buscarla. Perder el
+   teléfono con meses de turnos es lo peor que le puede pasar a alguien en
+   esta app, así que el aviso sale donde se mira todos los días. Cuándo, lo
+   decide `avisoRespaldo()` en logica.js.
+
+   Se aparta mientras esté el aviso de instalar: sin instalar, respaldar va
+   después (lo que se apunta en el navegador ni siquiera llega a la app). */
+function pintarAvisoRespaldo() {
+  const caja = document.getElementById('aviso-respaldo');
+  const aviso = bannerInstalarVisible() ? null
+    : avisoRespaldo(datos.turnos, datos.ultimoRespaldo, datos.respaldoPospuesto, hoy());
+  caja.classList.toggle('oculto', !aviso);
+  if (!aviso) return;
+
+  const nunca = aviso.dias === null;
+  document.getElementById('respaldo-titulo').textContent = nunca
+    ? t('respaldoNuncaTitulo') : rellenar(t('respaldoViejoTitulo'), aviso.dias);
+  document.getElementById('respaldo-texto').textContent =
+    t(nunca ? 'respaldoNuncaTexto' : 'respaldoViejoTexto');
+}
+
+/** "Ahora no": lo esconde unos días (DIAS_POSPONER_RESPALDO). Se guarda porque
+    un aviso que vuelve cada vez que se abre la app se aprende a ignorar. */
+function posponerRespaldo() {
+  datos.respaldoPospuesto = hoy();
+  guardar();
+  pintar();
+}
+
 function pintarBanner() {
   const caja   = document.getElementById('instalar');
   const cuerpo = document.getElementById('inst-cuerpo');
@@ -3436,7 +3282,7 @@ function pintarBanner() {
      navegador" en la pantalla del principio: para los demás, la pantalla ya
      hizo su trabajo. Sigue haciendo falta porque esa decisión se toma en
      caliente y conviene poder cambiar de idea sin cerrar la app. */
-  const vale = debeInstalar() || (instalarOculto && !estaInstalada() && esIOS());
+  const vale = bannerInstalarVisible();
 
   caja.classList.toggle('oculto', !vale);
   if (!vale) return;
@@ -3514,25 +3360,27 @@ function pintar() {
      suya sino de la sección que lo contiene, y el día que se mueva de sitio
      dejaría de actualizarse sin dar ningún error. */
   pintarBanner();
+  pintarAvisoRespaldo();
   if (pantalla === 'reportes')   pintarReportes();
   if (pantalla === 'turno')      pintarTurno();
   if (pantalla === 'ajustes')    pintarAjustes();
   if (pantalla === 'bienvenida') pintarBienvenida();
   if (pantalla === 'ayuda')      pintarAyuda();
   if (pantalla === 'instalacion') pintarInstalacion();
+  pintarHojaAyuda();
 }
 
 /* --- La semana --- */
 function pintarSemana() {
-  const fechas = diasDeLaSemana(lunes);
+  const fechas = diasDeLaSemana(semanaVista);
   const deLaSemana = datos.turnos.filter(t => fechas.includes(t.fecha));
   const r = resumir(deLaSemana);
 
   document.getElementById('lugar').textContent = datos.trabajo.nombre;
   document.getElementById('rango').textContent =
-    `${diaYMes(lunes)} – ${diaYMes(fechas[6])}`;
+    `${diaYMes(semanaVista)} – ${diaYMes(fechas[6])}`;
 
-  const esSemanaActual = lunes === lunesDeLaSemana(hoy());
+  const esSemanaActual = semanaVista === inicioDeEstaSemana(hoy());
   document.getElementById('btn-hoy').classList.toggle('oculto', esSemanaActual);
   // No dejamos avanzar más allá de la semana en curso: registrar propinas del
   // futuro no significa nada, y un toque de más en la flecha te dejaría
@@ -3591,7 +3439,9 @@ function pintarSemana() {
 
     const letra = document.createElement('span');
     letra.className = 'letra';
-    letra.textContent = t('letrasDias')[i];
+    // Por la fecha y no por la posición: con la semana empezando en domingo,
+    // la primera celda es una D, no una L.
+    letra.textContent = t('letrasDias')[numeroDelDia(fecha)];
 
     const numero = document.createElement('span');
     numero.className = 'num';
@@ -3628,7 +3478,7 @@ function pintarSemana() {
 
   // Comparación con la semana anterior: un número solo no dice si fue buena
   // semana; comparado con el anterior, sí.
-  const anteriores = diasDeLaSemana(sumarDias(lunes, -7));
+  const anteriores = diasDeLaSemana(sumarDias(semanaVista, -7));
   const rAnterior = resumir(datos.turnos.filter(x => anteriores.includes(x.fecha)));
   const cifrasAnterior = cifrasPrincipales(rAnterior, conSueldo);
   /* Se compara si hay con qué **y** si la persona quiere.
@@ -3684,7 +3534,7 @@ function pintarSemana() {
               + `${formato(Math.abs(dif))}</span>`;
       }
     }
-    const nombre = etiqueta !== undefined ? etiqueta : t(claveEtiqueta);
+    const nombre = escaparHTML(etiqueta !== undefined ? etiqueta : t(claveEtiqueta));
     return `<div class="metrica">`
          + `<div class="cabeza"><span class="etiqueta">${nombre}</span>`
          + `<button class="info" onclick="mostrarNota('${claveNota}', this)"`
@@ -3825,16 +3675,19 @@ function pintarReportes() {
   // Sin turnos en el período, las tablas serían siete filas de guiones.
   document.getElementById('rep-cuerpo').classList.toggle('oculto', turnos.length === 0);
 
-  /* La tabla: siempre siete filas, en el mismo orden que la semana. Un día sin
+  /* La tabla: siempre siete filas, en el mismo orden que la semana (la de
+     pago: si empieza en domingo, el domingo va primero). Un día sin
      suficientes turnos se apaga en vez de esconderse, para que cada día esté
      siempre en el mismo sitio. */
+  const primero = numeroDelDia(inicioDeEstaSemana(hoy()));
+  const enOrden = [0, 1, 2, 3, 4, 5, 6].map(i => porDia[(primero + i) % 7]);
   const minimo = MINIMO_TURNOS_REPORTE;
   let filas = `<div class="rep-fila titulos">`
     + `<span class="etiqueta">${t('repDia')}</span>`
     + `<span class="etiqueta">${t('repPorHora')}</span>`
     + `<span class="etiqueta">${t('repTurnos')}</span>`
     + `<span class="etiqueta">${t('repPorTurno')}</span></div>`;
-  porDia.forEach(({ clave, resumen: r }) => {
+  enOrden.forEach(({ clave, resumen: r }) => {
     const nombre = t('nombresDias')[clave];
     if (r.turnos < minimo) {
       const hora = r.turnos === 0 ? '—' : `<span class="nota">${t('repPocosDatos')}</span>`;
@@ -4248,7 +4101,36 @@ function pintarUltimoRespaldo() {
   else linea.textContent = rellenar(t('ultimoRespaldoDias'), dias);
 }
 
+/* Las siete letras del día en que empieza la semana de pago. En el orden de
+   la fila de la semana (L a D); cada botón lleva el número de `getDay()`, que
+   es lo que se guarda. */
+const DIAS_EN_ORDEN = [1, 2, 3, 4, 5, 6, 0];   // lunes … domingo, en getDay()
+
+function pintarInicioSemana() {
+  const caja = document.getElementById('a-inicio-semana');
+  // Un valor raro (un respaldo tocado a mano) se pinta como lunes, que es
+  // también lo que hace `inicioDeSemana` con él: la pantalla y el cálculo no
+  // pueden decir cosas distintas.
+  const elegido = DIAS_EN_ORDEN.includes(datos.trabajo.inicioSemana)
+    ? datos.trabajo.inicioSemana : 1;
+  caja.innerHTML = '';
+  DIAS_EN_ORDEN.forEach((dia, i) => {
+    const boton = document.createElement('button');
+    boton.textContent = t('letrasDias')[i];
+    boton.setAttribute('aria-label', t('nombresDias')[i]);
+    boton.className = dia === elegido ? 'activo' : '';
+    boton.onclick = () => cambiarInicioSemana(dia);
+    caja.appendChild(boton);
+  });
+  // "De domingo a sábado": el primero elegido y el de antes de él.
+  const primero = DIAS_EN_ORDEN.indexOf(elegido);
+  const ultimo = (primero + 6) % 7;
+  document.getElementById('a-inicio-confirma').textContent =
+    rellenar(t('semanaDeA'), t('diasEnFrase')[primero], t('diasEnFrase')[ultimo]);
+}
+
 function pintarAjustes() {
+  pintarInicioSemana();
   const pie = document.getElementById('pie-legal');
   pie.textContent = rellenar(t('pieDerechos'), VERSION_APP);
   pie.onclick = mostrarDiagnostico;
@@ -4377,10 +4259,17 @@ function abrirAyuda(clave) {
 }
 
 function pintarAyuda() {
-  const lista = document.getElementById('ayuda-lista');
+  pintarPreguntas('ayuda-lista', AYUDA);
+}
+
+/* Las preguntas plegadas, en la Ayuda completa o en la hoja de una pantalla.
+   Es el mismo dibujo en los dos sitios a propósito: quien aprendió a abrir
+   una pregunta en un lado ya sabe hacerlo en el otro. */
+function pintarPreguntas(idCaja, claves) {
+  const lista = document.getElementById(idCaja);
   lista.innerHTML = '';
 
-  AYUDA.forEach(clave => {
+  claves.forEach(clave => {
     const mayus = clave.charAt(0).toUpperCase() + clave.slice(1);
     const abierta = ayudaAbierta === clave;
 
@@ -4410,6 +4299,49 @@ function pintarAyuda() {
 
     lista.appendChild(item);
   });
+}
+
+/* --- La hoja de ayuda de cada pantalla ---
+
+   Es la respuesta a "¿cómo sé qué hace esta pantalla sin preguntarle a
+   nadie?", ahora que la app llega a gente que no conoce a quien la hizo.
+   No es un tour: no señala botones ni se ancla a la pantalla, solo abre las
+   preguntas de esa pantalla. Por eso un rediseño no la rompe.
+
+   Vive en memoria y no se guarda: al abrir la app, cerrada. */
+let hojaAyuda = null;   // la pantalla cuya hoja está abierta, o null
+
+function abrirHojaAyuda(deQuePantalla) {
+  hojaAyuda = deQuePantalla;
+  ayudaAbierta = '';    // se abre con todas las preguntas cerradas
+  cerrarNota();
+  pintar();
+}
+
+function cerrarHojaAyuda() {
+  hojaAyuda = null;
+  pintar();
+}
+
+/** "Ver todas las preguntas": la Ayuda completa, que cuelga de Ajustes. */
+function verTodaLaAyuda() {
+  // La pregunta que estaba abierta en la hoja sigue abierta en la lista, porque
+  // `irA()` no toca `ayudaAbierta`: quien toca "ver todas" a mitad de una
+  // respuesta no quiere perderla. Una prueba lo vigila.
+  irA('ayuda');
+}
+
+function pintarHojaAyuda() {
+  const fondo = document.getElementById('hoja-ayuda');
+  const claves = hojaAyuda && AYUDA_POR_PANTALLA[hojaAyuda];
+  fondo.classList.toggle('oculto', !claves);
+  if (!claves) return;
+
+  const nombres = { semana: 'semana', turno: 'turnoTitulo',
+                    reportes: 'reportes', ajustes: 'ajustes' };
+  document.getElementById('hoja-titulo').textContent =
+    rellenar(t('ayudaDe'), t(nombres[hojaAyuda]));
+  pintarPreguntas('hoja-lista', claves);
 }
 
 /* --- Bienvenida --- */
@@ -4489,15 +4421,38 @@ window.addEventListener('scroll', cerrarNota, { passive: true });
 const FUNCIONES_NECESARIAS = [
   'redondear', 'leerNumero', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
   'calcularTipOutTramos', 'revisarCortes',
-  'calcularTurno', 'resumir', 'lunesDeLaSemana', 'sumarDias',
+  'calcularTurno', 'resumir', 'lunesDeLaSemana', 'inicioDeSemana', 'numeroDelDia',
+  'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
-  'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo'
+  'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo',
+  'avisoRespaldo'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la
    lista de arriba. Es la que detecta que los dos archivos llegaron en
    versiones distintas. */
+
+/* Sin textos.js no hay app: cada pantalla y cada aviso salen de `t()`, que lo
+   necesita. Si no llegó (se cortó la señal a media descarga, un archivo que
+   falta al publicar), se dice con el diálogo propio y se para aquí; seguir
+   dejaría la pantalla en blanco sin explicación.
+
+   Es el ÚNICO texto escrito suelto en el código, y en los dos idiomas a la vez
+   porque sin textos.js tampoco se puede saber cuál eligió la persona. La misma
+   excepción que el trocito del tema en la cabecera. El `throw` corta el resto
+   de este script a propósito; los datos no se han tocado todavía. */
+if (typeof TEXTOS === 'undefined') {
+  document.getElementById('dialogo-texto').textContent =
+    'La app no terminó de cargar. Tus turnos están a salvo: no se ha tocado '
+    + 'nada. Ciérrala del todo (deslízala hacia arriba) y vuelve a abrirla con '
+    + 'señal.\n\nThe app did not finish loading. Your shifts are safe: nothing '
+    + 'was touched. Close it completely (swipe it up) and open it again with a '
+    + 'connection.';
+  document.getElementById('dialogo-ok').classList.add('oculto');
+  document.getElementById('dialogo').classList.remove('oculto');
+  throw new Error('textos.js no llegó');
+}
 
 cargar();
 aplicarTema();
@@ -4514,7 +4469,7 @@ if (faltan.length > 0) {
   console.error('logica.js llegó incompleto. Faltan:', faltan);
   avisar(t('appAMedias'));
 } else {
-  lunes = lunesDeLaSemana(hoy());
+  semanaVista = inicioDeEstaSemana(hoy());
   // Quien nunca ha configurado la app no entra por la semana: entra por la
   // bienvenida. Abrir directamente en un calendario vacío no le dice qué hacer
   // ni le avisa de que los porcentajes que trae puestos no son los suyos.

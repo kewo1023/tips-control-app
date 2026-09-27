@@ -80,6 +80,7 @@ ctx.window.scrollTo = () => {};
 ctx.window.innerWidth = 390;   // el ancho de un iPhone corriente
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(__dirname + '/logica.js', 'utf8'), ctx);
+vm.runInContext(fs.readFileSync(__dirname + '/textos.js', 'utf8'), ctx);
 vm.runInContext(script, ctx);
 
 /* --- El diálogo, en las pruebas ------------------------------------------
@@ -471,10 +472,47 @@ ok('la semana pasada está vacía', texto('total-semana') === '$0.00');
 ok('lo dice sin inventar comparación', texto('contra-semana').includes('Sin turnos'));
 run('irAHoy()');
 ok('el botón Hoy vuelve a la semana actual', texto('rango') === '3 ago – 9 ago');
-run("lunes = lunesDeLaSemana('2026-08-10'); pintar();");
+run("semanaVista = inicioDeEstaSemana('2026-08-10'); pintar();");
 ok('la semana siguiente compara con la anterior',
    texto('contra-semana').includes('que la semana pasada'));
 ok('y marca la caída', texto('contra-semana').includes('−$313.00'));
+
+
+/* La semana de pago. En este punto hay dos turnos: jueves 6 ($95.50 sin
+   sueldo) y viernes 7 ($217.50). Hoy es jueves 6. Los rangos y totales
+   escritos a mano con el calendario de agosto de 2026 delante. */
+grupo('La semana de pago empieza el día que diga el restaurante');
+const letraDe = celda => celda.children.find(c => c.className === 'letra').textContent;
+run('irAHoy()');
+run('cambiarInicioSemana(0)');
+ok('con semana de domingo, va del 2 al 8', texto('rango') === '2 ago – 8 ago');
+ok('la primera celda es la D del domingo, no la L', letraDe(dias()[0]) === 'D');
+ok('y la última la S del sábado', letraDe(dias()[6]) === 'S');
+ok('el total sigue teniendo los dos turnos', texto('total-semana') === '$313.00');
+ok('y se guarda en el teléfono',
+   JSON.parse(almacen.tipsControl).trabajo.inicioSemana === 0);
+
+run('cambiarInicioSemana(5)');
+ok('con semana de viernes, el jueves 6 cierra la que empezó el 31',
+   texto('rango') === '31 jul – 6 ago');
+ok('y el viernes 7 ya es de la semana siguiente', texto('total-semana') === '$95.50');
+ok('sigue siendo la semana en curso: no deja avanzar',
+   d.getElementById('btn-siguiente').disabled === true);
+
+/* El ancla. Mirando la semana en curso y pasando a semana de jueves, lo que
+   hay que ver es la semana que empieza HOY, no la anterior. */
+run('cambiarInicioSemana(4)');
+ok('pasar a jueves un jueves deja ver la semana de hoy', texto('rango') === '6 ago – 12 ago');
+
+// Mirando una semana vieja, la vista se queda en esas fechas.
+run('cambiarInicioSemana(1); irAHoy(); cambiarSemana(-1)');
+run('cambiarInicioSemana(0)');
+ok('mirando la semana pasada, se queda en la semana pasada',
+   texto('rango') === '26 jul – 1 ago');
+
+run('cambiarInicioSemana(1); irAHoy()');
+ok('de vuelta en lunes, todo como estaba', texto('rango') === '3 ago – 9 ago'
+   && letraDe(dias()[0]) === 'L' && texto('total-semana') === '$313.00');
 
 
 /* ==========================================================================
@@ -650,7 +688,7 @@ ok('quitarlo no toca los turnos guardados',
 
 
 grupo('Comparación contra la semana anterior');
-run("irA('semana'); lunes = lunesDeLaSemana('2026-08-06'); pintar();");
+run("irA('semana'); semanaVista = inicioDeEstaSemana('2026-08-06'); pintar();");
 ok('en una semana sin anterior no hay flechas de comparación',
    !d.getElementById('metricas').innerHTML.includes('class="delta'));
 // Registramos un turno flojo en la semana siguiente para comparar contra ella.
@@ -765,7 +803,7 @@ ok('ninguna traducción quedó vacía',
 
 
 grupo('Lo que suele romperse');
-run("irA('semana'); lunes = lunesDeLaSemana('2026-08-06'); pintar();");
+run("irA('semana'); semanaVista = inicioDeEstaSemana('2026-08-06'); pintar();");
 dias()[1].click();
 avisos.length = 0;
 run('guardarTurno()');
@@ -923,6 +961,104 @@ run('cambiarIdioma("es")');
 run("irA('ajustes')");
 ok('cerrar devuelve a Ajustes', !d.getElementById('p-ajustes')._classes.has('oculto'));
 
+/* Las respuestas nuevas siguen la misma regla: nombrar, no ubicar. */
+ok('ninguna respuesta de la Ayuda dice dónde está un botón, en ningún idioma',
+   run('AYUDA').every(c => {
+     const M = c.charAt(0).toUpperCase() + c.slice(1);
+     return sinUbicacion(run(`TEXTOS.es['ayuda${M}R']`))
+         && sinUbicacion(run(`TEXTOS.en['ayuda${M}R']`));
+   }));
+
+
+/* La hoja de ayuda de cada pantalla. Los botones "Ayuda" llevan su onclick
+   escrito en el HTML, que el mini-dom no dispara: se comprueba que existan y
+   a qué pantalla apuntan, y se llama a la función que ejecutan. */
+grupo('La hoja de ayuda de cada pantalla');
+const hoja = () => d.getElementById('hoja-ayuda');
+const itemsHoja = () => d.querySelectorAll('#hoja-lista .ayuda-item').length;
+
+['semana', 'turno', 'reportes', 'ajustes'].forEach(p => {
+  ok(`la pantalla ${p} tiene su botón de Ayuda`,
+     html.includes(`onclick="abrirHojaAyuda('${p}')"`));
+});
+ok('cada pantalla con botón tiene sus preguntas',
+   ['semana', 'turno', 'reportes', 'ajustes'].every(p => run(`AYUDA_POR_PANTALLA.${p}.length`) > 0));
+ok('y todas esas preguntas existen en la Ayuda completa',
+   Object.values(run('AYUDA_POR_PANTALLA')).flat().every(c => run('AYUDA').includes(c)));
+
+run("irA('semana')");
+ok('empieza cerrada', hoja()._classes.has('oculto'));
+run("abrirHojaAyuda('semana')");
+ok('se abre', !hoja()._classes.has('oculto'));
+ok('con las preguntas de la semana, ni una más',
+   itemsHoja() === run('AYUDA_POR_PANTALLA.semana.length'));
+ok('y el título de la pantalla', texto('hoja-titulo') === 'Ayuda · Semana');
+ok('sin ninguna respuesta abierta', d.querySelectorAll('#hoja-lista .ayuda-r').length === 0);
+
+run("abrirAyuda('porHora')");
+ok('una pregunta se abre dentro de la hoja',
+   d.querySelectorAll('#hoja-lista .ayuda-r').length === 1
+   && texto('hoja-lista').includes('dividido entre las horas'));
+ok('y la hoja sigue abierta', !hoja()._classes.has('oculto'));
+
+run('verTodaLaAyuda()');
+ok('"ver todas" lleva a la Ayuda completa', !d.getElementById('p-ayuda')._classes.has('oculto'));
+ok('cierra la hoja', hoja()._classes.has('oculto'));
+ok('y la pregunta que estaba abierta sigue abierta',
+   texto('ayuda-lista').includes('dividido entre las horas'));
+
+run("irA('semana'); abrirHojaAyuda('semana'); cerrarHojaAyuda()");
+ok('"Cerrar" la cierra', hoja()._classes.has('oculto'));
+run("abrirHojaAyuda('semana'); irA('reportes')");
+ok('cambiar de pantalla también', hoja()._classes.has('oculto'));
+
+run("irA('semana')");
+dias()[0].click();
+run("abrirHojaAyuda('turno')");
+ok('en el turno salen las del turno, empezando por Ventas',
+   texto('hoja-titulo') === 'Ayuda · Turno'
+   && texto('hoja-lista').startsWith(run("t('ayudaVentasP')")));
+run('cerrarHojaAyuda()');
+ok('y al cerrarla se sigue en el formulario', !d.getElementById('p-turno')._classes.has('oculto'));
+run("irA('ajustes'); abrirHojaAyuda('ajustes')");
+ok('en Ajustes la primera es "¿Quién ve mis datos?"',
+   texto('hoja-lista').startsWith(run("t('ayudaPrivacidadP')")));
+run("cambiarIdioma('en')");
+ok('en inglés, título y preguntas en inglés',
+   texto('hoja-titulo') === 'Help · Settings'
+   && texto('hoja-lista').startsWith('Who sees my data?'));
+run("cambiarIdioma('es'); irA('semana')");
+
+
+/* El día en que empieza la semana de pago, en Ajustes. */
+grupo('El día de inicio de la semana en Ajustes');
+run("irA('ajustes')");
+const letrasInicio = () => d.getElementById('a-inicio-semana').children;
+ok('siete botones', letrasInicio().length === 7);
+ok('de la L a la D, como la fila de la semana',
+   letrasInicio().map(b => b.textContent).join('') === 'LMXJVSD');
+ok('de fábrica, marcado el lunes y solo el lunes',
+   letrasInicio()[0]._classes.has('activo')
+   && letrasInicio().filter(b => b._classes.has('activo')).length === 1);
+ok('y la frase lo confirma', texto('a-inicio-confirma') === 'De lunes a domingo.');
+ok('cada letra dice su día entero al lector de pantalla',
+   letrasInicio()[2].getAttribute('aria-label') === 'Miércoles');
+
+letrasInicio()[6].click();   // la D
+ok('tocar la D guarda domingo (0 en getDay)', D().trabajo.inicioSemana === 0);
+ok('la D queda marcada', letrasInicio()[6]._classes.has('activo')
+   && !letrasInicio()[0]._classes.has('activo'));
+ok('y la frase dice de domingo a sábado', texto('a-inicio-confirma') === 'De domingo a sábado.');
+run("cambiarIdioma('en')");
+ok('en inglés también', texto('a-inicio-confirma') === 'Sunday to Saturday.');
+run("cambiarIdioma('es')");
+
+run("datos.trabajo.inicioSemana = 9; pintar()");
+ok('un valor raro se pinta como lunes, igual que lo calcula la semana',
+   letrasInicio()[0]._classes.has('activo') && texto('a-inicio-confirma') === 'De lunes a domingo.');
+letrasInicio()[0].click();
+run("irA('semana')");
+
 
 grupo('El teléfono no deja guardar');
 
@@ -1060,6 +1196,54 @@ ok('un archivo sin fecha no borra la del teléfono',
 ok('y una fecha que no se entiende se ignora',
    importarCon(null, 'ayer') === undefined);
 
+/* Importar no pisa los ajustes de un teléfono que ya tiene turnos. El caso que
+   lo destapó: te suben los porcentajes, los cambias, y luego importas un
+   respaldo de junio para recuperar un día borrado. Antes volvían los de junio
+   y los turnos siguientes salían con el tip-out equivocado. */
+const archivoViejo = {
+  trabajo: { nombre: 'Del archivo', tarifaHora: 3 },
+  roles: [{ id: 'r-arch', nombre: 'Busser', porcentaje: 1 }],
+  prefs: { tema: 'oscuro' },
+  turnos: [{ id: 'arch-1', fecha: '2026-06-02', ventas: 500, efectivo: 20,
+             tarjeta: 40, entrada: '17:00', salida: '22:00', tarifaHora: 3, tipOut: 5 }]
+};
+run(`datos.trabajo = { ...TRABAJO_POR_DEFECTO, nombre: 'Del teléfono', tarifaHora: 9 };
+     datos.roles = [{ id: 'r-tel', nombre: 'Busser', porcentaje: 3 }];
+     datos.prefs = { ...PREFS_POR_DEFECTO, tema: 'claro' };
+     datos.turnos = [{ id: 'tel-1', fecha: '2026-08-03', ventas: 800, efectivo: 40,
+       tarjeta: 60, entrada: '17:00', salida: '23:00', tarifaHora: 9, tipOut: 24 }]`);
+run(`hacerImportacion(${JSON.stringify(archivoViejo)})`);
+ok('con turnos en el teléfono, el sueldo se queda el del teléfono', D().trabajo.tarifaHora === 9);
+ok('y el nombre del restaurante también', D().trabajo.nombre === 'Del teléfono');
+ok('y los porcentajes', D().roles.length === 1 && D().roles[0].porcentaje === 3);
+ok('y el tema', D().prefs.tema === 'claro');
+ok('pero el turno del archivo sí entra', D().turnos.length === 2
+   && D().turnos.some(x => x.id === 'arch-1'));
+
+run('datos.turnos = []');
+run(`hacerImportacion(${JSON.stringify(archivoViejo)})`);
+ok('en un teléfono sin turnos, los ajustes del archivo sí entran',
+   D().trabajo.tarifaHora === 3 && D().roles[0].porcentaje === 1);
+ok('y los campos que el archivo no trae se rellenan con los de fábrica',
+   D().trabajo.tipOutEnEfectivo === true);
+
+/* La pregunta de antes de importar tiene que decir lo mismo que va a pasar. */
+const FileReaderAntes = ctx.FileReader;
+ctx.FileReader = function () {
+  this.readAsText = () => this.onload({ target: { result: JSON.stringify(archivoViejo) } });
+};
+const preguntaImportar = conTurnos => {
+  run(conTurnos ? `datos.turnos = [${JSON.stringify(archivoViejo.turnos[0])}]` : 'datos.turnos = []');
+  avisos.length = 0;
+  run("importar({ target: { files: [{}], value: 'x' } })");
+  return avisos[0];
+};
+ok('con turnos, la pregunta dice que los ajustes se quedan',
+   preguntaImportar(true) === run("rellenar(t('confirmImportar'), 1)"));
+ok('sin turnos, dice que se traen los del respaldo',
+   preguntaImportar(false) === run("rellenar(t('confirmImportarNuevo'), 1)"));
+ctx.FileReader = FileReaderAntes;
+
 run("datos.turnos = []; irA('ajustes')");
 ok('sin turnos la línea no sale: no hay nada que respaldar',
    lineaRespaldo()._classes.has('oculto'));
@@ -1081,6 +1265,62 @@ ok('y sin la función en el navegador no revienta',
 run('datos = ' + estadoAntesRespaldo);
 almacen.tipsControl = almacenAntesRespaldo;
 run(`irA('${pantallaAntesRespaldo}')`);
+avisos.length = 0;
+
+
+/* El aviso de respaldo en la semana. Cuándo sale lo prueba pruebas.js
+   (`avisoRespaldo`); aquí, que se pinte, que diga lo que toca y que sus dos
+   botones hagan lo que prometen. */
+grupo('El aviso de respaldo en la semana');
+const estadoAntesAviso = JSON.stringify(D());
+const avisoResp = () => d.getElementById('aviso-respaldo');
+const cincoTurnosApp = [3, 4, 5, 6].map(n => ({ id: 'ar' + n, fecha: `2026-08-0${n}`,
+  ventas: 500, efectivo: 20, tarjeta: 40, entrada: '17:00', salida: '22:00',
+  tarifaHora: 5, tipOut: 10 }))
+  .concat([{ id: 'ar0', fecha: '2026-07-31', ventas: 500, efectivo: 20, tarjeta: 40,
+             entrada: '17:00', salida: '22:00', tarifaHora: 5, tipOut: 10 }]);
+
+run(`datos.turnos = ${JSON.stringify(cincoTurnosApp.slice(0, 4))};
+     delete datos.ultimoRespaldo; delete datos.respaldoPospuesto; irA('semana')`);
+ok('con 4 turnos no sale', avisoResp()._classes.has('oculto'));
+
+run(`datos.turnos = ${JSON.stringify(cincoTurnosApp)}; pintar()`);
+ok('con 5 y sin respaldo, sale', !avisoResp()._classes.has('oculto'));
+ok('diciendo que no tienen copia', texto('respaldo-titulo') === run("t('respaldoNuncaTitulo')"));
+ok('su botón exporta de verdad', /id="aviso-respaldo"[\s\S]*?onclick="exportar\(\)"/.test(html));
+ok('y el otro pospone', /id="aviso-respaldo"[\s\S]*?onclick="posponerRespaldo\(\)"/.test(html));
+
+// Del 27 de junio al 6 de agosto son 40 días (3 de junio + 31 de julio + 6).
+run("datos.ultimoRespaldo = '2026-06-27'; pintar()");
+ok('con un respaldo viejo dice cuántos días tiene', texto('respaldo-titulo') === 'Tu copia tiene 40 días');
+
+run('posponerRespaldo()');
+ok('"Ahora no" lo esconde', avisoResp()._classes.has('oculto'));
+ok('y lo apunta con la fecha de hoy', D().respaldoPospuesto === '2026-08-06');
+ok('guardado en el teléfono, para que no vuelva al abrir la app',
+   JSON.parse(almacen.tipsControl).respaldoPospuesto === '2026-08-06');
+run("datos.respaldoPospuesto = '2026-07-30'; pintar()");
+ok('a los 7 días vuelve', !avisoResp()._classes.has('oculto'));
+
+const BlobAntesAviso = ctx.Blob;
+ctx.Blob = function () {};
+run('exportar()');
+ctx.Blob = BlobAntesAviso;
+ok('al exportar desaparece', avisoResp()._classes.has('oculto'));
+
+// Con el aviso de instalar a la vista, el de respaldo se aparta.
+run("delete datos.ultimoRespaldo; delete datos.respaldoPospuesto; pintar()");
+ok('(de vuelta a la vista, sin respaldo)', !avisoResp()._classes.has('oculto'));
+const uaAntesAviso = ctx.navigator.userAgent;
+ctx.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1';
+run('instalarOculto = true; pintar()');
+ok('con el aviso de instalar puesto, el de respaldo no sale',
+   !d.getElementById('instalar')._classes.has('oculto') && avisoResp()._classes.has('oculto'));
+ctx.navigator.userAgent = uaAntesAviso;
+run('instalarOculto = false');
+
+run('datos = ' + estadoAntesAviso);
+run("irA('semana')");
 avisos.length = 0;
 
 
@@ -1151,6 +1391,49 @@ ok('y el aviso de derechos', texto('pie-legal').includes('Kevin Rincón'));
 run("datos.prefs.idioma = 'en'; pintar()");
 ok('también en inglés', texto('pie-legal').includes('All rights reserved'));
 run("datos.prefs.idioma = 'es'; pintar()");
+
+
+/* Los textos viven en su propio archivo (textos.js). Eso abre la puerta al
+   fallo del 8 de agosto con otra cara: un index.html nuevo con un textos.js
+   viejo. Tres defensas, y cada una con su prueba. */
+grupo('textos.js: que no falte ni llegue viejo');
+
+// 1. Todo archivo que la página carga tiene que estar en la copia sin señal.
+//    Si se añade un archivo y se olvida en sw.js, la app abre sin él en el
+//    sótano del restaurante.
+const guiones = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+const archivosSW = fs.readFileSync(__dirname + '/sw.js', 'utf8');
+ok('la página carga textos.js', guiones.includes('textos.js'));
+ok('y cada archivo que carga está en la copia del service worker',
+   guiones.length > 0 && guiones.every(g => archivosSW.includes(`'./${g}'`)));
+
+// 2. Un texto que falta no se vuelve "undefined": avisa una vez.
+avisos.length = 0;
+ok('una clave que no existe devuelve texto vacío', run("t('claveQueNoExiste')") === '');
+ok('y avisa de que la app se actualizó a medias',
+   avisos.length === 1 && avisos[0] === run("t('appAMedias')"));
+run("t('otraQueTampoco')");
+ok('una sola vez, aunque falten varias', avisos.length === 1);
+run('avisoFaltaTexto = false');
+avisos.length = 0;
+
+// 3. Sin textos.js la app no se queda en blanco: lo dice y para.
+{
+  const doc2 = crearDocumento(html);
+  const ctx2 = { ...ctx, document: doc2, localStorage: {
+    getItem: () => null, setItem: () => { throw new Error('no debía guardar'); },
+    removeItem: () => {} } };
+  ctx2.window = ctx2;
+  vm.createContext(ctx2);
+  vm.runInContext(fs.readFileSync(__dirname + '/logica.js', 'utf8'), ctx2);
+  let paro = false;
+  try { vm.runInContext(script, ctx2); } catch (e) { paro = /textos\.js/.test(e.message); }
+  ok('sin textos.js el arranque se detiene', paro);
+  ok('enseñando el diálogo', !doc2.getElementById('dialogo')._classes.has('oculto'));
+  ok('con el aviso en los dos idiomas',
+     /no terminó de cargar/.test(doc2.getElementById('dialogo-texto').textContent)
+     && /did not finish loading/.test(doc2.getElementById('dialogo-texto').textContent));
+}
 
 
 /* La pantalla de instalación.
@@ -1776,6 +2059,19 @@ run("irA('semana')");
 ok('un nombre de solo espacios cae al de fábrica, no deja la etiqueta en blanco',
    texto('metricas-extras').includes('Puntos'));
 
+/* El nombre lo escribe la persona y se mete en HTML armado como texto. Con
+   comillas se cerraba el aria-label antes de tiempo; con "<", el navegador lo
+   leía como una etiqueta. Se mira el HTML crudo: el mini-dom no interpreta lo
+   que se le mete por innerHTML, así que es lo que le llegaría al teléfono. */
+run("irA('ajustes')");
+d.getElementById('a-incentivo-nombre').value = 'Botellas "VIP" <b>';
+run('guardarNombreIncentivo()');
+run("irA('semana')");
+const crudoIncentivo = d.getElementById('metricas-extras').innerHTML;
+ok('un nombre con comillas y "<" llega escapado a la métrica',
+   crudoIncentivo.includes('Botellas &quot;VIP&quot; &lt;b&gt;'));
+ok('y nada de él entra como HTML', !crudoIncentivo.includes('<b>'));
+
 // --- Apagarlo no borra nada ---
 run("irA('ajustes')");
 d.getElementById('a-incentivo').checked = false;
@@ -1947,8 +2243,13 @@ ok('las casillas se rellenan como el chip',
    /background: var\(--verde-suave\)/.test(regla('.check:has(input:checked)')));
 ok('y dejan de ser la casilla azul del sistema', /appearance: none/.test(regla('.check input')));
 ok('la pestaña activa lleva la píldora', /background: var\(--verde-suave\)/.test(regla('.pestanas button.activa::before')));
+/* Eran 4. El botón (i) pasó a tinta-2 el 27 de septiembre de 2026: con
+   tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
-   (html.match(/color: var\(--tinta-3\)/g) || []).length === 4);
+   (html.match(/color: var\(--tinta-3\)/g) || []).length === 3);
+ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
+ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
+   /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));
 
 
 /* ==========================================================================
@@ -2054,6 +2355,15 @@ run('datos.turnos = []; pintar()');
 ok('sin turnos lo dice en vez de enseñar $0.00',
    texto('rep-mejor') === '—' && texto('rep-contra') === run("t('repSinTurnos')"));
 ok('y esconde las tablas vacías', d.getElementById('rep-cuerpo')._classes.has('oculto'));
+
+// Con la semana de pago en domingo, la tabla sigue el orden de la semana.
+run(`datos.turnos = ${JSON.stringify(TURNOS_REPORTE)}; datos.trabajo.inicioSemana = 0; pintar()`);
+ok('con semana de domingo, la tabla empieza en domingo',
+   htmlDias().indexOf('Domingo') < htmlDias().indexOf('Lunes')
+   && htmlDias().indexOf('Sábado') > htmlDias().indexOf('Viernes'));
+ok('y el mejor día sigue siendo el mismo', texto('rep-mejor') === '$30.00');
+run('datos.trabajo.inicioSemana = 1; pintar()');
+ok('en lunes, el lunes vuelve arriba', htmlDias().indexOf('Lunes') < htmlDias().indexOf('Domingo'));
 
 // En inglés.
 run(`datos.turnos = ${JSON.stringify(TURNOS_REPORTE)}; datos.prefs.idioma = 'en'; pintar()`);

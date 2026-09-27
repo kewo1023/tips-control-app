@@ -434,20 +434,50 @@ function resumir(turnos) {
 /* --- Fechas -------------------------------------------------------------- */
 
 /**
- * Devuelve el lunes de la semana de una fecha, como texto "2026-08-03".
+ * El primer día de la semana a la que pertenece una fecha, como texto
+ * "2026-08-03". `diaInicio` usa la numeración de `getDay()`: 0 domingo,
+ * 1 lunes… 6 sábado. Sin él, o con algo que no sea un día, la semana empieza
+ * en lunes, que es lo que la app hizo siempre.
+ *
+ * Existe porque la semana que importa es la del CHEQUE, y no todos los
+ * restaurantes la cortan el mismo día: donde la semana de pago va de domingo a
+ * sábado, un "neto de la semana" de lunes a domingo no cuadra nunca con el
+ * cheque, y la persona acaba desconfiando de la app entera.
+ *
  * Trabajamos con el texto de la fecha y no con objetos Date porque Date
  * interpreta zonas horarias: "2026-08-06" se puede convertir en el 5 de agosto
  * a las 7 PM según dónde estés, y de repente un turno cambia de semana solo.
  */
-function lunesDeLaSemana(fechaTexto) {
+function inicioDeSemana(fechaTexto, diaInicio) {
+  const inicio = Number.isInteger(diaInicio) && diaInicio >= 0 && diaInicio <= 6
+    ? diaInicio : 1;
   const [a, m, d] = String(fechaTexto).split('-').map(Number);
   const fecha = new Date(a, (m || 1) - 1, d || 1);
-  const dia = fecha.getDay();              // 0 domingo, 1 lunes, ... 6 sábado
-  const retroceder = (dia + 6) % 7;        // cuántos días hay que ir atrás
+  const dia = fecha.getDay();                  // 0 domingo, 1 lunes, ... 6 sábado
+  const retroceder = (dia - inicio + 7) % 7;   // cuántos días hay que ir atrás
   fecha.setDate(fecha.getDate() - retroceder);
   const mm = String(fecha.getMonth() + 1).padStart(2, '0');
   const dd = String(fecha.getDate()).padStart(2, '0');
   return `${fecha.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * El lunes de la semana de una fecha. Se queda aparte de `inicioDeSemana`
+ * porque los Reportes agrupan por día de la semana (los lunes, los martes…),
+ * y eso no depende de qué día empiece la semana de pago de nadie.
+ */
+function lunesDeLaSemana(fechaTexto) {
+  return inicioDeSemana(fechaTexto, 1);
+}
+
+/**
+ * Qué día de la semana es una fecha, contando desde el lunes: 0 lunes …
+ * 6 domingo. Es el orden de las listas de nombres y letras de los días. No se
+ * usa `getDay()` directamente porque ese empieza en domingo, y confundir las
+ * dos numeraciones pone la letra de un día encima de la fecha del otro.
+ */
+function numeroDelDia(fechaTexto) {
+  return diasEntre(lunesDeLaSemana(fechaTexto), fechaTexto);
 }
 
 
@@ -486,9 +516,9 @@ function diasEntre(desde, hasta) {
   return Number.isFinite(dias) ? dias : null;
 }
 
-/** Las 7 fechas de la semana que empieza ese lunes. */
-function diasDeLaSemana(lunes) {
-  return [0, 1, 2, 3, 4, 5, 6].map(i => sumarDias(lunes, i));
+/** Las 7 fechas de la semana que empieza en esa fecha (sea el día que sea). */
+function diasDeLaSemana(inicio) {
+  return [0, 1, 2, 3, 4, 5, 6].map(i => sumarDias(inicio, i));
 }
 
 /**
@@ -722,7 +752,7 @@ function turnosDelPeriodo(turnos, hoyTexto, dias) {
 function reportePorDia(turnos) {
   const grupos = [[], [], [], [], [], [], []];
   (Array.isArray(turnos) ? turnos : []).filter(turnoValido).forEach(t => {
-    grupos[diasEntre(lunesDeLaSemana(t.fecha), t.fecha)].push(t);
+    grupos[numeroDelDia(t.fecha)].push(t);
   });
   return grupos.map((lista, dia) => ({ clave: dia, resumen: resumir(lista) }));
 }
@@ -768,6 +798,41 @@ function mejorGrupo(grupos, contarSueldo) {
 }
 
 
+/* --- El aviso de respaldo ----------------------------------------------- */
+
+/* Cuándo sale el aviso de respaldo en la Semana. Con menos de 5 turnos hay
+   poco que perder y el aviso sería ruido para alguien que acaba de empezar;
+   30 días es lo que se tarda en juntar un mes que dolería perder; y "Ahora
+   no" lo esconde 7 días: lo bastante para no ser una molestia diaria, lo
+   bastante poco para que no se olvide. */
+const MINIMO_TURNOS_AVISO_RESPALDO = 5;
+const DIAS_AVISO_RESPALDO = 30;
+const DIAS_POSPONER_RESPALDO = 7;
+
+/**
+ * Si hay que avisar de que falta un respaldo, y por qué.
+ * Devuelve `null` si no, o `{ dias }`: `null` si nunca se hizo, o cuántos
+ * días tiene el último.
+ *
+ * Las fechas que no se entienden cuentan como que no existen: un respaldo con
+ * fecha ilegible es "nunca", y un "ahora no" ilegible no esconde nada. En la
+ * duda, avisar; un aviso de más molesta, uno de menos cuesta los turnos.
+ */
+function avisoRespaldo(turnos, ultimoRespaldo, pospuesto, hoyTexto) {
+  const cuantos = Array.isArray(turnos) ? turnos.filter(turnoValido).length : 0;
+  if (cuantos < MINIMO_TURNOS_AVISO_RESPALDO) return null;
+
+  const desdePospuesto = diasEntre(pospuesto, hoyTexto);
+  if (desdePospuesto !== null && desdePospuesto >= 0
+      && desdePospuesto < DIAS_POSPONER_RESPALDO) return null;
+
+  const dias = diasEntre(ultimoRespaldo, hoyTexto);
+  if (dias === null) return { dias: null };
+  // Una fecha en el futuro (reloj movido) se trata como hoy: no avisa.
+  return dias >= DIAS_AVISO_RESPALDO ? { dias } : null;
+}
+
+
 /* --- Para que node pueda probar este archivo ----------------------------- */
 /* En el navegador estas funciones ya quedan disponibles al cargar el script.
    `module` solo existe cuando el archivo lo abre node, así que esta línea es
@@ -776,11 +841,13 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     redondear, leerNumero, horaAMinutos, calcularHoras, calcularTipOut,
     calcularTipOutTramos, revisarCortes,
-    calcularTurno, resumir, lunesDeLaSemana,
+    calcularTurno, resumir, lunesDeLaSemana, inicioDeSemana, numeroDelDia,
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
     turnoValido, fusionarTurnos,
     franjaDelTurno, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
-    CORTE_TARDE_MIN, MINIMO_TURNOS_REPORTE
+    avisoRespaldo,
+    CORTE_TARDE_MIN, MINIMO_TURNOS_REPORTE, MINIMO_TURNOS_AVISO_RESPALDO,
+    DIAS_AVISO_RESPALDO, DIAS_POSPONER_RESPALDO
   };
 }

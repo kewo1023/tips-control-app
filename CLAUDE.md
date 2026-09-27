@@ -1,9 +1,9 @@
 # Tips Control — instrucciones para Claude
 
 App web (PWA) para que un mesero registre sus propinas por turno y sepa cuánto
-gana de verdad por hora. Dólares, restaurantes de Estados Unidos. La usa un
-grupo cerrado de 10 a 50 personas, no solo quien la hizo: casi todas las
-reglas de abajo salen de ahí.
+gana de verdad por hora. Dólares, restaurantes de Estados Unidos. La usan
+meseros de varios restaurantes, no solo quien la hizo: casi todas las reglas
+de abajo salen de ahí.
 
 Publicada en `https://kewo1023.github.io/tips-control-app/` desde la rama
 `main`. El mantenedor hace sus propios commits.
@@ -48,6 +48,7 @@ SOFTWARE o describe a una PERSONA? Lo primero va aquí; lo segundo, a
 |---|---|
 | `index.html` | Interfaz, estilos, textos y guardado. Tiene un índice de secciones (A…U) en el orden en que aparecen: mantener ese orden |
 | `logica.js` | Cálculos puros sobre el dinero. Es lo que se prueba |
+| `textos.js` | Todos los textos de la app, en español y en inglés (`TEXTOS`) |
 | `pruebas.js` | Pruebas de las fórmulas. `node pruebas.js` |
 | `pruebas-app.js` | Uso real simulado sobre `index.html`. `node pruebas-app.js` |
 | `mini-dom.js` | DOM mínimo escrito a mano para las pruebas (jsdom no está disponible) |
@@ -78,8 +79,12 @@ tres cosas. Los campos numéricos son `type="text" inputmode="decimal"`, nunca
 **Nada de `alert()` ni `confirm()`.** Se usa `avisar(texto)` y
 `preguntar(texto, siAcepta, [siNo])`.
 
-**Ningún texto visible suelto en el código.** Va en `TEXTOS` (sección M0), en
-español y en inglés, y se llama con `t('clave')`.
+**Ningún texto visible suelto en el código.** Va en `TEXTOS` (`textos.js`), en
+español y en inglés, y se llama con `t('clave')`. Todo archivo nuevo que cargue
+la página va también en `ARCHIVOS` de `sw.js` (una prueba lo vigila).
+
+**Texto que escribe la persona dentro de HTML armado a mano:** `escaparHTML()`.
+Mejor `textContent` cuando se pueda.
 
 **Los datos son la única verdad.** Cualquier cambio llama a `guardar()` y
 luego a `pintar()`. `guardar()` devuelve si lo consiguió; quien cierra una

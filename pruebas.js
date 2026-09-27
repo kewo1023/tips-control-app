@@ -451,6 +451,33 @@ probar('el domingo pertenece a la semana que empezó el lunes',
 probar('cruzando el cambio de mes',
   L.lunesDeLaSemana('2026-09-02'), '2026-08-31');
 
+/* La semana de pago no empieza igual en todos los restaurantes. Escritas a
+   mano antes de correrlas, con el calendario de agosto de 2026 delante: el
+   jueves 6 cae en la semana que empezó el domingo 2, el sábado 1 o el viernes
+   31 de julio, según el día de corte. */
+probar('semana de domingo: el jueves 6 cae en la del domingo 2',
+  L.inicioDeSemana('2026-08-06', 0), '2026-08-02');
+probar('semana de sábado: en la del sábado 1',
+  L.inicioDeSemana('2026-08-06', 6), '2026-08-01');
+probar('semana de viernes: en la del viernes 31 de julio',
+  L.inicioDeSemana('2026-08-06', 5), '2026-07-31');
+probar('el día de corte es el primero de su propia semana',
+  L.inicioDeSemana('2026-08-06', 4), '2026-08-06');
+probar('el sábado, con semana de domingo, sigue en la del domingo anterior',
+  L.inicioDeSemana('2026-08-08', 0), '2026-08-02');
+probar('cruzando el fin de año, semana de domingo',
+  L.inicioDeSemana('2027-01-01', 0), '2026-12-27');
+probar('sin día de corte, lunes, como siempre',
+  L.inicioDeSemana('2026-08-06'), '2026-08-03');
+probar('un día que no existe (7) también cae en lunes',
+  L.inicioDeSemana('2026-08-06', 7), '2026-08-03');
+probar('y un texto en vez de número, también',
+  L.inicioDeSemana('2026-08-06', '0'), '2026-08-03');
+
+probar('el jueves es el día 3 contando desde el lunes', L.numeroDelDia('2026-08-06'), 3);
+probar('el lunes es el 0', L.numeroDelDia('2026-08-03'), 0);
+probar('y el domingo el 6, no el 0 de getDay()', L.numeroDelDia('2026-08-09'), 6);
+
 probar('la semana siguiente',
   L.sumarDias('2026-08-03', 7), '2026-08-10');
 probar('la semana anterior',
@@ -823,6 +850,41 @@ probar('sin período entran todos menos los del futuro',
   L.turnosDelPeriodo(fechasPeriodo, '2026-08-06', null).length, 3);
 probar('un turno sin fecha válida no entra',
   L.turnosDelPeriodo([{ id: 'z', fecha: 'ayer' }], '2026-08-06', null).length, 0);
+
+
+/* --------------------------------------------------------------------------
+   El aviso de respaldo en la Semana
+   -------------------------------------------------------------------------- */
+grupo('Aviso de respaldo');
+const cincoTurnos = [1, 2, 3, 4, 5].map(n => ({ id: 'r' + n, fecha: `2026-08-0${n}` }));
+const HOY_R = '2026-08-06';
+
+probar('con 4 turnos no avisa: hay poco que perder',
+  L.avisoRespaldo(cincoTurnos.slice(0, 4), undefined, undefined, HOY_R), null);
+probar('con 5 y ningún respaldo, avisa que nunca se hizo',
+  L.avisoRespaldo(cincoTurnos, undefined, undefined, HOY_R), { dias: null });
+probar('los turnos sin fecha válida no cuentan para llegar a 5',
+  L.avisoRespaldo([...cincoTurnos.slice(0, 4), { id: 'x', fecha: 'ayer' }],
+                  undefined, undefined, HOY_R), null);
+// Del 7 de julio al 6 de agosto son 30 días; del 8, 29.
+probar('un respaldo de hace 29 días no avisa',
+  L.avisoRespaldo(cincoTurnos, '2026-07-08', undefined, HOY_R), null);
+probar('uno de hace 30 días sí, y dice cuántos',
+  L.avisoRespaldo(cincoTurnos, '2026-07-07', undefined, HOY_R), { dias: 30 });
+probar('un respaldo con fecha ilegible cuenta como nunca',
+  L.avisoRespaldo(cincoTurnos, 'ayer', undefined, HOY_R), { dias: null });
+probar('un respaldo con fecha en el futuro (reloj movido) no avisa',
+  L.avisoRespaldo(cincoTurnos, '2026-08-20', undefined, HOY_R), null);
+
+// "Ahora no" el 31 de julio: esconde hasta el 6 de agosto, que es el día 7.
+probar('"ahora no" hace 6 días todavía lo esconde',
+  L.avisoRespaldo(cincoTurnos, undefined, '2026-07-31', HOY_R), null);
+probar('a los 7 días vuelve a salir',
+  L.avisoRespaldo(cincoTurnos, undefined, '2026-07-30', HOY_R), { dias: null });
+probar('un "ahora no" ilegible no esconde nada',
+  L.avisoRespaldo(cincoTurnos, undefined, 'ayer', HOY_R), { dias: null });
+probar('ni uno con fecha en el futuro',
+  L.avisoRespaldo(cincoTurnos, undefined, '2026-09-01', HOY_R), { dias: null });
 
 
 /* --------------------------------------------------------------------------
