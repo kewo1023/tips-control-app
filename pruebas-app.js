@@ -22,6 +22,11 @@ const vm = require('vm');
 const { crearDocumento } = require('./mini-dom.js');
 
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+/* El CSS vive en estilos.css desde el 27 de septiembre de 2026. Las pruebas
+   que miran reglas de diseño lo leen junto con el HTML (los estilos escritos
+   en línea siguen en index.html), para comprobar lo mismo que antes. */
+const css = fs.readFileSync(__dirname + '/estilos.css', 'utf8');
+const htmlYcss = html + '\n' + css;
 // El último bloque <script> del archivo es el de la app (el primero es el
 // trocito del tema que va en la cabecera).
 const bloques = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
@@ -1440,9 +1445,11 @@ grupo('textos.js: que no falte ni llegue viejo');
 // 1. Todo archivo que la página carga tiene que estar en la copia sin señal.
 //    Si se añade un archivo y se olvida en sw.js, la app abre sin él en el
 //    sótano del restaurante.
-const guiones = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+const guiones = [...html.matchAll(/<script src="([^"]+)"/g),
+                 ...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m => m[1]);
 const archivosSW = fs.readFileSync(__dirname + '/sw.js', 'utf8');
 ok('la página carga textos.js', guiones.includes('textos.js'));
+ok('y estilos.css', guiones.includes('estilos.css'));
 ok('y cada archivo que carga está en la copia del service worker',
    guiones.length > 0 && guiones.every(g => archivosSW.includes(`'./${g}'`)));
 
@@ -1712,8 +1719,8 @@ run(`datos.turnos = ${turnosAntes}; guardar(); irA('semana');`);
 /* --------------------------------------------------------------------------
    El teclado con coma
 
-   Grupo escrito a partir de un fallo real en el iPhone de un compañero: su
-   teclado ofrecía "," donde el de Kev ofrece ".", y lo que escribía llegaba al
+   Grupo escrito a partir de un fallo real en el iPhone de un usuario del piloto: su
+   teclado ofrecía "," donde el del desarrollador ofrece ".", y lo que escribía llegaba al
    código como texto vacío. `Number('') || 0` lo convertía en 0 sin decir nada.
 
    Se empieza por el desastre, no por el camino feliz: lo primero que se
@@ -2231,11 +2238,11 @@ ok('son dos trazados: el símbolo y el nombre',
 ok('el nombre no es texto', !/<text/.test(marcaAjustes.innerHTML));
 ok('no lo leen los lectores de pantalla', marcaAjustes.getAttribute('aria-hidden') === 'true');
 ok('los colores de la marca de agua son los del kit, en los dos temas',
-   /\.marca-kev \{[^}]*color: #475569; opacity: 0\.40/.test(html)
-   && /\[data-tema="oscuro"\] \.marca-kev \{ color: #CBD5E1; opacity: 0\.45/.test(html));
+   /\.marca-kev \{[^}]*color: #475569; opacity: 0\.40/.test(htmlYcss)
+   && /\[data-tema="oscuro"\] \.marca-kev \{ color: #CBD5E1; opacity: 0\.45/.test(htmlYcss));
 ok('y no pasan del tope de 0.60',
-   !/\.marca-kev[^}]*opacity: 0\.[6-9]/.test(html));
-ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(html));
+   !/\.marca-kev[^}]*opacity: 0\.[6-9]/.test(htmlYcss));
+ok('no recibe toques', /\.marca-kev \{[^}]*pointer-events: none/.test(htmlYcss));
 
 
 /* El diagnóstico de la pantalla. En el mini-dom no existen `screen`,
@@ -2313,7 +2320,7 @@ ctx.navigator.userAgent = ''; modoStandalone = false;
 delete ctx.innerHeight; ctx.innerWidth = 390;
 reiniciarHueco();
 
-const bloqueHueco = (html.match(/@media \(orientation: portrait\) \{\s*:root\.hueco-ios[\s\S]*?\n\}/) || [''])[0];
+const bloqueHueco = (htmlYcss.match(/@media \(orientation: portrait\) \{\s*:root\.hueco-ios[\s\S]*?\n\}/) || [''])[0];
 ok('todo el arreglo va dentro de "solo en vertical"', bloqueHueco.length > 0);
 ok('la barra se ancla arriba, no al borde que se mueve',
    /\.pestanas \{[^}]*top: var\(--alto-estable\)[^}]*bottom: auto[^}]*translateY\(-100%\)/.test(bloqueHueco));
@@ -2335,7 +2342,7 @@ ok('la capa de papel va fija', reglasHueco.some(r => /body::before/.test(r) && /
 /* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
    que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */
 grupo('Diseño: jerarquía y selecciones');
-const regla = sel => (html.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{[^}]*\\}')) || [''])[0];
+const regla = sel => (htmlYcss.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{[^}]*\\}')) || [''])[0];
 ok('las leyendas ya no usan el gris que no cumple contraste',
    /color: var\(--tinta-2\)/.test(regla('.etiqueta')) && /color: var\(--tinta-2\)/.test(regla('h2.seccion')));
 ok('el título de la pantalla va en tinta y negrita',
@@ -2349,7 +2356,7 @@ ok('la pestaña activa lleva la píldora', /background: var\(--verde-suave\)/.te
 /* Eran 4. El botón (i) pasó a tinta-2 el 27 de septiembre de 2026: con
    tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
-   (html.match(/color: var\(--tinta-3\)/g) || []).length === 3);
+   (htmlYcss.match(/color: var\(--tinta-3\)/g) || []).length === 3);
 ok('dos toques no hacen zoom: manipulation en la raíz y en la hoja, que tiene scroll propio',
    /touch-action: manipulation/.test(regla('html')) && /touch-action: manipulation/.test(regla('.hoja')));
 ok('y el pellizco para ampliar no se bloquea',
@@ -2428,7 +2435,23 @@ ok('la tarde gana, con sus tres turnos',
    /metrica mejor"><div class="etiqueta">Tarde<\/div><div class="valor">\$30\.00/.test(htmlFranjas()));
 ok('la mañana, con uno solo, no enseña una cifra que parezca comparable',
    /Mañana<\/div><div class="valor poco">pocos datos/.test(htmlFranjas()));
-ok('explica cómo se decide mañana o tarde', texto('rep-aclara') === run("t('repAclara')"));
+ok('explica cómo se decide mañana o tarde, con la hora de fábrica',
+   texto('rep-aclara') === run("rellenar(t('repAclara'), '3 pm')"));
+
+/* La hora de corte, cambiada. Los turnos de la prueba: el lunes sale a las
+   15:00 (mañana con cualquier corte desde las 3) y los viernes a las 23:00. */
+const franjasTexto = () => texto('rep-franjas');
+run("cambiarCorteTarde('16:00')");
+ok('con corte a las 4 pm, la aclaración lo dice', texto('rep-aclara').startsWith('Mañana: sales a las 4 pm o antes'));
+ok('y se guarda en el teléfono', JSON.parse(almacen.tipsControl).trabajo.corteTarde === '16:00');
+run("cambiarCorteTarde('14:00')");
+ok('con corte a las 2 pm, el turno que sale a las 3 pasa a la tarde',
+   franjasTexto().includes('por hora · 0 turnos') && franjasTexto().includes('por hora · 4 turnos'));
+run("datos.trabajo.corteTarde = 'mediodía'; pintar()");
+ok('un corte ilegible se trata como las 3 pm, en la cuenta y en el texto',
+   texto('rep-aclara').startsWith('Mañana: sales a las 3 pm o antes')
+   && franjasTexto().includes('por hora · 1 turno'));
+run("cambiarCorteTarde('15:00')");
 
 // Contando el sueldo cambian la cifra y la etiqueta, en todos los sitios a la vez.
 run('datos.prefs.contarSueldo = true; pintar()');

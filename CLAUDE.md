@@ -46,7 +46,8 @@ SOFTWARE o describe a una PERSONA? Lo primero va aquí; lo segundo, a
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` | Interfaz, estilos, textos y guardado. Tiene un índice de secciones (A…U) en el orden en que aparecen: mantener ese orden |
+| `index.html` | Pantallas y código de la interfaz y el guardado. Sus secciones (I…U) van en el orden en que aparecen: mantener ese orden |
+| `estilos.css` | Todo el CSS (secciones A…H y A2…A5), en el orden de la cascada |
 | `logica.js` | Cálculos puros sobre el dinero. Es lo que se prueba |
 | `textos.js` | Todos los textos de la app, en español y en inglés (`TEXTOS`) |
 | `pruebas.js` | Pruebas de las fórmulas. `node pruebas.js` |
@@ -54,7 +55,7 @@ SOFTWARE o describe a una PERSONA? Lo primero va aquí; lo segundo, a
 | `mini-dom.js` | DOM mínimo escrito a mano para las pruebas (jsdom no está disponible) |
 | `sw.js` | Service worker |
 | `manifest.json`, `icono-*.png` | Instalación |
-| `hacer-iconos.py`, `hacer-tutorial.py`, `tutorial-*.png` | Generadores de imágenes |
+| `hacer-iconos.py` | Generador de los íconos |
 | `LICENSE` | Uso permitido; copiar o modificar el código, no |
 | `DECISIONES.md` | Los porqués y los incidentes |
 
@@ -81,7 +82,8 @@ tres cosas. Los campos numéricos son `type="text" inputmode="decimal"`, nunca
 
 **Ningún texto visible suelto en el código.** Va en `TEXTOS` (`textos.js`), en
 español y en inglés, y se llama con `t('clave')`. Todo archivo nuevo que cargue
-la página va también en `ARCHIVOS` de `sw.js` (una prueba lo vigila).
+la página (`<script src>` o `<link rel="stylesheet">`) va también en
+`ARCHIVOS` de `sw.js` (una prueba lo vigila).
 
 **Texto que escribe la persona dentro de HTML armado a mano:** `escaparHTML()`.
 Mejor `textContent` cuando se pueda.

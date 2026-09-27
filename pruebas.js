@@ -40,8 +40,8 @@ function grupo(titulo) {
 /* --------------------------------------------------------------------------
    Leer lo que escribe una persona
 
-   Estas pruebas nacen de un fallo real: el teclado de un compañero ofrecía
-   coma donde el de Kev ofrece punto, y "3,5" acabó guardado como 0.
+   Estas pruebas nacen de un fallo real: el teclado de un usuario ofrecía
+   coma donde el del desarrollador ofrece punto, y "3,5" acabó guardado como 0.
 
    Se empieza por el desastre que se quiere evitar y no por el camino feliz:
    la primera prueba no es "¿lee 3.5?", es "¿lo ilegible deja de valer 0?".
@@ -806,6 +806,24 @@ probar('sin hora de salida no se adivina',
   L.franjaDelTurno({ entrada: '10:00' }) === null, true);
 probar('y un turno vacío tampoco revienta', L.franjaDelTurno(undefined) === null, true);
 
+/* La hora de corte, configurable. Con corte a las 4 pm, salir a las 3:30 ya
+   no es de la tarde; salir a las 4:00 en punto sigue siendo mañana. */
+probar('con corte a las 4 pm, salir a las 3:30 es mañana',
+  L.franjaDelTurno({ entrada: '10:00', salida: '15:30' }, '16:00'), 'manana');
+probar('y las 4:00 en punto todavía también',
+  L.franjaDelTurno({ entrada: '10:00', salida: '16:00' }, '16:00'), 'manana');
+probar('las 4:01 ya es tarde', L.franjaDelTurno({ entrada: '10:00', salida: '16:01' }, '16:00'), 'tarde');
+probar('con corte a las 2 pm, salir a las 3 es tarde',
+  L.franjaDelTurno({ entrada: '10:00', salida: '15:00' }, '14:00'), 'tarde');
+probar('cruzar la medianoche sigue siendo tarde con cualquier corte',
+  L.franjaDelTurno({ entrada: '17:00', salida: '01:00' }, '16:00'), 'tarde');
+probar('sin corte, las 3 pm de fábrica', L.minutosDeCorte(undefined), 15 * 60);
+probar('un corte ilegible también cae en las 3 pm', L.minutosDeCorte('tarde'), 15 * 60);
+probar('y uno imposible (25:00), igual', L.minutosDeCorte('25:00'), 15 * 60);
+probar('el reporte por franja usa el corte que se le pasa',
+  L.reportePorFranja([{ id: 'c1', fecha: '2026-08-03', entrada: '10:00', salida: '15:30' }], '16:00')
+    .grupos[0].resumen.turnos, 1);
+
 const porDia = L.reportePorDia([repA, repB, repC, repD]);
 probar('siempre devuelve los siete días', porDia.length, 7);
 probar('el lunes junta sus tres turnos', porDia[0].resumen.turnos, 3);
@@ -850,6 +868,58 @@ probar('sin período entran todos menos los del futuro',
   L.turnosDelPeriodo(fechasPeriodo, '2026-08-06', null).length, 3);
 probar('un turno sin fecha válida no entra',
   L.turnosDelPeriodo([{ id: 'z', fecha: 'ayer' }], '2026-08-06', null).length, 0);
+
+
+/* --------------------------------------------------------------------------
+   El resumen del año y la hoja para Excel
+   -------------------------------------------------------------------------- */
+grupo('Resumen anual');
+/* Escritos a mano: dos turnos en 2026 (enero y agosto), uno en 2025.
+   Enero: 6 h, efectivo 40 + tarjeta 60 = 100, tip-out 24 → neto 76.
+   Agosto: 5 h, efectivo 20 + tarjeta 30 = 50, tip-out 10 → neto 40. */
+const tAnual = [
+  { id: 'a1', fecha: '2026-01-15', entrada: '17:00', salida: '23:00', ventas: 800,
+    efectivo: 40, tarjeta: 60, tarifaHora: 5, tipOut: 24 },
+  { id: 'a2', fecha: '2026-08-03', entrada: '10:00', salida: '15:00', ventas: 400,
+    efectivo: 20, tarjeta: 30, tarifaHora: 5, tipOut: 10 },
+  { id: 'a3', fecha: '2025-12-31', entrada: '17:00', salida: '23:00', ventas: 900,
+    efectivo: 50, tarjeta: 50, tarifaHora: 5, tipOut: 30 },
+  { id: 'a4', fecha: 'ayer' }
+];
+const r26 = L.resumenAnual(tAnual, 2026);
+probar('el año suma solo sus turnos', r26.total.turnos, 2);
+probar('el tip-out del año', r26.total.tipOut, 34);
+probar('el neto de propinas del año', r26.total.netoPropinas, 116);
+probar('efectivo y tarjeta, separados', [r26.total.efectivo, r26.total.tarjeta], [60, 90]);
+probar('siempre doce meses', r26.meses.length, 12);
+probar('enero tiene el suyo', r26.meses[0].netoPropinas, 76);
+probar('un mes vacío sale en cero, no desaparece', r26.meses[1].turnos, 0);
+probar('el 31 de diciembre es del año que termina', L.resumenAnual(tAnual, 2025).total.turnos, 1);
+probar('los años con turnos, del más nuevo al más viejo', L.aniosConTurnos(tAnual), [2026, 2025]);
+probar('sin turnos, ningún año', L.aniosConTurnos([]), []);
+
+grupo('Hoja para Excel (CSV)');
+probar('un número va tal cual, con punto', L.celdaCSV(12.5), '12.5');
+probar('un texto con coma va entre comillas', L.celdaCSV('Sección 3, terraza'), '"Sección 3, terraza"');
+probar('las comillas se doblan', L.celdaCSV('el "VIP"'), '"el ""VIP"""');
+probar('un texto que empieza por = no se vuelve fórmula', L.celdaCSV('=1+1'), "'=1+1");
+probar('ni por +, - o @', ['+1', '-2', '@a'].map(L.celdaCSV), ["'+1", "'-2", "'@a"]);
+probar('un número negativo sí se queda número', L.celdaCSV(-40), '-40');
+probar('vacío y NaN salen como celda vacía', [L.celdaCSV(undefined), L.celdaCSV(NaN)], ['', '']);
+
+const csv = L.turnosACSV(tAnual, { fecha: 'Fecha', nota: 'Nota' });
+const lineasCSV = csv.split('\r\n');
+probar('empieza con la marca BOM, para los acentos en Excel', csv.charCodeAt(0), 0xFEFF);
+probar('una fila de encabezados, una por turno válido y el cierre',
+  lineasCSV.length, 1 + 3 + 1);
+probar('los encabezados van en el idioma que se le pasa',
+  lineasCSV[0].slice(1).startsWith('Fecha,'), true);
+probar('del más viejo al más nuevo', lineasCSV[1].startsWith('2025-12-31'), true);
+probar('la fila de enero, columna por columna',
+  lineasCSV[2], '2026-01-15,17:00,23:00,6,800,40,60,100,24,76,5,30,,');
+probar('un incentivo anotado en 0 sale como 0; sin anotar, vacío',
+  [L.turnosACSV([{ id: 'i', fecha: '2026-01-01', incentivo: 0 }], {}).split('\r\n')[1].split(',')[12],
+   lineasCSV[2].split(',')[12]], ['0', '']);
 
 
 /* --------------------------------------------------------------------------

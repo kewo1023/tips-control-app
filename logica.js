@@ -36,8 +36,8 @@ function redondear(n) {
 /**
  * Convierte lo que una persona escribió en un campo en un número de verdad.
  *
- * Esto existe por un fallo que apareció en el teléfono de un compañero: su
- * teclado ofrecía una coma donde el de Kev ofrece un punto, escribió "3,5" en
+ * Esto existe por un fallo que apareció en el teléfono de un usuario del
+ * piloto: su teclado ofrecía una coma donde el del desarrollador ofrece un punto, escribió "3,5" en
  * el porcentaje de un ayudante y la app lo guardó como **0**. Sin avisar. Su
  * tip-out pasó a ser $0 y la app le dijo que se llevaba más dinero del que se
  * llevaba, que es la peor dirección posible del error.
@@ -144,7 +144,7 @@ function calcularHoras(entrada, salida) {
 /**
  * Reparte el tip-out entre los roles que trabajaron ese turno.
  *
- * Regla del restaurante de Kev: cada rol tiene un porcentaje fijo que se
+ * El modelo de la app: cada rol tiene un porcentaje fijo que se
  * calcula sobre las VENTAS TOTALES del turno. Si un rol no estuvo, su
  * porcentaje simplemente no se suma; los demás no reciben más por eso.
  *
@@ -576,7 +576,7 @@ function cifrasPrincipales(calculo, contarSueldo) {
  * Depende de un dato del restaurante, no de un gusto: **cómo se paga el
  * tip-out**. Hay dos formas y las dos son normales en Estados Unidos:
  *
- *   - **En efectivo** (lo habitual, y el caso de Kev). Los billetes se entregan
+ *   - **En efectivo** (lo habitual). Los billetes se entregan
  *     en la mano al terminar el turno, así que salen del efectivo. Se muestra
  *     `efectivoNeto`.
  *   - **Descontado del cheque.** El sistema del restaurante lo retiene solo, y
@@ -700,7 +700,12 @@ function fusionarTurnos(actuales, importados) {
    mañana.
 
    Un doble (mañana y tarde seguidas, más de 9 horas) sale después de las 3 y
-   cae en la tarde solo, sin regla aparte: así se cuenta allá. */
+   cae en la tarde solo, sin regla aparte: así se cuenta allá.
+
+   Las 3 pm son el valor de fábrica. Desde el 27 de septiembre de 2026 cada
+   quien puede poner la suya (`trabajo.corteTarde`): en otro restaurante el
+   turno de la mañana puede terminar a las 4, y con la hora fija los Reportes
+   le mezclaban las dos franjas. */
 const CORTE_TARDE_MIN = 15 * 60;
 
 /* Con menos turnos que esto, un grupo no compite por "el mejor". Dos martes
@@ -717,13 +722,23 @@ const MINIMO_TURNOS_REPORTE = 3;
  * salida caería en la mañana. Por eso, si la salida es menor que la entrada
  * (el turno cruzó la medianoche, como en `calcularHoras`), es de la tarde.
  */
-function franjaDelTurno(turno) {
+function franjaDelTurno(turno, corte) {
   const t = turno || {};
   const ini = horaAMinutos(t.entrada);
   const fin = horaAMinutos(t.salida);
   if (fin === null) return null;
   if (ini !== null && fin < ini) return 'tarde';
-  return fin <= CORTE_TARDE_MIN ? 'manana' : 'tarde';
+  return fin <= minutosDeCorte(corte) ? 'manana' : 'tarde';
+}
+
+/**
+ * La hora de corte en minutos. Acepta "HH:MM"; sin ella o con algo que no se
+ * entienda, las 3 pm de fábrica. Un corte ilegible no puede dejar todos los
+ * turnos en una sola franja sin que nadie sepa por qué.
+ */
+function minutosDeCorte(corte) {
+  const min = horaAMinutos(corte);   // null con cualquier cosa que no sea "HH:MM"
+  return min === null ? CORTE_TARDE_MIN : min;
 }
 
 /**
@@ -763,11 +778,11 @@ function reportePorDia(turnos) {
  * salida desapareciera de la tabla sin más, la suma de las franjas no cuadraría
  * con la de los días y nada lo explicaría.
  */
-function reportePorFranja(turnos) {
+function reportePorFranja(turnos, corte) {
   const manana = [], tarde = [];
   let sinHora = 0;
   (Array.isArray(turnos) ? turnos : []).filter(turnoValido).forEach(t => {
-    const f = franjaDelTurno(t);
+    const f = franjaDelTurno(t, corte);
     if (f === 'manana') manana.push(t);
     else if (f === 'tarde') tarde.push(t);
     else sinHora++;
@@ -795,6 +810,91 @@ function mejorGrupo(grupos, contarSueldo) {
     porHora(g) > porHora(mejor)
     || (porHora(g) === porHora(mejor) && g.resumen.turnos > mejor.resumen.turnos)
       ? g : mejor).clave;
+}
+
+
+/* --- El resumen del año y la hoja para Excel ------------------------------ */
+
+/**
+ * El año entero: el total y los doce meses, cada uno ya resumido con
+ * `resumir` (las mismas cifras que la semana, así que cuadran entre sí).
+ * Siempre los doce meses, aunque estén vacíos: una tabla a la que le faltan
+ * meses se lee como un error.
+ *
+ * Es un registro personal de lo que la persona anotó, no un cálculo de
+ * impuestos: la pantalla no lo presenta como otra cosa.
+ */
+function resumenAnual(turnos, anio) {
+  const prefijo = String(anio) + '-';
+  const delAnio = (Array.isArray(turnos) ? turnos : [])
+    .filter(t => turnoValido(t) && t.fecha.startsWith(prefijo));
+  const meses = Array.from({ length: 12 }, (_, i) => {
+    const mes = prefijo + String(i + 1).padStart(2, '0') + '-';
+    return resumir(delAnio.filter(t => t.fecha.startsWith(mes)));
+  });
+  return { anio: Number(anio), total: resumir(delAnio), meses };
+}
+
+/** Los años que tienen turnos, del más reciente al más viejo. */
+function aniosConTurnos(turnos) {
+  const anios = new Set((Array.isArray(turnos) ? turnos : [])
+    .filter(turnoValido).map(t => Number(t.fecha.slice(0, 4))));
+  return [...anios].sort((a, b) => b - a);
+}
+
+/* Las columnas de la hoja, en orden. Los encabezados los pone quien llama, en
+   su idioma; aquí solo se decide qué va y en qué orden. Efectivo y tarjeta
+   separados, como en toda la app. */
+const COLUMNAS_CSV = ['fecha', 'entrada', 'salida', 'horas', 'ventas',
+  'efectivo', 'tarjeta', 'propinas', 'tipOut', 'netoPropinas',
+  'tarifaHora', 'sueldo', 'incentivo', 'nota'];
+
+/**
+ * Una celda de CSV.
+ *
+ * Los números van tal cual, con punto decimal y sin "$", para que Excel y
+ * Google Sheets los lean como números y se puedan sumar. El texto va entre
+ * comillas si lleva coma, comillas o saltos de línea.
+ *
+ * Y un texto que empieza por = + - o @ se protege con un apóstrofo: Excel lo
+ * tomaría como una fórmula y la ejecutaría al abrir el archivo. La nota la
+ * escribe la persona, y un respaldo ajeno puede traer cualquier cosa.
+ */
+function celdaCSV(valor) {
+  if (typeof valor === 'number') return Number.isFinite(valor) ? String(valor) : '';
+  if (valor === null || valor === undefined) return '';
+  let texto = String(valor);
+  if (/^[=+\-@\t\r]/.test(texto)) texto = "'" + texto;
+  return /[",\r\n]/.test(texto) ? '"' + texto.replace(/"/g, '""') + '"' : texto;
+}
+
+/**
+ * Los turnos como hoja de cálculo (CSV), uno por fila, del más viejo al más
+ * nuevo. `encabezados` trae el nombre de cada columna de `COLUMNAS_CSV`.
+ *
+ * Empieza con la marca BOM para que Excel abra bien los acentos: sin ella,
+ * "Sección" sale como "SecciÃ³n". Filas separadas con CRLF, como pide el
+ * formato.
+ */
+function turnosACSV(turnos, encabezados) {
+  const nombres = encabezados || {};
+  const lista = (Array.isArray(turnos) ? turnos : []).filter(turnoValido)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const filas = lista.map(t => {
+    const c = calcularTurno(t);
+    const incentivo = typeof t.incentivo === 'number' ? t.incentivo : '';
+    const valores = {
+      fecha: t.fecha, entrada: t.entrada || '', salida: t.salida || '',
+      horas: c.horas, ventas: redondear(Number(t.ventas) || 0),
+      efectivo: c.efectivo, tarjeta: c.tarjeta, propinas: c.propinas,
+      tipOut: c.tipOut, netoPropinas: c.netoPropinas,
+      tarifaHora: Number(t.tarifaHora) || 0, sueldo: c.sueldoBase,
+      incentivo, nota: t.nota || ''
+    };
+    return COLUMNAS_CSV.map(col => celdaCSV(valores[col])).join(',');
+  });
+  const cabecera = COLUMNAS_CSV.map(col => celdaCSV(nombres[col] || col)).join(',');
+  return '\uFEFF' + [cabecera, ...filas].join('\r\n') + '\r\n';
 }
 
 
@@ -845,8 +945,9 @@ if (typeof module !== 'undefined' && module.exports) {
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
     turnoValido, fusionarTurnos,
-    franjaDelTurno, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
-    avisoRespaldo,
+    franjaDelTurno, minutosDeCorte, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
+    avisoRespaldo, resumenAnual, aniosConTurnos, celdaCSV, turnosACSV,
+    COLUMNAS_CSV,
     CORTE_TARDE_MIN, MINIMO_TURNOS_REPORTE, MINIMO_TURNOS_AVISO_RESPALDO,
     DIAS_AVISO_RESPALDO, DIAS_POSPONER_RESPALDO
   };

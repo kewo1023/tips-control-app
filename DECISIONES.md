@@ -536,7 +536,10 @@ Volver a verificar la documentación antes de implementarlo.
 
 - **Partir `index.html`**: el umbral acordado eran 2,000 líneas y está muy por
   encima. Primer corte hecho el 27 de septiembre de 2026: los textos
-  (`TEXTOS`) viven en `textos.js` (sección 18).
+  (`TEXTOS`) viven en `textos.js` (sección 18). Segundo corte, el mismo día:
+  el CSS en `estilos.css`, cargado en el mismo sitio de la cabecera para no
+  cambiar la cascada. Las pruebas de diseño leen el HTML y el CSS juntos.
+  Siguiente candidato: el código de dibujar (sección T), el más largo.
 - Activar la tabla `trabajos` si aparece un segundo trabajo.
 - Incentivo con lista de productos, si lo siguen pidiendo.
 - Más de 3 cambios de equipo por turno.
@@ -684,7 +687,10 @@ después el mes y el año.
   las 3" en el reloj: salir a la 1 am no es un turno de mañana.
 - **Regla fija, sin casilla en Ajustes**: hoy todos los usuarios trabajan en el
   mismo tipo de horario. Si entra alguien de un restaurante con otra división,
-  se vuelve configurable.
+  se vuelve configurable. **Reemplazada el 27 de septiembre de 2026**: al abrirse a
+  otros restaurantes, la hora es `trabajo.corteTarde` (3 pm de fábrica). Un
+  corte ilegible cuenta como las 3 pm (`minutosDeCorte`), y la frase de la
+  pantalla sale de la misma cifra que el cálculo (`corteVigente`).
 - **El "por hora" de un grupo es el total entre el total de horas**
   (`resumir`), no el promedio de los "por hora" de cada turno. Si no, un turno
   de 3 horas pesaría igual que un doble de 10.
@@ -896,4 +902,18 @@ en un iPhone:
 - **Dos toques no hacen zoom** (`touch-action: manipulation` en la raíz y en la
   hoja de ayuda, que tiene scroll propio). El pellizco para ampliar se deja a
   propósito: quitarlo es una barrera para quien lo necesita para leer.
+
+**Tutoriales en imagen, retirados (27 de septiembre de 2026).** `tutorial-*.png`
+y su generador enseñaban «Añadir a pantalla de inicio» (nombre de España) y
+los pasos de iOS 18. La pantalla de instalación ya da los pasos según el
+teléfono; unas imágenes fijas volverían a quedar viejas con cada iOS. Siguen en
+el historial de git si hicieran falta.
+
+**Resumen del año y hoja para Excel (lógica, 27 de septiembre de 2026).**
+`resumenAnual` da el año calendario y sus doce meses con `resumir`, así que
+cuadra con la semana. `turnosACSV` saca una fila por turno con números sin
+"$" y punto decimal, para que se puedan sumar; lleva la marca BOM (sin ella
+Excel rompe los acentos) y protege con un apóstrofo el texto que empieza por
+= + - o @, porque Excel lo ejecutaría como fórmula y la nota la escribe la
+persona. Es un registro personal, nunca un cálculo de impuestos.
 

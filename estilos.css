@@ -1,0 +1,995 @@
+/* ============================================================================
+   ESTILOS — Tips Control
+   Copyright (c) 2026 Kevin Rincón. Todos los derechos reservados. Ver LICENSE.
+   ----------------------------------------------------------------------------
+   Es el <style> que vivía dentro de index.html (secciones A a H y A2 a A5),
+   sacado a su propio archivo para que index.html baje de tamaño. Se carga en
+   la cabecera, en el mismo sitio donde estaba, así que el orden de la cascada
+   no cambia.
+
+   Si este archivo no llega, la app se ve sin diseño pero funciona y los datos
+   no se tocan. Va en la copia del service worker, como todo lo que carga la
+   página (una prueba lo vigila).
+   ========================================================================== */
+
+/* ============================================================================
+   SECCIÓN A — Colores
+   ----------------------------------------------------------------------------
+   Decisión de diseño (v2): el color ya NO rellena tarjetas. El verde aparece
+   en tres sitios y en ninguno más: la cifra principal, la barra de cada día y
+   la pestaña activa. Todo lo demás es papel y tinta.
+
+   La razón: cuando todo está resaltado, nada está resaltado. Antes el bloque
+   verde competía con el número que de verdad importaba.
+   ========================================================================== */
+:root {
+  --papel:      #faf9f7;   /* el fondo */
+  --tarjeta:    #ffffff;
+  --linea:      #e7e5e0;   /* bordes: casi invisibles, solo separan */
+  --linea-alta: #c8c5be;
+  --tinta:      #16150f;   /* el texto principal */
+  --tinta-2:    #6b6963;   /* etiquetas y datos secundarios */
+  --tinta-3:    #9a9891;   /* lo que casi no importa */
+  --verde:      #15803d;
+  --verde-suave:#dcf2e3;   /* solo para las barras de los días */
+  --rojo:       #a52020;
+  /* El día libre que ya pasó. Va MÁS OSCURO que el papel a propósito: así se
+     lee como una casilla hundida, un hueco. Una celda vacía más clara que la
+     página (que es lo que era, blanca sobre hueso) parece una ficha levantada
+     esperando algo. Es el mismo gris con el que se sombrean las filas sin
+     datos de una tabla, y significa lo mismo: aquí no hay nada.
+
+     Bajado de #f0efeb: contra el blanco de una celda trabajada la diferencia
+     era de unos 15 tonos sobre 255 y en el teléfono no se distinguía. */
+  --hueco:      #e4e2da;
+  --hueco-linea:#d5d2c8;   /* su borde, también más marcado */
+
+  /* El fondo de una celda del calendario, aparte de `--tarjeta`.
+     En claro son el mismo color y esta variable no cambia nada; existe porque
+     en oscuro el día trabajado necesita subir un escalón por encima del hueco
+     sin arrastrar consigo las tarjetas de estadísticas ni los formularios. */
+  --dia:        var(--tarjeta);
+  --dia-linea:  var(--linea);
+}
+/* El modo oscuro ya NO se activa con `prefers-color-scheme` desde el CSS, sino
+   con el atributo `data-tema` en la etiqueta <html>. Quien decide el valor de
+   ese atributo es la función `aplicarTema()`: si el usuario eligió Automático,
+   consulta al sistema; si eligió claro u oscuro, manda su elección.
+
+   Lo importante es que aquí solo hay dos juegos de colores, uno claro y uno
+   oscuro. La tercera opción (Automático) no necesita colores propios: se
+   resuelve a uno de los dos antes de que la página se dibuje. */
+:root[data-tema="oscuro"] {
+    --papel:      #0e0e0d;
+    --tarjeta:    #191918;
+    --linea:      #2b2b28;
+    --linea-alta: #45443f;
+    --tinta:      #f7f6f3;
+    --tinta-2:    #9d9b94;
+    --tinta-3:    #6a6862;
+    --verde:      #5bd68b;
+    --verde-suave:#1a3226;
+    --rojo:       #f08c8c;
+    /* Tres escalones, y el orden importa tanto como el contraste.
+    
+       En oscuro no se puede "hundir" el hueco por debajo del fondo: el papel
+       ya está casi en negro y lo que va más abajo no se ve —ese era el
+       problema original—. Pero el primer arreglo lo subió por ENCIMA de la
+       tarjeta, y entonces el día que no trabajaste pasó a ser la celda más
+       clara de la fila: la vista se iba a los días vacíos.
+    
+       Así que sube el hueco lo justo para verse, y la celda del día trabajado
+       sube otro escalón para quedar por encima. Queda
+       fondo (#0e0e0d) < hueco (#161614) < día (#242422), que es el mismo orden
+       que en claro. El protagonismo vuelve a los días trabajados. */
+    --hueco:      #161614;
+    --hueco-linea:#282824;
+    --dia:        #242422;
+    --dia-linea:  #35352f;
+}
+
+/* ============================================================================
+   SECCIÓN B — Base y tipografía
+   ----------------------------------------------------------------------------
+   El carácter de la app está aquí, no en el color. Dos recursos:
+
+   1. Contraste de tamaño brutal entre la cifra y su etiqueta (40px contra
+      10px). Una jerarquía tímida se lee como desorden.
+   2. Etiquetas en versalitas espaciadas. Es un recurso de tipografía editorial
+      (periódicos, informes financieros) y hace que un dato se lea como un dato
+      y no como una frase.
+   ========================================================================== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* ----------------------------------------------------------------------------
+   El tamaño de la letra, para quien no ve de cerca.
+
+   Todos los tamaños de esta hoja están en `rem`, que significa "veces el
+   tamaño base". `aplicarEscala()` cambia ese tamaño base aquí arriba y toda la
+   app crece a la vez, manteniendo las proporciones: la cifra sigue siendo
+   cuatro veces su etiqueta, que es de donde sale el carácter de la app. Si
+   cada tamaño estuviera en píxeles habría que tocar cuarenta reglas y la
+   jerarquía se rompería en la primera que se olvidara.
+
+   Va en porcentaje y no en píxeles a propósito: así se multiplica por el
+   tamaño de letra que la persona ya tenga puesto en su navegador en vez de
+   pisarlo. Quien ya había agrandado la letra de todo su teléfono no debería
+   ver la nuestra encoger al abrir la app.
+
+   Los márgenes y los rellenos siguen en píxeles: si creciera todo, en tamaño
+   grande cabrían tres datos por pantalla. Lo que crece es la letra; el aire
+   entre las cosas se queda como está. Las únicas medidas que crecen con ella
+   son las que la contienen —el alto de cada día, los círculos de ayuda, el
+   hueco de la barra de abajo—, porque si no la cortarían.
+   -------------------------------------------------------------------------- */
+/* Sin zoom al tocar dos veces. En el teléfono, dos toques rápidos en una zona
+   sin botón (entre tarjetas, en un número) agrandaban la página entera, y
+   con una mano y de pie cuesta volver. `manipulation` quita solo el doble
+   toque: el pellizco para ampliar se queda a propósito, porque hay quien lo
+   necesita para leer y quitárselo es una barrera de accesibilidad.
+   No se hereda: el navegador cruza el valor del elemento tocado con el de sus
+   antepasados hasta el primero que hace scroll. Por eso va también en la hoja
+   de ayuda, que tiene scroll propio. */
+html { font-size: 100%; touch-action: manipulation; }
+
+/* La franja muerta de iOS 26 (WebKit 301108).
+
+   Medido en el teléfono con el diagnóstico de Ajustes: al abrir la app
+   instalada, iOS le da una ventana de 894 de alto en una pantalla de 956 (le
+   quita justo lo que mide el hueco del reloj, 62), y debajo pinta una franja
+   con el fondo de la raíz. Ese hueco no se puede recuperar desde la app.
+
+   Lo que se descubrió después, con un video del teléfono: al hacer scroll iOS
+   no corrige la ventana UNA vez, la hace ALTERNAR entre 894 y 956. Una barra
+   pegada abajo (`bottom: 0`) sigue ese borde y salta 62 cada vez. Por eso,
+   cuando se detecta el fallo (`hueco-ios`, lo pone `medirHuecoIOS()`):
+
+     - La barra se ancla ARRIBA, no abajo: `top` a la altura corta que iOS da
+       al abrir (`--alto-estable`) y subida su propio alto con `translateY`.
+       El borde de arriba de la ventana no se mueve nunca, así que la barra
+       tampoco. La etiqueta queda siempre donde estaba con la ventana corta.
+     - Su fondo se prolonga hacia abajo (`::after`). Con la ventana larga tapa
+       la franja que queda debajo; con la corta cae en la franja muerta, que
+       ya es del mismo color porque la raíz se pinta como la barra.
+     - Pierde el margen de la rayita de inicio: la rayita está en el borde
+       real, dentro de la franja.
+     - Una capa fija de papel tapa la ventana, para que el color de la raíz no
+       asome detrás del contenido en una pantalla corta.
+
+   La clase NO se quita al hacer scroll: se pone una vez y se queda. Quitarla
+   y ponerla fue lo que hizo parpadear la barra en la v31 y la v32. La
+   `--alto-estable` solo cambia si aparece una ventana todavía más corta.
+   Todo va dentro de `orientation: portrait`: en horizontal, anclar la barra a
+   894 la mandaría fuera de la pantalla.
+
+   REGLA: nada de esto puede cambiar el ALTO DE LA PÁGINA. La v31 le ponía al
+   cuerpo un alto mínimo y armó un bucle con iOS. Solo se tocan cosas que no
+   ocupan sitio: la barra (`fixed`), el fondo de la raíz y la capa fija. Una
+   prueba lo vigila. */
+@media (orientation: portrait) {
+  :root.hueco-ios { background: var(--tarjeta); }
+  :root.hueco-ios body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; background: var(--papel);
+  }
+  :root.hueco-ios .pestanas {
+    top: var(--alto-estable); bottom: auto; transform: translateY(-100%);
+    padding-bottom: 0;
+  }
+  :root.hueco-ios .pestanas::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 100%;
+    height: 200px; background: var(--tarjeta);
+  }
+}
+
+body {
+  margin: 0;
+  /* El relleno de arriba es el hueco del reloj y la isla dinámica, por si la
+     app se dibuja debajo de ellos.
+
+     Se creía que con la barra de estado en `default` la app empezaba debajo
+     del reloj y este relleno valía 0. El diagnóstico del 23 de septiembre de
+     2026 lo desmintió: en iOS 26, instalada, vale 62px en un iPhone grande y
+     la página se dibuja debajo del reloj igual. Este relleno es lo que evita
+     que el título y el botón Cerrar del formulario queden tapados. */
+  padding: env(safe-area-inset-top) 14px calc(4.75rem + env(safe-area-inset-bottom));
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Versalitas: la etiqueta de todo dato numérico */
+/* Tres niveles de texto, y el color de cada uno es parte de la regla:
+     título     → tinta, negrita, grande
+     leyenda    → tinta-2, MAYÚSCULAS espaciadas, pequeña (esta clase)
+     comentario → tinta-2, letra normal, minúsculas
+   La leyenda estaba en tinta-3, que da 2.7:1 sobre el papel (el mínimo para
+   texto es 4.5:1): las etiquetas de toda la app se leían lavadas y los tres
+   niveles se confundían. tinta-3 queda para lo que no hay que leer: guiones,
+   días vacíos, bordes, placeholders. Leyenda y comentario comparten color y
+   se distinguen por las mayúsculas, el peso y el espaciado. */
+.etiqueta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+/* Las cifras van en fuente tabular para que se alineen en columna, y con las
+   letras un poco apretadas: un número grande con espaciado normal se ve
+   desparramado. */
+.cifra { font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
+
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+/* ============================================================================
+   SECCIÓN C — Cabecera y navegación entre semanas
+   ========================================================================== */
+.cabecera {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 2px 12px;
+}
+/* El título de la pantalla, al mismo nivel que el de Ajustes o el del turno
+   (`.barra-titulo .fecha`). Era pequeño y gris, y se leía como un comentario. */
+.cabecera .lugar { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em;
+                   color: var(--tinta); }
+/* Las píldoras de la cabecera: "Hoy" y "Ayuda". "Ayuda" va en palabra y no
+   en un "?" porque la píldora ya se lee como algo que se toca (es la forma de
+   "Hoy"), y una palabra no depende de que la persona sepa qué significa un
+   ícono. El selector lleva la cabecera delante para ganarle a
+   `.barra-titulo button`, que le quitaría el borde. */
+.cabecera-der { display: flex; align-items: center; gap: 6px; }
+.cabecera .pildora, .barra-titulo .pildora {
+  position: relative;
+  font-size: 0.75rem; color: var(--tinta-2); font-weight: 600; font-family: inherit;
+  padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
+  background: none; cursor: pointer;
+}
+.cabecera .hoy { color: var(--verde); }
+/* La zona de toque crece por fuera sin agrandar el dibujo: la píldora mide
+   unos 30 puntos de alto y Apple pide 44. De lado crece poco para no pisar a
+   la de al lado. Es la misma idea que los días libres: la caja que se ve y la
+   que se toca van por separado. */
+.pildora::after { content: ''; position: absolute; inset: -9px -3px; }
+
+.semana-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.semana-nav .rango { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
+.semana-nav button {
+  width: 2.5rem; height: 2.5rem; border: 1px solid var(--linea);
+  background: var(--tarjeta); color: var(--tinta-2); border-radius: 10px;
+  font-size: 1.0625rem; line-height: 1; cursor: pointer;
+}
+.semana-nav button:disabled { opacity: .35; }
+
+/* ============================================================================
+   SECCIÓN D — La semana: siete días tocables
+   ----------------------------------------------------------------------------
+   Cada día es un botón. El relleno verde de abajo es proporcional al día que
+   más ganaste esa semana: la celda ES la barra. Así se compara de un vistazo
+   sin ocupar espacio extra con un gráfico aparte.
+   ========================================================================== */
+.dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+
+.dia {
+  position: relative; overflow: hidden;
+  height: 5.125rem; padding: 7px 2px 6px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 1px solid var(--dia-linea); border-radius: 9px;
+  background: var(--dia); color: var(--tinta);
+  font-family: inherit; cursor: pointer;
+}
+.dia .barra {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--verde-suave);
+}
+.dia .letra, .dia .num, .dia .monto { position: relative; }
+.dia .letra { font-size: 0.5625rem; font-weight: 600; letter-spacing: 0.06em;
+              color: var(--tinta-2); text-transform: uppercase; }
+.dia .num   { font-size: 0.9375rem; font-weight: 500; margin-top: 1px; }
+.dia .monto { font-size: 0.6875rem; font-weight: 600; color: var(--verde);
+              margin-top: auto; font-variant-numeric: tabular-nums; }
+/* Un día en que el tip-out se comió las propinas. Es raro, pero existe, y el
+   verde diría lo contrario de lo que pasó. */
+.dia .monto.negativo { color: var(--rojo); }
+/* Montos de cuatro cifras. Encogen en vez de cortarse: un "$1,23" no es un
+   número más pequeño, es un número equivocado. */
+.dia .monto.largo { font-size: 0.5625rem; letter-spacing: -0.03em; }
+.dia.vacio .num { color: var(--tinta-3); font-weight: 400; }
+/* Hundido solo el día vacío que YA pasó. Los que están por venir se quedan
+   neutros: hoy es miércoles y pintar de "libre" el jueves, viernes, sábado y
+   domingo sería afirmar algo de cuatro días que todavía no han ocurrido. El
+   gris vacío es neutro y no dice nada; en cuanto se pinta, empieza a decir. */
+/* El día libre que ya pasó: la caja se dibuja un poco más adentro, para que
+   se lea como algo que está al fondo y no al mismo nivel que los demás.
+
+   Se pinta con `::before` en vez de encoger la celda entera, y no es un
+   capricho técnico. Encogiéndola pasarían dos cosas: los números de los días
+   dejarían de estar alineados con los de al lado —y una fila de calendario con
+   los números bailando no parece profundidad, parece un error— y el sitio
+   donde hay que tocar para registrar ese turno se haría más pequeño, justo en
+   los días que se rellenan tarde y a destiempo. Así la celda mantiene su
+   tamaño y su posición; lo único que se mete hacia dentro es lo que se ve.
+
+   El margen es igual por los cuatro lados en vez de proporcional al alto y al
+   ancho: lo que el ojo percibe es el hueco alrededor, no la razón entre los
+   lados, y un margen constante se lee como intención mientras que uno desigual
+   se lee como un descuadre. */
+.dia.vacio.pasado { background: none; border-color: transparent; }
+.dia.vacio.pasado::before {
+  content: ''; position: absolute; inset: 3px;
+  background: var(--hueco); border: 1px solid var(--hueco-linea);
+  border-radius: 7px;
+}
+.dia.hoy { border-color: var(--tinta); }
+.dia.hoy .letra { color: var(--tinta); }
+
+/* ============================================================================
+   SECCIÓN E — El resumen de la semana
+   ========================================================================== */
+.total { padding: 22px 2px 6px; }
+.total .cantidad {
+  font-size: 2.625rem; font-weight: 600; line-height: 1;
+  margin: 6px 0 4px; color: var(--tinta);
+}
+.total .contra { font-size: 0.8125rem; color: var(--tinta-2); }
+.total .sube { color: var(--verde); font-weight: 600; }
+.total .baja { color: var(--rojo); font-weight: 600; }
+
+/* Rejilla de métricas: las líneas separadoras son el propio hueco de la
+   rejilla sobre un fondo del color del borde. Un truco viejo que evita tener
+   que decidir qué celda lleva borde y cuál no. */
+.metricas {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1px; background: var(--linea);
+  border: 1px solid var(--linea); border-radius: 12px; overflow: hidden;
+}
+.metricas.extras { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
+.metrica { background: var(--tarjeta); padding: 12px 12px; }
+.metrica .valor { font-size: 1.375rem; font-weight: 600; margin-top: 3px;
+                  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.metricas.extras .metrica { padding: 11px 10px; }
+.metricas.extras .valor { font-size: 1.0625rem; }
+
+/* La última tarjeta se estira hasta el final de su fila.
+ 
+   El fondo gris de `.metricas` no es decoración: es el truco que dibuja las
+   rayas de separación entre tarjetas, que se ven por el hueco de 1px que deja
+   el `gap`. Con seis tarjetas en tres columnas la rejilla queda exacta y no
+   sobra nada; con siete —al encender el incentivo— sobraban dos celdas vacías
+   y ese fondo aparecía como un bloque gris.
+ 
+   Estirando la última no queda ninguna celda vacía, así que el gris vuelve a
+   ser solo la raya que siempre fue. Y sirve para cualquier número de tarjetas
+   futuro sin volver a tocarlo. */
+.metricas.extras .metrica:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
+.metricas.extras .metrica:last-child:nth-child(3n+2) { grid-column: span 2; }
+/* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
+   anotar: si están todos, repetir "en 6 de 6" sería ruido. */
+.metrica .cuantos { font-size: 0.6875rem; color: var(--tinta-2); margin-top: 3px;
+                    letter-spacing: 0.02em; }
+
+/* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
+.metrica .cabeza { display: flex; align-items: center;
+                   justify-content: space-between; gap: 6px; }
+
+/* El botón (i). Medía 16 px y había que atinarle; Apple pide 44 puntos de
+   zona de toque. El dibujo sube a 20 px y la zona crece por fuera con
+   `::after` (12 px por lado), sin mover nada de la tarjeta. La tinta pasa a
+   tinta-2: con tinta-3 casi no se veía, y es lo que alguien nuevo tiene que
+   encontrar para entender un número. */
+.info {
+  position: relative;
+  flex: none; width: 1.25rem; height: 1.25rem; padding: 0;
+  border: 1px solid var(--linea-alta); border-radius: 50%;
+  background: none; color: var(--tinta-2);
+  font-size: 0.6875rem; font-weight: 600; font-style: italic; line-height: 1;
+  cursor: pointer;
+}
+.info::after { content: ''; position: absolute; inset: -12px; }
+
+/* La diferencia contra la semana pasada va SIEMPRE en su propio renglón,
+   debajo de la cifra. Antes iba al lado y quedaba a merced del ancho: en las
+   tarjetas angostas saltaba de línea sola y la rejilla se veía desalineada.
+   Una posición fija se lee mejor que una que a veces cambia. */
+.delta { display: block; margin-top: 3px;
+         font-size: 0.78125rem; font-weight: 600; letter-spacing: 0; }
+.delta.sube   { color: var(--verde); }
+.delta.baja   { color: var(--rojo); }
+/* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
+.delta.plano  { color: var(--tinta-2); }
+
+/* ----------------------------------------------------------------------------
+   El globo de ayuda.
+
+   Va con `position: fixed` y se coloca con JavaScript debajo del botón que lo
+   abrió. La alternativa —meterlo dentro de la tarjeta— lo habría dejado
+   cortado por el `overflow: hidden` que redondea las esquinas de la rejilla, y
+   además empujaría el resto de la pantalla hacia abajo al abrirse.
+
+   Colores invertidos (tinta de fondo, papel de letra) para que se lea como
+   algo que está *encima* de la app y no como una parte más de ella.
+   -------------------------------------------------------------------------- */
+.globo {
+  position: fixed; z-index: 50;
+  width: 235px; max-width: calc(100vw - 28px);
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--tinta); color: var(--papel);
+  font-size: 0.78125rem; line-height: 1.35;
+}
+
+.mas {
+  width: 100%; margin-top: 10px; padding: 11px;
+  background: none; border: 1px solid var(--linea); border-radius: 10px;
+  color: var(--tinta-2); font-size: 0.8125rem; cursor: pointer;
+}
+.dato-suelto { font-size: 0.8125rem; color: var(--tinta-2); padding: 12px 2px 0; }
+
+/* ----------------------------------------------------------------------------
+   La hoja de ayuda de cada pantalla.
+
+   Sube desde abajo porque ahí llega el pulgar. Por encima de las pestañas
+   (10) y por debajo del diálogo (50): si algo falla con la hoja abierta, el
+   aviso tiene que verse encima. Alto máximo para que con la letra en
+   Mayor siga quedando fondo que tocar para cerrarla.
+   -------------------------------------------------------------------------- */
+.hoja-fondo {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(0, 0, 0, .38);
+  display: flex; align-items: flex-end;
+}
+.hoja {
+  width: 100%; max-height: 82vh; overflow-y: auto; box-sizing: border-box;
+  touch-action: manipulation;   /* ver `html`: sin zoom de doble toque */
+  background: var(--tarjeta); border-top: 1px solid var(--linea);
+  border-radius: 18px 18px 0 0;
+  padding: 8px 16px calc(14px + env(safe-area-inset-bottom));
+}
+.hoja .asa { width: 36px; height: 4px; border-radius: 4px;
+             background: var(--linea-alta); margin: 0 auto 8px; }
+.hoja-cabeza { display: flex; align-items: center; justify-content: space-between; }
+.hoja-cabeza span { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.hoja-cabeza button { border: none; background: none; color: var(--tinta-2);
+                      font-size: 0.9375rem; font-family: inherit; padding: 10px 4px; }
+.hoja-todas { display: block; width: 100%; margin-top: 4px; padding: 13px;
+              border: none; background: none; color: var(--verde);
+              font-size: 0.875rem; font-weight: 600; font-family: inherit; }
+
+/* ============================================================================
+   SECCIÓN E2 — Reportes: qué turno conviene
+   ----------------------------------------------------------------------------
+   Todo lleva el prefijo `rep-` a propósito: `.fila` ya existe (la rejilla de
+   dos columnas del formulario) y una tabla con esa clase heredaría su
+   `grid-template-columns` sin dar ningún error. Se vería rota y nada diría
+   por qué.
+   ========================================================================== */
+.rep-periodos { margin: 4px 0 2px; }
+.rep-tabla { background: var(--tarjeta); border: 1px solid var(--linea);
+             border-radius: 12px; overflow: hidden; }
+.rep-fila { display: grid; grid-template-columns: 1.3fr 1fr 0.7fr 1fr;
+            align-items: baseline; padding: 9px 12px;
+            border-top: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
+.rep-fila:first-child { border-top: 0; }
+.rep-fila > :not(:first-child) { text-align: right; }
+.rep-fila.titulos { padding: 8px 12px 6px; }
+.rep-dia   { font-weight: 500; }
+.rep-hora  { font-weight: 600; }
+.rep-n, .rep-turno { color: var(--tinta-2); font-size: 0.8125rem; }
+/* El mejor día en verde, y solo ese: es la respuesta a la pregunta de la
+   pantalla. Si se pintaran también los "buenos", la respuesta se diluye. */
+.rep-fila.mejor .rep-dia, .rep-fila.mejor .rep-hora { color: var(--verde); }
+/* Pocos datos (o ninguno) se apaga, no se esconde: la fila sigue ahí para que
+   la tabla tenga siempre sus siete días en el mismo sitio. */
+.rep-fila.poco > * { color: var(--tinta-2); font-weight: 400; }
+.rep-fila .nota { font-size: 0.6875rem; }
+.metrica.mejor .valor { color: var(--verde); }
+.metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-2); }
+.rep-aclara { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0;
+              line-height: 1.4; }
+
+/* ============================================================================
+   SECCIÓN F — Formulario del turno
+   ========================================================================== */
+.barra-titulo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 14px; margin-bottom: 4px;
+}
+.barra-titulo .fecha { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+.barra-titulo button {
+  border: none; background: none; color: var(--tinta-2);
+  font-size: 0.9375rem; cursor: pointer; padding: 6px;
+}
+
+.campo { margin-bottom: 13px; }
+.campo:last-child { margin-bottom: 0; }
+.campo label { display: block; margin-bottom: 5px; }
+
+/* Los campos de dinero son `type=text`, no `type=number`. La razón está en
+   `leerNumero()` de logica.js: con `type=number` el navegador decide qué es un
+   número válido, y esa decisión cambia según el idioma del teléfono. En el de
+   un compañero, "3,5" llegaba al código como texto vacío. */
+input[type=text], input[type=time] {
+  width: 100%; padding: 11px 12px;
+  border: 1px solid var(--linea); border-radius: 9px;
+  background: var(--papel); color: var(--tinta);
+  /* 1rem = 16px con el tamaño Normal, y más con los otros. Nunca menos, que es
+     lo que importa: por debajo de 16px, Safari en iPhone hace zoom al tocar el
+     campo y descoloca la pantalla. Por eso este valor va en rem y no en una
+     medida que pueda encoger. */
+  font-size: 1rem; font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+input:focus { outline: none; border-color: var(--tinta); }
+::placeholder { color: var(--tinta-3); }
+
+/* ----------------------------------------------------------------------------
+   Las dos cajas de hora, una al lado de la otra.
+
+   Esto costó dos intentos. El control de hora de Safari en iPhone trae un
+   ancho propio bastante generoso y se niega a encoger, así que se desbordaba
+   de su columna y se montaba sobre la de al lado. Hacen falta las cuatro
+   piezas juntas; con menos, en iOS se sigue saliendo:
+
+   1. `minmax(0, 1fr)` en la rejilla. Un `1fr` normal significa en realidad
+      "1fr pero nunca menos que el contenido"; el `minmax(0, …)` es lo que le
+      quita ese derecho de veto.
+   2. `min-width: 0` en la columna, por la misma razón.
+   3. `max-width: 100%` en el input: sin él, `width: 100%` no basta en Safari.
+   4. `-webkit-appearance: none`: mientras el control conserva su apariencia
+      nativa, iOS ignora el ancho que le pidas. El selector de rueda al tocarlo
+      sigue funcionando igual; lo único que cambia es el marco.
+   -------------------------------------------------------------------------- */
+.fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.fila > div { min-width: 0; }
+
+input[type=time] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+/* Atajos de hora: las que más usa, sacadas de sus propios turnos. */
+.horas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.horas button {
+  padding: 5px 8px; border: 1px solid var(--linea); border-radius: 7px;
+  background: none; color: var(--tinta-2); font-size: 0.75rem;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.horas button.puesta { border-color: var(--verde); color: var(--verde); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  padding: 8px 13px; border: 1px solid var(--linea); border-radius: 999px;
+  background: var(--papel); color: var(--tinta-2);
+  font-size: 0.8125rem; cursor: pointer; user-select: none;
+}
+/* ESTA es la apariencia de toda selección de la app: los chips, el control
+   segmentado (idioma, tema, tamaño), las casillas de Ajustes y la pestaña
+   activa. Antes cada pantalla tenía la suya —borde verde sin relleno, casilla
+   azul del sistema, solo texto verde— y la misma idea ("esto está elegido") se
+   decía de cuatro maneras.
+
+   Aviso de contraste: verde sobre verde-suave da 4.26:1 en claro, un poco por
+   debajo del 4.5:1 para texto de este tamaño. Subir la letra NO lo arregla
+   (hace falta ~19 px en negrita para contar como texto grande); lo arreglaría
+   un verde algo más oscuro, que es cambiar la paleta. Decisión pendiente.
+
+   El chip puesto se RELLENA, no solo se perfila. Con seis chips en dos filas,
+   un borde de un píxel obliga a mirar dos veces para saber cuáles están
+   marcados, y esa lista es la que decide cuánto tip-out se paga. */
+.chip.activo { border-color: var(--verde); background: var(--verde-suave);
+               color: var(--verde); font-weight: 600; }
+.chip small { opacity: .7; margin-left: 3px; }
+
+/* Un tramo del turno: la cabecera con sus ventas y debajo sus ayudantes.
+   Solo aparece cuando hubo algún cambio de equipo; con uno solo, aquí no hay
+   más que la fila de chips de siempre. */
+.tramo { margin-bottom: 13px; }
+.tramo:last-child { margin-bottom: 0; }
+.tramo-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tramo-cab .titulo { flex: 1; font-size: 0.625rem; font-weight: 600;
+                     letter-spacing: 0.08em; text-transform: uppercase;
+                     color: var(--tinta-2); }
+.tramo-cab input { width: 104px; padding: 8px 10px; }
+/* El resto se calcula, no se escribe: es el único número de este bloque que
+   la persona no teclea, y por eso se ve como un dato y no como un campo. */
+.tramo-cab .resto { font-size: 0.875rem; font-weight: 600; color: var(--tinta);
+                    font-variant-numeric: tabular-nums; }
+.tramo-cab .quitar { color: var(--rojo); padding: 6px 9px; line-height: 1; }
+
+/* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
+   guía el ojo desde el concepto hasta la cifra. */
+.recibo { font-size: 0.875rem; }
+.recibo div { display: flex; justify-content: space-between; padding: 5px 0;
+              color: var(--tinta-2); }
+.recibo .final {
+  border-top: 1px solid var(--linea); margin-top: 7px; padding-top: 11px;
+  color: var(--tinta); font-size: 0.9375rem;
+}
+.recibo .final span:last-child { font-size: 1.625rem; font-weight: 600;
+                                 letter-spacing: -0.025em; }
+.recibo .resta { color: var(--rojo); }
+.recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
+
+/* De qué se compone una línea, debajo de su etiqueta y en el gris apagado de
+   las notas. Hoy solo lo usa "Propinas", que es la única línea del recibo cuyo
+   número NO se tecleó: sale de sumar efectivo y tarjeta, y sin decirlo hay que
+   adivinar de dónde salió esa cifra.
+
+   Va en <small> y no en <span> a propósito: `.recibo span:last-child` pinta de
+   tinta normal al último span de cada fila, y un span aquí dentro sería el
+   último de su etiqueta y saldría oscuro, justo lo contrario de lo que se
+   busca. */
+.recibo small { display: block; font-size: 0.75rem; color: var(--tinta-2);
+                margin-top: 1px; letter-spacing: 0; }
+/* Con la etiqueta en dos líneas, la cifra se alinea con la PRIMERA, no con el
+   centro del bloque: si no, el número queda flotando entre los dos renglones. */
+.recibo .con-detalle { align-items: baseline; }
+
+/* El sueldo por hora cuando NO se suma al total: va debajo de la raya final,
+   más pequeño y en gris. Se ve porque es dinero que sí cobras, pero se lee
+   como una nota al pie y no como parte de la suma de arriba. */
+/* El desglose por tramo, debajo de su total. Va sin signo y en tinta apagada:
+   la resta ya la hizo la línea de arriba, y un segundo "−" haría pensar que se
+   descuenta dos veces. */
+.recibo .sub { padding: 2px 0; font-size: 0.8125rem; }
+.recibo .sub span { color: var(--tinta-2) !important; }
+.recibo .sub span:first-child { padding-left: 13px; }
+.recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
+.recibo .aparte span { color: var(--tinta-2) !important; }
+/* La excepción al gris de las líneas de abajo: un efectivo neto en negativo es
+   plata que sale de tu cartera esta noche. Ese sí tiene que verse. */
+.recibo .aparte .resta { color: var(--rojo) !important; }
+
+/* ============================================================================
+   SECCIÓN G — Botones
+   ========================================================================== */
+button { font-family: inherit; }
+
+.principal {
+  width: 100%; padding: 15px; margin-top: 4px;
+  background: var(--tinta); color: var(--papel);
+  border: none; border-radius: 11px;
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+}
+.secundario {
+  width: 100%; padding: 12px; margin-top: 8px;
+  background: none; color: var(--tinta-2);
+  border: 1px solid var(--linea); border-radius: 11px;
+  font-size: 0.875rem; cursor: pointer;
+}
+.secundario.riesgo { color: var(--rojo); }
+.chico { padding: 7px 11px; font-size: 0.8125rem; border: 1px solid var(--linea);
+         border-radius: 8px; background: var(--papel); color: var(--tinta);
+         cursor: pointer; }
+
+/* ============================================================================
+   SECCIÓN H — Pestañas
+   ========================================================================== */
+.pestanas {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex;
+  background: var(--tarjeta); border-top: 1px solid var(--linea);
+  padding-bottom: env(safe-area-inset-bottom); z-index: 10;
+}
+.pestanas button {
+  position: relative; isolation: isolate;
+  flex: 1; border: none; background: none; padding: 11px 0 13px;
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--tinta-2); cursor: pointer;
+}
+.pestanas button.activa { color: var(--verde); }
+/* La pestaña activa lleva la píldora del chip. Se dibuja con `::before` y no
+   encogiendo el botón: la zona que recibe el dedo sigue siendo un tercio
+   entero de la barra, como antes. Es la misma idea que los días libres de la
+   semana: la caja que se ve y la caja que se toca van por separado. */
+.pestanas button.activa::before {
+  content: ''; position: absolute; inset: 6px 14px 8px; z-index: -1;
+  border: 1px solid var(--verde); border-radius: 999px; background: var(--verde-suave);
+}
+
+.oculto { display: none !important; }
+.vacio { text-align: center; color: var(--tinta-2); padding: 30px 20px;
+         font-size: 0.875rem; }
+/* Control segmentado: tres opciones donde solo una puede estar activa. Se usa
+   en vez de un menú desplegable porque las tres caben a la vista: elegir es un
+   toque, no dos, y de paso ves qué opciones hay sin tener que abrir nada. */
+.segmentado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 6px; }
+.segmentado button {
+  padding: 11px 6px; border: 1px solid var(--linea); border-radius: 999px;
+  background: var(--papel); color: var(--tinta-2);
+  font-size: 0.8125rem; cursor: pointer;
+}
+/* Igual que `.chip.activo`: la misma selección se ve igual en toda la app. */
+.segmentado button.activo { border-color: var(--verde); background: var(--verde-suave);
+                            color: var(--verde); font-weight: 600; }
+
+/* El día en que empieza la semana de pago: siete letras, la misma apariencia
+   de selección que todo lo demás. 2.75rem de alto para llegar a los 44 puntos
+   de toque; el ancho lo pone la pantalla. */
+.siete { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.siete button {
+  height: 2.75rem; padding: 0; border: 1px solid var(--linea); border-radius: 999px;
+  background: var(--papel); color: var(--tinta-2); font-family: inherit;
+  font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+}
+.siete button.activo { border-color: var(--verde); background: var(--verde-suave);
+                       color: var(--verde); }
+.confirma { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0; }
+
+/* ----------------------------------------------------------------------------
+   La Ayuda: preguntas que se despliegan.
+
+   Van cerradas de entrada. Ocho respuestas abiertas a la vez son un muro de
+   texto que nadie lee; ocho preguntas cortas se recorren con la vista en dos
+   segundos y se abre solo la que hacía falta.
+
+   La flecha gira en lugar de cambiar de símbolo: el mismo elemento moviéndose
+   se entiende como "esto se abre", mientras que un + que se convierte en − hay
+   que interpretarlo.
+   -------------------------------------------------------------------------- */
+.ayuda-item { border-bottom: 1px solid var(--linea); }
+.ayuda-item:last-child { border-bottom: none; }
+
+.ayuda-p {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 14px 2px;
+  background: none; border: none; text-align: left;
+  color: var(--tinta); font-family: inherit; font-size: 0.875rem;
+  font-weight: 500; line-height: 1.35; cursor: pointer;
+}
+.ayuda-p .flecha {
+  flex: none; color: var(--tinta-3); font-size: 0.75rem;
+  transition: transform .15s;
+}
+.ayuda-item.abierta .flecha { transform: rotate(90deg); }
+
+.ayuda-r {
+  padding: 0 2px 15px; margin: -4px 0 0;
+  font-size: 0.8125rem; line-height: 1.55; color: var(--tinta-2);
+}
+
+/* Texto de introducción de la bienvenida. Es el único párrafo largo de la app:
+   se lee una vez en la vida y explica por qué le estamos pidiendo datos antes
+   de dejarle hacer nada. Pedir sin explicar es lo que hace que la gente
+   abandone en la primera pantalla. */
+.intro { font-size: 0.875rem; line-height: 1.5; color: var(--tinta-2);
+         margin: 4px 2px 0; }
+
+/* La casilla y su texto van dentro de la misma etiqueta para que se pueda
+   tocar el texto además del cuadrito: en un teléfono, acertarle a un cuadro de
+   16 px con el pulgar es pedir demasiado. */
+/* Las casillas, con la apariencia del chip. Por dentro siguen siendo un
+   <input type="checkbox"> de verdad: se toca igual, el lector de pantalla
+   del iPhone la sigue anunciando como marcada o no, y ningún código cambia.
+   Solo se le quita el dibujo del sistema (`appearance: none`) y se le pone
+   el nuestro: un círculo que se rellena, a la derecha del texto.
+
+   El relleno de toda la píldora sale de `:has(input:checked)`, que Safari
+   entiende desde iOS 15.4. En un navegador más viejo se pierde el relleno
+   de la píldora pero el círculo sigue marcando: se degrada, no se rompe. */
+.check { display: flex; align-items: center; justify-content: space-between;
+         gap: 10px; margin-top: 13px; padding: 10px 14px;
+         border: 1px solid var(--linea); border-radius: 999px;
+         background: var(--papel); font-size: 0.8125rem; color: var(--tinta-2);
+         cursor: pointer; }
+.check:has(input:checked) { border-color: var(--verde); background: var(--verde-suave);
+                            color: var(--verde); font-weight: 600; }
+.check input { order: 2; -webkit-appearance: none; appearance: none;
+               width: 18px; height: 18px; margin: 0; flex: none;
+               border: 1.5px solid var(--linea-alta); border-radius: 50%;
+               background: var(--tarjeta); cursor: pointer; }
+.check input:checked { border-color: var(--verde); background: var(--verde);
+                       box-shadow: inset 0 0 0 3px var(--verde-suave); }
+.check input:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+
+.rol-fila { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
+/* Por clase y no por `type`: desde que el porcentaje dejó de ser
+   `type=number`, los dos campos de la fila son texto y el selector viejo los
+   habría estirado a los dos por igual. */
+.rol-fila input.nombre { flex: 1; }
+.rol-fila input.pct    { width: 74px; }
+/* ============================================================================
+   SECCIÓN A2 — El aviso de instalación
+   ----------------------------------------------------------------------------
+   Va dentro de la pantalla de la semana y NO flotando encima, a propósito. Un
+   banner fijo tapa contenido y esta app ya tiene una barra ocupando la parte de
+   abajo. Este empuja el resto hacia abajo, crece con el tamaño de letra como
+   todo lo demás, y desaparece del todo en cuanto la app está instalada — que es
+   el único final bueno que tiene esta historia.
+   ========================================================================== */
+.instalar {
+  background: var(--tarjeta);
+  border: 1px solid var(--linea-alta);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 0 14px;
+}
+.instalar p { margin: 6px 0 0; font-size: 0.875rem; color: var(--tinta-2); }
+.instalar ol { margin: 8px 0 0; padding-left: 1.2em; font-size: 0.875rem; }
+.instalar li { margin-bottom: 5px; }
+.instalar b { color: var(--tinta); font-weight: 600; }
+/* El ícono de Compartir, metido en la frase. Que se vea el dibujo exacto que hay
+   que buscar vale más que cualquier descripción: "el cuadrito con la flecha"
+   obliga a traducir palabras a un dibujo, y ahí es donde la gente se pierde. */
+.instalar svg { vertical-align: -3px; margin: 0 1px; }
+/* El aviso de por qué importa. Es la única parte que no se puede resumir: sin
+   ella, "instálala" suena a capricho del que hizo la app. */
+.instalar .aviso {
+  margin-top: 10px; font-size: 0.8125rem; color: var(--tinta-2); line-height: 1.4;
+}
+.instalar-botones {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
+}
+/* El texto del botón verde va en color de papel y no en blanco fijo: en modo
+   oscuro el verde se aclara y un blanco encima quedaría ilegible. */
+.instalar-accion {
+  background: var(--verde); color: var(--papel); border: 0; border-radius: 9px;
+  padding: 10px 16px; font-size: 0.875rem; font-weight: 600; font-family: inherit;
+}
+.instalar-secundario {
+  background: transparent; color: var(--tinta); border: 1px solid var(--linea-alta);
+  border-radius: 9px; padding: 10px 14px; font-size: 0.875rem; font-family: inherit;
+}
+.instalar-luego {
+  background: transparent; border: 0; color: var(--tinta-2);
+  font-size: 0.8125rem; font-family: inherit; padding: 10px 4px; margin-left: auto;
+}
+
+/* ============================================================================
+   SECCIÓN A3 — La pantalla de instalación
+   ----------------------------------------------------------------------------
+   Ocupa la pantalla entera y va ANTES que la bienvenida. El motivo no es
+   estético: en iPhone, lo que se guarda en el navegador y lo que se guarda en
+   la app instalada son dos cajones distintos que no se comunican. Quien
+   configure su restaurante, su sueldo y sus porcentajes aquí y luego instale la
+   app, se encuentra la bienvenida otra vez y todo vacío. La única forma de que
+   eso no pase es que no llegue a configurar nada hasta estar dentro.
+
+   Por eso tapa todo en vez de ser un aviso más: un banner que se puede ignorar
+   se ignora, y el precio de ignorarlo lo paga la persona veinte minutos después
+   sin entender por qué.
+   ========================================================================== */
+.inst-pantalla {
+  min-height: 82vh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 24px 4px;
+}
+.inst-icono {
+  width: 68px; height: 68px; border-radius: 15px; margin-bottom: 20px;
+  border: 1px solid var(--linea);
+}
+.inst-pantalla h1 {
+  font-size: 1.5rem; margin: 0 0 8px; letter-spacing: -0.02em;
+}
+.inst-pantalla .entradilla {
+  margin: 0 0 22px; color: var(--tinta-2); font-size: 0.9375rem; line-height: 1.45;
+}
+.inst-pantalla .inst-sub {
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--tinta-2); margin: 0 0 10px;
+}
+.inst-pantalla ol { margin: 0; padding-left: 1.3em; font-size: 0.9375rem; }
+.inst-pantalla li { margin-bottom: 11px; line-height: 1.45; }
+.inst-pantalla b { font-weight: 600; }
+.inst-pantalla svg { vertical-align: -3px; margin: 0 1px; }
+.inst-pantalla .aviso {
+  margin-top: 22px; padding: 12px 14px;
+  background: var(--verde-suave); border-radius: 10px;
+  font-size: 0.8125rem; line-height: 1.45; color: var(--tinta);
+}
+/* La salida. Va abajo del todo, en gris y sin aspecto de botón, porque no es lo
+   que queremos que se haga: existe solo para que un fallo de detección en algún
+   teléfono raro no deje a esa persona encerrada fuera de su propia app. */
+.inst-salida {
+  background: transparent; border: 0; color: var(--tinta-2);
+  font-family: inherit; font-size: 0.8125rem; text-decoration: underline;
+  margin-top: 26px; padding: 10px 0; align-self: center;
+}
+
+/* ============================================================================
+   SECCIÓN A4 — El diálogo propio
+   ----------------------------------------------------------------------------
+   Sustituye a `alert()` y `confirm()` del navegador por dos motivos, y el
+   segundo es el importante:
+
+   1. Los del navegador salen con el título "kewo1023.github.io dice", que no se
+      puede quitar y hace que la app parezca una página web cualquiera.
+   2. Cuando una página muestra varios seguidos, iOS ofrece "Eliminar cuadros de
+      diálogo". Quien marque esa casilla —después de borrar tres roles, por
+      ejemplo— apaga sin saberlo TODOS los avisos de la app, incluido "no se
+      pudo guardar tu turno". La regla número uno de este proyecto es que nada
+      falle en silencio, y esa casilla la desactivaba con dos toques. Un <div>
+      nuestro no se puede apagar.
+   ========================================================================== */
+.dialogo-fondo {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.dialogo {
+  background: var(--tarjeta);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%; max-width: 340px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+/* `pre-line` respeta los saltos de línea del texto: varios mensajes llevan el
+   detalle técnico en una segunda línea, y sin esto salía todo pegado. */
+.dialogo-texto {
+  margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--tinta);
+  white-space: pre-line;
+}
+.dialogo-botones { display: flex; gap: 8px; margin-top: 18px; }
+.dialogo-botones button {
+  flex: 1; border-radius: 9px; padding: 12px 10px;
+  font-size: 0.9375rem; font-family: inherit; font-weight: 600;
+}
+.dialogo-ok { background: var(--verde); color: var(--papel); border: 0; }
+.dialogo-cancelar {
+  background: transparent; color: var(--tinta);
+  border: 1px solid var(--linea-alta); font-weight: 500;
+}
+
+/* El pie de Ajustes. Deliberadamente discreto: es información que hay que poder
+   encontrar, no que haya que leer. */
+.pie {
+  margin: 30px 0 10px; text-align: center;
+  font-size: 0.75rem; line-height: 1.5; color: var(--tinta-2);
+  white-space: pre-line;
+}
+
+/* ============================================================================
+   SECCIÓN A5 — La firma de quien hizo la app
+   ----------------------------------------------------------------------------
+   Es la marca de agua de Kev, no un elemento de Tips Control: el logo y sus
+   colores vienen del kit de marca y NO de los tokens de esta hoja. Por eso los
+   dos hex de abajo van sueltos a propósito, que es lo contrario de la regla
+   del resto del archivo. La paleta de la app (verde, papel, tinta) no cambia.
+
+   El kit la pide fija abajo a la izquierda. Aquí abajo a la izquierda está la
+   pestaña Semana, y la regla del propio kit es que nunca vaya sobre nada que
+   se toque. Así que va en el flujo de la pantalla, al final del contenido, y
+   sube con el scroll. El `pointer-events: none` es la red de seguridad, no el
+   permiso.
+
+   Solo va en Ajustes, junto a la versión y el copyright (23 de septiembre de
+   2026). En la Semana y en Reportes, con poco contenido, quedaba flotando en
+   medio del espacio vacío y se leía como un elemento suelto de la interfaz,
+   no como una firma. Es una excepción de esta app, decidida por su autor: la
+   regla general del kit (marca en la pantalla principal) no se cambió.
+
+   El dibujo (símbolo y nombre) vive en UNA constante, `MARCA_KEV`, en la
+   sección M, y se pinta desde `pintarMarca()`. Todavía no
+   es la versión final del logo: cuando cambie, se cambia ahí y en ningún otro
+   lado.
+   ========================================================================== */
+.marca-kev {
+  display: flex; margin: 22px 0 0 2px; padding: 8px;   /* 8px de aire */
+  color: #475569; opacity: 0.40;                       /* claro, según el kit */
+  pointer-events: none; user-select: none; -webkit-user-select: none;
+}
+:root[data-tema="oscuro"] .marca-kev { color: #CBD5E1; opacity: 0.45; }
+.marca-kev svg { display: block; width: 45.5px; height: 16px; fill: currentColor; }
+/* En Ajustes va centrada, como el pie legal que tiene debajo. */
+.marca-kev.centrada { justify-content: center; margin: 30px 0 -20px; }
+
+h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+             text-transform: uppercase; color: var(--tinta-2);
+             margin: 24px 0 9px 2px; }
