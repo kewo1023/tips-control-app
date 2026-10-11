@@ -275,6 +275,50 @@ function revisarCortes(ventasTotales, cortes) {
   return { ok: true, motivo: '', corte: -1 };
 }
 
+/**
+ * Lo que la pantalla dice debajo de cada corte MIENTRAS se escribe.
+ *
+ * `revisarCortes` solo habla al guardar, y hasta entonces la pantalla
+ * calculaba con lo que hubiera: quien escribía las ventas de cada tramo en vez
+ * de las acumuladas (700 y luego 500) veía un tramo de −$200, un tip-out que
+ * restaba de menos y ningún aviso. Con un solo cambio las dos lecturas dan lo
+ * mismo; el malentendido aparece con el segundo. Por eso cada corte enseña
+ * las ventas de SU tramo ("$500 en este tramo"), que confirman la lectura
+ * buena, o el motivo por el que no se puede usar.
+ *
+ * Recibe los textos tal como están en los campos, sin convertir: separar
+ * "vacío" de "ilegible" es justo lo que hace falta aquí.
+ *
+ * @returns {{ ok: boolean, cortes: Array<{ estado, ventas, limite }> }}
+ *   estado — 'ok' | 'vacio' | 'ilegible' | 'cero' | 'orden' | 'pasa' | 'espera'
+ *            ('espera': un corte posterior al que falla; sus ventas dependen
+ *            de él y no se pueden decir todavía)
+ *   ventas — las ventas del tramo, solo con 'ok'
+ *   limite — con 'orden', el corte anterior; con 'pasa', las ventas del turno
+ */
+function estadoDeCortes(ventasTotales, textos) {
+  const totalVentas = Number(ventasTotales) || 0;
+  const leidos = (Array.isArray(textos) ? textos : []).map(leerNumero);
+  const revision = revisarCortes(totalVentas,
+    leidos.map(l => (!l.ok || l.vacio) ? null : l.valor));
+  const fallo = revision.ok ? leidos.length : revision.corte;
+
+  const cortes = leidos.map((l, i) => {
+    const anterior = i === 0 ? 0 : leidos[i - 1].valor;
+    if (i < fallo)  return { estado: 'ok', ventas: redondear(l.valor - anterior), limite: null };
+    if (i > fallo)  return { estado: 'espera', ventas: null, limite: null };
+    if (!l.ok)      return { estado: 'ilegible', ventas: null, limite: null };
+    if (l.vacio)    return { estado: 'vacio', ventas: null, limite: null };
+    if (revision.motivo === 'pasa') {
+      return { estado: 'pasa', ventas: null, limite: totalVentas };
+    }
+    return i === 0 ? { estado: 'cero', ventas: null, limite: null }
+                   : { estado: 'orden', ventas: null, limite: anterior };
+  });
+
+  return { ok: revision.ok, cortes };
+}
+
 /* --- El turno completo --------------------------------------------------- */
 
 /**
@@ -940,7 +984,7 @@ function avisoRespaldo(turnos, ultimoRespaldo, pospuesto, hoyTexto) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     redondear, leerNumero, horaAMinutos, calcularHoras, calcularTipOut,
-    calcularTipOutTramos, revisarCortes,
+    calcularTipOutTramos, revisarCortes, estadoDeCortes,
     calcularTurno, resumir, lunesDeLaSemana, inicioDeSemana, numeroDelDia,
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,

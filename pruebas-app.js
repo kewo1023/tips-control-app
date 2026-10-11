@@ -1550,6 +1550,22 @@ ok('y estilos.css', guiones.includes('estilos.css'));
 ok('y cada archivo que carga está en la copia del service worker',
    guiones.length > 0 && guiones.every(g => archivosSW.includes(`'./${g}'`)));
 
+// 1b. Lo mismo con logica.js: toda función suya que llama la página está en
+//     FUNCIONES_NECESARIAS. Si falta, un logica.js viejo en la caché del
+//     teléfono hace que esa función no exista, y la app no se entera.
+{
+  const L = require('./logica.js');
+  const lista = (html.match(/const FUNCIONES_NECESARIAS = \[([\s\S]*?)\];/) || ['', ''])[1];
+  const resto = html.replace(/const FUNCIONES_NECESARIAS = \[[\s\S]*?\];/, '');
+  const olvidadas = Object.keys(L)
+    .filter(k => typeof L[k] === 'function')
+    .filter(k => new RegExp('\\b' + k + '\\(').test(resto))
+    .filter(k => !lista.includes(`'${k}'`));
+  ok('toda función de logica.js que usa la página se comprueba al arrancar',
+     lista !== '' && olvidadas.length === 0);
+  if (olvidadas.length) console.log('    faltan: ' + olvidadas.join(', '));
+}
+
 // 2. Un texto que falta no se vuelve "undefined": avisa una vez.
 avisos.length = 0;
 ok('una clave que no existe devuelve texto vacío', run("t('claveQueNoExiste')") === '');
@@ -1982,6 +1998,7 @@ const corte = i => d.querySelectorAll('#tramos .tramo-cab')[i].children
 const chipsDe = i => d.querySelectorAll('#tramos .tramo')[i]
                       .descendientes().filter(e => e._classes.has('chip'));
 const marcados = i => chipsDe(i).filter(e => e._classes.has('activo')).length;
+const nota = i => d.querySelectorAll('#tramos .tramo-nota')[i];
 
 dias()[0].click();                       // lunes 3
 set('f-entrada', '15:00'); set('f-salida', '23:00');
@@ -2031,6 +2048,8 @@ dias()[0].click();
 ok('al reabrirlo vuelven los dos tramos',
    d.querySelectorAll('#tramos .tramo').length === 2);
 ok('con su corte escrito', corte(0).value === '500');
+ok('y con las ventas de su tramo debajo, sin tener que tocarlo',
+   nota(0).textContent.includes('$500.00'));
 ok('los ayudantes del primer tramo, como estaban', marcados(0) === 2);
 ok('y los del último también', marcados(1) === 4);
 ok('el recibo desglosa por tramo', texto('recibo').includes('$500.00 al 4%'));
@@ -2087,12 +2106,45 @@ corte(1).dispatchEvent({ type: 'input' });
 run('guardarTurno()');
 ok('un cambio que va hacia atrás no se guarda', avisos.length === 1);
 
+/* Y ANTES de guardar, en la pantalla. El caso que lo trajo: los cambios
+   escritos tramo a tramo (500 y luego 400 más) en vez de acumulados. La
+   pantalla calculaba un tramo negativo, un "Lo que queda" que parecía bueno y
+   un tip-out de menos, sin ningún aviso hasta tocar Guardar. */
+ok('el cambio hacia atrás se marca en rojo mientras se escribe',
+   nota(1)._classes.has('mal'));
+ok('con el acumulado contra el que tiene que crecer',
+   nota(1).textContent.includes('$500.00'));
+ok('y el campo también', corte(1)._classes.has('mal'));
+ok('el cambio bueno no se marca', !nota(0)._classes.has('mal'));
+ok('y dice las ventas de su tramo', nota(0).textContent.includes('$500.00'));
+ok('lo que queda no inventa un número',
+   d.querySelectorAll('#tramos .resto')[0].textContent === '\u2014');
+ok('el recibo no desglosa un tramo negativo', !texto('recibo').includes('-$'));
+ok('el tip-out dice que hay que revisar los cambios',
+   texto('recibo').includes('revisa los cambios \u2014'));
+ok('y no da un total ni un por hora, porque dependen de él',
+   texto('recibo').includes('llevas \u2014') && texto('recibo').includes('Por hora \u2014'));
+
 corte(1).value = '1200';
 corte(1).dispatchEvent({ type: 'input' });
 avisos.length = 0;
 run('guardarTurno()');
 // $500 al 4% = $20; $700 al 3% = $21; $600 al 6.5% = $39.
 ok('con dos cambios suma los tres tramos', D().turnos[0].tipOut === 80);
+ok('con los dos bien, ninguno en rojo',
+   !nota(0)._classes.has('mal') && !nota(1)._classes.has('mal'));
+ok('el segundo dice lo vendido desde el primero, no el acumulado',
+   nota(1).textContent.includes('$700.00'));
+
+/* Las ventas del turno también mueven lo de abajo: antes, corregirlas dejaba
+   "Lo que queda" con la cifra vieja hasta tocar otra cosa. */
+set('f-ventas', '2000');
+ok('cambiar las ventas del turno recalcula lo que queda',
+   d.querySelectorAll('#tramos .resto')[0].textContent === '$800.00');
+set('f-ventas', '1000');
+ok('y si quedan por debajo de un cambio, ese cambio lo dice',
+   nota(1)._classes.has('mal') && nota(1).textContent.includes('$1,000.00'));
+set('f-ventas', '1800');
 ok('y guarda los tres', (D().turnos[0].tipoutTramos || []).length === 3);
 
 run("irA('semana')"); dias()[0].click(); run('agregarCorte()');

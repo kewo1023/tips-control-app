@@ -323,6 +323,27 @@ de ahí se paga el 5%, **pero solo sobre lo vendido después**.
 ventas deja el último tramo en negativo y el tip-out pasa a SUMAR dinero. Se
 rechazan también cortes que no crecen, el primero en cero, vacíos e ilegibles.
 
+**El aviso llega mientras se escribe, no solo al guardar** (v41). Con dos
+cambios, quien escribió lo vendido en cada tramo (700 y luego 500) en vez del
+acumulado vio un tramo de −$200, un "Lo que queda" que parecía bueno y un
+tip-out de menos, sin aviso hasta tocar Guardar. Con un cambio solo, las dos
+lecturas dan el mismo número, así que el malentendido no se ve hasta el
+segundo. Se decidió **seguir pidiendo el acumulado** (el recibo del POS que se
+imprime en el momento del cambio) y hacer que la pantalla lo confirme:
+
+- La cabecera dice "Acumulado al cambio N" y debajo de cada cambio va lo
+  vendido en SU tramo ("$500.00 en este tramo"): es la comprobación de que el
+  número se leyó como se quería.
+- Un cambio imposible se dice ahí mismo, en rojo, con contra qué número tiene
+  que crecer. "Lo que queda", el tip-out, el total y el por hora pasan a "—":
+  una raya no se confunde con una cifra.
+- `estadoDeCortes` (logica.js) hace la cuenta; `revisarCortes` sigue siendo
+  quien decide al guardar.
+
+Descartado: pasar a pedir lo vendido en cada tramo. Obligaría a restar dos
+recibos a mano, y los turnos guardados tienen los cortes como acumulados:
+habría que convertirlos.
+
 ---
 
 ## 6. El incentivo (puntos)

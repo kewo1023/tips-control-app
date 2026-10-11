@@ -630,7 +630,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v40';
+const VERSION_APP = 'v41';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1330,11 +1330,28 @@ function tramosDelFormulario() {
   ];
 }
 
-/** Las ventas del último tramo: lo que queda después del último cambio. */
+/** Cómo están los cambios escritos ahora mismo (ver `estadoDeCortes`). */
+function estadoCortesFormulario() {
+  return estadoDeCortes(num('f-ventas'), cortes.map(c => c.texto));
+}
+
+/**
+ * Las ventas del último tramo: lo que queda después del último cambio.
+ *
+ * `null` si algún cambio no se puede usar. Antes se restaba igual, y con los
+ * cambios escritos tramo a tramo (700 y luego 500) salía una cifra que parecía
+ * buena y no lo era. Una raya no se confunde con un número.
+ */
 function ventasRestantes() {
+  if (!estadoCortesFormulario().ok) return null;
   const ultimo = cortes.length > 0
     ? leerNumero(cortes[cortes.length - 1].texto).valor : 0;
   return redondear(num('f-ventas') - ultimo);
+}
+
+function textoRestante() {
+  const resto = ventasRestantes();
+  return resto === null ? '\u2014' : $(resto);
 }
 
 function leer() {
@@ -3048,6 +3065,7 @@ function pintarTramos() {
   // Se olvida el de la vuelta anterior: ya no está en la pantalla, y
   // escribirle encima sería pintar en un sitio que nadie ve.
   restoVisible = null;
+  notasVisibles = [];
 
   if (rolesQueCobran().length === 0) {
     caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-2)">'
@@ -3063,6 +3081,7 @@ function pintarTramos() {
 
   const cuantos = cortes.length + 1;
   for (let i = 0; i < cuantos; i++) caja.appendChild(bloqueTramo(i, cuantos));
+  pintarCifrasTramos();
 }
 
 /** Un tramo: su cabecera (si hay más de uno) y sus chips. */
@@ -3074,6 +3093,7 @@ function bloqueTramo(i, cuantos) {
   if (cuantos > 1) {
     const cab = document.createElement('div');
     cab.className = 'tramo-cab';
+    let campo = null;
 
     const titulo = document.createElement('span');
     titulo.className = 'titulo';
@@ -3088,7 +3108,7 @@ function bloqueTramo(i, cuantos) {
          sitios donde equivocarse. */
       const resto = document.createElement('span');
       resto.className = 'resto';
-      resto.textContent = $(ventasRestantes());
+      resto.textContent = textoRestante();
       /* Se guarda el elemento en vez de buscarlo luego por su id. Es más
          directo, y evita depender de `getElementById` para algo que este
          código acaba de crear: si el elemento cambiara de nombre, la búsqueda
@@ -3097,7 +3117,7 @@ function bloqueTramo(i, cuantos) {
       restoVisible = resto;
       cab.appendChild(resto);
     } else {
-      const campo = document.createElement('input');
+      campo = document.createElement('input');
       campo.type = 'text';
       campo.inputMode = 'decimal';
       campo.placeholder = '0.00';
@@ -3111,7 +3131,7 @@ function bloqueTramo(i, cuantos) {
         // está aquí al alcance, y depender del evento ata este código a que
         // quien lo dispare arme un objeto completo.
         cortes[i].texto = campo.value;
-        pintarResto();
+        pintarCifrasTramos();
         pintarRecibo();
       });
       cab.appendChild(campo);
@@ -3125,6 +3145,17 @@ function bloqueTramo(i, cuantos) {
     }
 
     bloque.appendChild(cab);
+
+    /* Debajo de cada cambio, las ventas de SU tramo. Es la confirmación de
+       que el número se leyó como acumulado: quien escribe 500 pensando en lo
+       vendido desde el cambio anterior ve "Tiene que ser más que $700.00" en
+       el momento, y no un tramo negativo al final. */
+    if (!esUltimo) {
+      const nota = document.createElement('div');
+      nota.className = 'tramo-nota';
+      notasVisibles[i] = { nota, campo };
+      bloque.appendChild(nota);
+    }
   }
 
   const chips = document.createElement('div');
@@ -3156,10 +3187,34 @@ function bloqueTramo(i, cuantos) {
 
 /* El <span> con las ventas del último tramo, mientras esté en pantalla. */
 let restoVisible = null;
+/* La nota y el campo de cada cambio, por la misma razón: { nota, campo }. */
+let notasVisibles = [];
 
-/** Solo ese número, sin tocar el resto de la pantalla. */
-function pintarResto() {
-  if (restoVisible) restoVisible.textContent = $(ventasRestantes());
+/** Las cifras de los tramos, sin tocar el resto de la pantalla. */
+function pintarCifrasTramos() {
+  if (restoVisible) restoVisible.textContent = textoRestante();
+  const estado = estadoCortesFormulario();
+  notasVisibles.forEach((v, i) => {
+    const n = estado.cortes[i];
+    if (!v || !n) return;
+    const mal = ['ilegible', 'cero', 'orden', 'pasa'].includes(n.estado);
+    v.nota.textContent = textoNotaCorte(n);
+    v.nota.classList.toggle('mal', mal);
+    if (v.campo) v.campo.classList.toggle('mal', mal);
+  });
+}
+
+function textoNotaCorte(n) {
+  switch (n.estado) {
+    case 'ok':       return rellenar(t('tramoNotaVentas'), $(n.ventas));
+    case 'ilegible': return t('tramoNotaIlegible');
+    case 'cero':     return t('tramoNotaCero');
+    case 'orden':    return rellenar(t('tramoNotaOrden'), $(n.limite));
+    case 'pasa':     return rellenar(t('tramoNotaPasa'), $(n.limite));
+    // 'vacio' y 'espera': todavía no hay nada que decir de este tramo, así
+    // que se dice qué número va ahí.
+    default:         return t('tramoNotaVacio');
+  }
 }
 
 /**
@@ -3213,7 +3268,16 @@ function pintarRecibo() {
   let html = fila(`${t('mPropinas')}<small>${t('propinasDe')}</small>`,
                   $(c.propinas), '', 'con-detalle');
 
-  if (c.tipOut > 0) {
+  /* Con un cambio de equipo que no se puede usar (vacío, hacia atrás, más que
+     las ventas) el tip-out todavía no se sabe, y tampoco lo que te llevas.
+     Antes se pintaban igual: un tramo negativo restaba de menos y el total
+     subía sin que nada lo dijera. Una raya no se confunde con un número; el
+     motivo está debajo del cambio que falla. */
+  const cortesMal = cortes.length > 0 && !estadoCortesFormulario().ok;
+
+  if (cortesMal) {
+    html += fila(`${t('mTipOut')} · ${t('tipoutRevisa')}`, '\u2014', 'resta');
+  } else if (c.tipOut > 0) {
     if (cortes.length > 0) {
       /* Con cambios de equipo, una línea de total y debajo el desglose por
          tramo con sus ventas y su porcentaje. Esos dos números son justo los
@@ -3254,14 +3318,15 @@ function pintarRecibo() {
      fuera de la suma, así que llamarlo "total" sería una resta que no cuadra
      a la vista. */
   html += fila(t(conSueldo ? 'totalTurno' : 'teLlevas'),
-               $(cifras.total), '', 'final');
+               cortesMal ? '\u2014' : $(cifras.total), '', 'final');
 
   /* El por hora estaba pegado a la etiqueta del total ("Te llevas · $23.01/h"),
      y era la única línea del recibo con dos cifras: la de la izquierda se leía
      como parte del nombre. Aquí abajo es lo que es, un dato derivado del número
      grande que tiene justo encima. */
   if (c.horas > 0) {
-    html += fila(t('porHoraRecibo'), $(cifras.porHora), '', 'aparte');
+    html += fila(t('porHoraRecibo'), cortesMal ? '\u2014' : $(cifras.porHora),
+                 '', 'aparte');
   }
 
   /* Con el sueldo fuera de la cuenta, la línea va DESPUÉS del total y sin
@@ -3296,7 +3361,7 @@ function pintarRecibo() {
 
      Y solo si hubo tip-out: sin él, el efectivo neto y el efectivo a secas son
      el mismo número, y una línea que repite otra no informa, estorba. */
-  if (datos.trabajo.tipOutEnEfectivo && c.tipOut > 0) {
+  if (datos.trabajo.tipOutEnEfectivo && c.tipOut > 0 && !cortesMal) {
     html += fila(t('mEfectivoNeto'), $(c.efectivoNeto),
                  c.efectivoNeto < 0 ? 'resta' : 'tenue', 'aparte');
   }
@@ -3777,6 +3842,9 @@ function pintarBienvenida() {
 ['f-ventas','f-efectivo','f-tarjeta','f-nota']
   .forEach(id => document.getElementById(id)
     .addEventListener('input', pintarRecibo));
+// Lo que queda y el "Es más que las ventas del turno" dependen de las ventas.
+document.getElementById('f-ventas')
+  .addEventListener('input', pintarCifrasTramos);
 
 // Los campos de hora sí repintan también sus atajos, para que el botón
 // correspondiente quede marcado si eliges esa hora a mano. No hay riesgo de
@@ -3822,7 +3890,7 @@ window.addEventListener('scroll', cerrarNota, { passive: true });
    -------------------------------------------------------------------------- */
 const FUNCIONES_NECESARIAS = [
   'redondear', 'leerNumero', 'horaAMinutos', 'calcularHoras', 'calcularTipOut',
-  'calcularTipOutTramos', 'revisarCortes',
+  'calcularTipOutTramos', 'revisarCortes', 'estadoDeCortes',
   'calcularTurno', 'resumir', 'lunesDeLaSemana', 'inicioDeSemana', 'numeroDelDia',
   'sumarDias',
   'diasDeLaSemana', 'turnosDelDia', 'horasFrecuentes', 'mejorTurno',

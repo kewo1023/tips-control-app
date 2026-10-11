@@ -252,6 +252,52 @@ probar('un corte igual a las ventas vale: el último tramo no vendió nada',
 probar('sin cortes no hay nada que revisar',
   L.revisarCortes(1800, []).ok, true);
 
+/* Lo que la pantalla dice debajo de cada cambio mientras se escribe. El caso
+   que lo trajo: dos cambios escritos tramo a tramo (700 y después 500) en vez
+   de acumulados. Con uno solo las dos lecturas coinciden; con dos, la pantalla
+   calculaba un tramo de −$200 sin decir nada. */
+const ESTADO = (ventas, textos) =>
+  L.estadoDeCortes(ventas, textos).cortes.map(c => c.estado);
+
+probar('dos cambios acumulados: cada uno enseña las ventas de SU tramo',
+  L.estadoDeCortes(2231.7, ['700', '1200']).cortes.map(c => c.ventas), [700, 500]);
+
+probar('y con eso se pueden usar',
+  L.estadoDeCortes(2231.7, ['700', '1200']).ok, true);
+
+probar('escritos tramo a tramo (700 y 500), el segundo se marca hacia atrás',
+  ESTADO(2231.7, ['700', '500']), ['ok', 'orden']);
+
+probar('diciendo contra qué acumulado tiene que crecer',
+  L.estadoDeCortes(2231.7, ['700', '500']).cortes[1].limite, 700);
+
+probar('y no se pueden usar',
+  L.estadoDeCortes(2231.7, ['700', '500']).ok, false);
+
+probar('un cambio recién añadido está vacío, no mal',
+  ESTADO(1800, ['']), ['vacio']);
+
+probar('uno ilegible no es uno vacío',
+  ESTADO(1800, ['4oo']), ['ilegible']);
+
+probar('el primero en cero tiene su propio motivo',
+  ESTADO(1800, ['0']), ['cero']);
+
+probar('uno por encima de las ventas, con las ventas del turno',
+  [ESTADO(1800, ['2000'])[0], L.estadoDeCortes(1800, ['2000']).cortes[0].limite],
+  ['pasa', 1800]);
+
+/* Detrás de uno que falla no se puede decir cuánto vendió el siguiente: sus
+   ventas se miden desde el que falla. */
+probar('los de después del que falla esperan',
+  ESTADO(1800, ['', '1200', '1500']), ['vacio', 'espera', 'espera']);
+
+probar('acepta lo que acepta el campo: coma decimal',
+  L.estadoDeCortes(1800, ['500,50', '1200']).cortes.map(c => c.ventas), [500.5, 699.5]);
+
+probar('sin cambios no hay nada que enseñar',
+  L.estadoDeCortes(1800, []), { ok: true, cortes: [] });
+
 /* Un ejemplo con números redondos: $500 vendidos con dos ayudantes al 2%,
    y $1300 más con los cinco al 5%. */
 const TRAMOS_EJEMPLO = L.calcularTipOutTramos(1800, [

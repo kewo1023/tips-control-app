@@ -192,7 +192,15 @@ const TEXTOS = {
     ventasCambio: 'Ventas hasta el cambio de equipo',
     // Los cambios de equipo a mitad de turno
     equipoCambio: '+ El equipo cambió durante el turno',
-    tramoHasta: 'Hasta el cambio %1',
+    tramoHasta: 'Acumulado al cambio %1',
+    // Debajo de cada cambio, mientras se escribe
+    tramoNotaVacio: 'Las ventas que marca el recibo del POS en ese momento',
+    tramoNotaVentas: '%1 en este tramo',
+    tramoNotaIlegible: 'No se entiende este número',
+    tramoNotaCero: 'Tiene que ser más que cero',
+    tramoNotaOrden: 'Tiene que ser más que %1, el acumulado del cambio anterior',
+    tramoNotaPasa: 'Es más que las ventas del turno (%1)',
+    tipoutRevisa: 'revisa los cambios',
     tramoResto: 'Lo que queda',
     alPorciento: 'al',
     cambioEquipo: 'cambio', cambiosEquipoPl: 'cambios',
@@ -281,7 +289,7 @@ const TEXTOS = {
     ayudaVentasR: 'Las ventas netas de tu cierre (checkout) en el punto de venta: sin impuestos y sin propinas. Es la cifra sobre la que se calcula el tip-out. Si en tu restaurante el tip-out se calcula sobre otra cifra, pon esa.',
 
     ayudaEquipoP: '¿Qué es "El equipo cambió durante el turno"?',
-    ayudaEquipoR: 'Es para las noches en que llegan o se van ayudantes a mitad de turno y el tip-out cambia desde ese momento. Tocas ese enlace, escribes las ventas que marcaba el punto de venta cuando cambió el equipo y marcas quién había antes y quién después. La app calcula cada tramo con su equipo. Si el equipo fue el mismo toda la noche, no lo toques.',
+    ayudaEquipoR: 'Es para las noches en que llegan o se van ayudantes a mitad de turno y el tip-out cambia desde ese momento. Tocas ese enlace, escribes las ventas acumuladas que marcaba el recibo del punto de venta cuando cambió el equipo (en un segundo cambio, otra vez el acumulado, no lo vendido desde el primero) y marcas quién había antes y quién después. La app calcula cada tramo con su equipo. Si el equipo fue el mismo toda la noche, no lo toques.',
 
     ayudaSemanaPagoP: '¿Qué día empieza mi semana?',
     ayudaSemanaPagoR: 'El día en que empieza tu semana de pago, para que el neto de la semana cuadre con tu cheque. Viene en lunes; si tu restaurante corta la semana otro día, cámbialo en Ajustes. Tus turnos no cambian: solo se agrupan distinto.',
@@ -446,7 +454,14 @@ const TEXTOS = {
     campoPorcentaje: 'Helper percentage',
     ventasCambio: 'Sales up to the team change',
     equipoCambio: '+ The team changed during the shift',
-    tramoHasta: 'Up to change %1',
+    tramoHasta: 'Running total at change %1',
+    tramoNotaVacio: 'The sales the POS receipt shows at that moment',
+    tramoNotaVentas: '%1 in this stretch',
+    tramoNotaIlegible: 'This number can’t be read',
+    tramoNotaCero: 'Must be more than zero',
+    tramoNotaOrden: 'Must be more than %1, the running total at the previous change',
+    tramoNotaPasa: 'More than the shift sales (%1)',
+    tipoutRevisa: 'check the changes',
     tramoResto: 'What is left',
     alPorciento: 'at',
     cambioEquipo: 'change', cambiosEquipoPl: 'changes',
@@ -529,7 +544,7 @@ const TEXTOS = {
     ayudaVentasR: 'The net sales on your checkout from the point of sale: no tax and no tips. It is the number tip-out is calculated on. If your restaurant calculates tip-out on a different number, use that one.',
 
     ayudaEquipoP: 'What is "The team changed during the shift"?',
-    ayudaEquipoR: 'It is for nights when helpers arrive or leave mid-shift and tip-out changes from that moment on. Tap that link, enter the sales the point of sale showed when the team changed, and mark who was there before and after. The app calculates each part with its own team. If the team was the same all night, leave it alone.',
+    ayudaEquipoR: 'It is for nights when helpers arrive or leave mid-shift and tip-out changes from that moment on. Tap that link, enter the running sales total the point-of-sale receipt showed when the team changed (at a second change, the running total again, not what was sold since the first) and mark who was there before and after. The app calculates each part with its own team. If the team was the same all night, leave it alone.',
 
     ayudaSemanaPagoP: 'What day does my week start?',
     ayudaSemanaPagoR: 'The day your pay week starts, so the week’s net matches your paycheck. It comes set to Monday; if your restaurant starts the week on another day, change it in Settings. Your shifts don’t change: they are just grouped differently.',

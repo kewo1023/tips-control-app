@@ -629,6 +629,13 @@ input[type=time] {
 .tramo-cab .resto { font-size: 0.875rem; font-weight: 600; color: var(--tinta);
                     font-variant-numeric: tabular-nums; }
 .tramo-cab .quitar { color: var(--rojo); padding: 6px 9px; line-height: 1; }
+/* Debajo de cada cambio: las ventas de su tramo, o por qué no se puede usar.
+   En rojo solo cuando falla, junto con el borde del campo: es el único aviso
+   que hay antes de guardar. */
+.tramo-nota { margin: -2px 0 8px; font-size: 0.75rem; color: var(--tinta-2);
+              font-variant-numeric: tabular-nums; }
+.tramo-nota.mal { color: var(--rojo); }
+.tramo-cab input.mal { border-color: var(--rojo); }
 
 /* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
    guía el ojo desde el concepto hasta la cifra. */
