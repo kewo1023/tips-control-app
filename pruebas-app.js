@@ -2819,6 +2819,27 @@ ok('el punto de partida sigue al dedo', siguiendo.desde === 900
 ok('con movimiento reducido no se recoge nunca', decide(abierta, 300, 894, 2000, true).recogida === false);
 ok('en una pantalla que no llega a tener scroll, abierta', decide(abierta, 50, 894, -100).recogida === false);
 
+// v45: al cambiar de pantalla, la nueva entra con un fundido que empieza en
+// transparente: tapa los fotogramas en que iOS deja ver lo de abajo.
+run("irA('semana')");
+const fundidos = {};
+['p-semana', 'p-reportes'].forEach(id => {
+  d.getElementById(id).animate = (cuadros, opciones) => { fundidos[id] = { cuadros, opciones }; };
+});
+run("irA('reportes')");
+const fReportes = fundidos['p-reportes'];
+ok('la pantalla nueva aparece con un fundido', !!fReportes);
+ok('que empieza unos fotogramas en transparente (60 ms o más)',
+   fReportes && fReportes.cuadros[0].opacity === 0 && fReportes.cuadros[1].opacity === 0
+   && fReportes.cuadros[1].offset * fReportes.opciones.duration >= 60);
+ok('solo opacidad: lo que se lee no se desplaza',
+   fReportes && fReportes.cuadros.every(c => c.transform === undefined));
+delete fundidos['p-reportes'];
+run("irA('reportes')");
+ok('tocar la pestaña en la que ya estás no la hace parpadear', !fundidos['p-reportes']);
+['p-semana', 'p-reportes'].forEach(id => { delete d.getElementById(id).animate; });
+run("irA('semana')");
+
 run("ponerRecogida(true)");
 ok('la clase va en la raíz', d.documentElement._classes.has('barra-recogida'));
 run("irA('reportes')");

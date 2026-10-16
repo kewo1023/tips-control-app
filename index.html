@@ -660,7 +660,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v44';
+const VERSION_APP = 'v45';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1061,11 +1061,43 @@ function soloDia(texto) {
    ========================================================================== */
 
 function irA(nombre) {
+  const venia = pantalla;
   pantalla = nombre;
   hojaAyuda = null;   // cambiar de pantalla cierra la hoja de la anterior
   pintar();
   window.scrollTo(0, 0);
   abrirBarra();       // cada pantalla empieza con la barra abierta, arriba del todo
+  if (nombre !== venia) aparecerPantalla(nombre);
+}
+
+/**
+ * La pantalla nueva entra con un fundido corto que empieza con unos
+ * fotogramas en transparente (v45).
+ *
+ * Por qué: en un iPhone instalado con la franja (estilos.css, sección B), al
+ * pasar de Semana a Reportes se veía durante dos fotogramas el número grande
+ * de abajo de Reportes ("Neto de 2026") debajo de la barra, en la franja,
+ * antes de que el velo lo tapara. Se vio en un video del teléfono a 60
+ * fotogramas por segundo. La causa más probable, sin medir: al pasar a una
+ * pantalla larga iOS alarga la ventana, y las capas fijas (la barra y su
+ * velo) tardan un par de fotogramas en cubrir la zona nueva. Eso es de iOS y
+ * no se arregla desde aquí; lo que sí se puede es que durante esos
+ * fotogramas la pantalla nueva no se vea: 60 ms en transparente (el doble de
+ * lo que duró el fallo) y luego aparece en 140 ms.
+ *
+ * Solo opacidad: cambiar de pestaña pasa muchas veces al día, y lo que se lee
+ * no se desplaza. Con movimiento reducido también vale: es un fundido.
+ * Donde no exista `element.animate()` (el navegador de mentira de las
+ * pruebas, uno muy viejo), cambia de golpe, como antes.
+ */
+function aparecerPantalla(nombre) {
+  const el = document.getElementById('p-' + nombre);
+  if (!el || typeof el.animate !== 'function') return;
+  el.animate([
+    { opacity: 0 },
+    { opacity: 0, offset: 0.3, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' },
+    { opacity: 1 }
+  ], { duration: 200 });
 }
 
 /* --- La barra se recoge al bajar (v44) ---

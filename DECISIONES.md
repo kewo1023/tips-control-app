@@ -1123,3 +1123,15 @@ probó una maqueta con scroll; el autor eligió la opción completa.
   sola al hacer scroll, se quita la escucha** (`vigilarScroll()` en el
   arranque) y queda el velo, que no depende del scroll.
 
+**El número que asomaba al cambiar de pestaña (v45, 16 de octubre de 2026).**
+Un video del teléfono, a 60 fotogramas por segundo, mostró que al pasar de
+Semana a Reportes se veía durante dos fotogramas (~33 ms) "Neto de 2026"
+debajo de la barra, en la franja; al tercero el velo ya lo tapaba. Al volver
+a Semana no pasaba, porque ahí abajo no hay nada. Causa más probable
+(inferencia, no medida): al pasar a una pantalla larga iOS alarga la ventana,
+y las capas fijas tardan un par de fotogramas en cubrir la zona nueva.
+Arreglo: la pantalla nueva entra con un fundido de 200 ms que pasa los
+primeros 60 ms en transparente (`aparecerPantalla()`); solo opacidad, y no
+si se toca la pestaña en la que ya se está. Se descartó darle a la página un
+alto mínimo para que la ventana no cambie: es lo que armó el bucle de la v31.
+
