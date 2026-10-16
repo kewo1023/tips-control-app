@@ -1082,3 +1082,44 @@ maqueta con dos opciones y eligió la de Hábitos con un gris más marcado.
   bajar. §17 lo descartó en su día porque no se podía probar sin arriesgar la
   navegación; la prueba tiene que ir aparte, sin tocar la barra de verdad.
 
+
+## 21. Lo que pasa debajo de la barra flotante (16 de octubre de 2026)
+
+Con la v43 en el teléfono aparecieron dos cosas: al bajar del todo, el último
+botón ("Mostrar menos") quedaba debajo de la barra, y la barra se veía
+"sobrepuesta", como un menú mal hecho. Se miró cómo lo resuelve iOS 26 y se
+probó una maqueta con scroll; el autor eligió la opción completa.
+
+- **El botón tapado era un fallo de medida.** En un iPhone con la franja
+  (§17), la barra queda 62 pt más arriba, pero el espacio del final de la
+  página era el de un teléfono normal (5.75rem + la rayita). Con la ventana
+  larga, lo último quedaba unos 7 pt debajo. Ahora es 9rem, **en todos los
+  teléfonos**: hacerlo depender de `hueco-ios` sería cambiar el alto de la
+  página según el fallo, que es justo lo que §17 prohíbe. En un teléfono sin
+  el fallo sobra un poco de espacio al final; no molesta.
+- **El velo.** La página se apaga en papel antes de llegar a la barra, y por
+  debajo de ella no asoma nada. Es lo que hace iOS 26 bajo sus barras
+  ("scroll edge effect"). Lo "sobrepuesto" venía de ver pasar la página por
+  detrás y por debajo de la barra. Para eso la barra se partió en dos: el
+  sitio (`.pestanas`, transparente, de lado a lado, sin recibir toques), que
+  sigue anclado igual que antes, y la barra que se ve (`.pestanas-barra`).
+- **Se recoge al bajar y vuelve al subir**, como iOS 26
+  (`tabBarMinimizeBehavior`): se encoge, los nombres se apagan y los íconos
+  bajan al centro. Tocar una pestaña, cambiar de pantalla o un aviso breve la
+  abren. Lo decide `decidirRecogida()`, una función pura con pruebas, con una
+  protección por cada forma de engañarse en el teléfono:
+  - el alto de la ventana cambió (iOS lo alterna al hacer scroll con la
+    franja): ese movimiento no cuenta;
+  - el rebote elástico se recorta al rango real del scroll;
+  - arriba del todo, siempre abierta;
+  - 12 px seguidos en una dirección, para que el temblor del dedo no la mueva;
+  - con movimiento reducido no se recoge nunca.
+
+  **Recogerse solo usa `transform`, `opacity` y color**: nada que reaccione
+  al scroll puede cambiar el alto de la página (el bucle de la v31). Una
+  prueba lo vigila.
+- **El riesgo que no se pudo probar aquí** es si la protección contra la
+  ventana que alterna basta en un iPhone instalado. **Si la barra parpadea
+  sola al hacer scroll, se quita la escucha** (`vigilarScroll()` en el
+  arranque) y queda el velo, que no depende del scroll.
+

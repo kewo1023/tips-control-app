@@ -552,7 +552,11 @@
   </div>
 </div>
 
+<!-- La barra de abajo. `.pestanas` es solo el sitio (transparente, de lado a
+     lado, con el velo que apaga la página detrás); la barra que se ve es
+     `.pestanas-barra`, que se recoge al bajar (v44). -->
 <nav class="pestanas" id="pestanas">
+  <div class="pestanas-barra">
   <!-- Una sola píldora para las tres pestañas: `pintar()` le dice cuál es la
        activa (`--i`) y ella se desliza hasta allí. -->
   <div class="pestanas-fila">
@@ -571,6 +575,7 @@
           class="detalle" id="aviso-breve-detalle"></span></span>
     <button class="cerrar" id="aviso-breve-cerrar" onclick="cerrarAvisoBreve()">✕</button>
     <span class="tiempo" id="aviso-breve-tiempo" aria-hidden="true"></span>
+  </div>
   </div>
 </nav>
 
@@ -655,7 +660,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v43';
+const VERSION_APP = 'v44';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1060,6 +1065,79 @@ function irA(nombre) {
   hojaAyuda = null;   // cambiar de pantalla cierra la hoja de la anterior
   pintar();
   window.scrollTo(0, 0);
+  abrirBarra();       // cada pantalla empieza con la barra abierta, arriba del todo
+}
+
+/* --- La barra se recoge al bajar (v44) ---
+
+   Al bajar por una pantalla, la barra de pestañas se encoge y deja solo los
+   íconos; al subir un poco, vuelve (estilos.css, sección H). Lo que decide es
+   `decidirRecogida()`, que no toca la página: recibe dónde está el scroll y
+   devuelve el estado nuevo. Así se prueba con números, sin teléfono.
+
+   Lo delicado es el iPhone con la franja (sección B de estilos.css): al hacer
+   scroll, iOS alarga y encoge la ventana, y eso mueve el scroll sin que el
+   dedo cambie de dirección. Las protecciones, una por cada forma de engañarse:
+   - si el alto de la ventana cambió desde la última vez, ese movimiento no
+     cuenta (solo se toma como nuevo punto de partida);
+   - el rebote elástico de arriba y de abajo se recorta al rango real;
+   - arriba del todo, siempre abierta;
+   - hacen falta 12 px seguidos en una dirección: el temblor del dedo al leer
+     no la mueve;
+   - con movimiento reducido no se recoge nunca. */
+const UMBRAL_RECOGER = 12;
+let recogida = { recogida: false, desde: 0, alto: 0 };
+
+/**
+ * @param {{recogida: boolean, desde: number, alto: number}} antes
+ *   `desde` es el punto desde el que se mide: lo más abajo que llegó estando
+ *   recogida, o lo más arriba estando abierta.
+ * @param {number} y      El scroll de ahora.
+ * @param {number} alto   El alto de la ventana ahora.
+ * @param {number} maximo El scroll más grande posible.
+ * @param {boolean} reducido Si la persona pidió menos movimiento.
+ * @returns {{recogida: boolean, desde: number, alto: number}}
+ */
+function decidirRecogida(antes, y, alto, maximo, reducido) {
+  const aqui = Math.min(Math.max(y, 0), Math.max(maximo, 0));
+  if (reducido || aqui <= 30) return { recogida: false, desde: aqui, alto };
+  if (alto !== antes.alto) return { recogida: antes.recogida, desde: aqui, alto };
+
+  let desde = antes.desde;
+  // El punto de partida sigue al dedo mientras va en la misma dirección.
+  if (antes.recogida && aqui > desde) desde = aqui;
+  if (!antes.recogida && aqui < desde) desde = aqui;
+
+  if (!antes.recogida && aqui - desde > UMBRAL_RECOGER) return { recogida: true, desde: aqui, alto };
+  if (antes.recogida && desde - aqui > UMBRAL_RECOGER) return { recogida: false, desde: aqui, alto };
+  return { recogida: antes.recogida, desde, alto };
+}
+
+function ponerRecogida(si) {
+  document.documentElement.classList.toggle('barra-recogida', si);
+}
+
+function abrirBarra() {
+  recogida = { recogida: false, desde: 0, alto: recogida.alto };
+  ponerRecogida(false);
+}
+
+/** Escucha el scroll. Se engancha una vez, en el arranque (sección U). */
+function vigilarScroll() {
+  let pendiente = false;
+  window.addEventListener('scroll', () => {
+    // Una decisión por fotograma como mucho, aunque lleguen veinte eventos.
+    if (pendiente) return;
+    pendiente = true;
+    requestAnimationFrame(() => {
+      pendiente = false;
+      const maximo = document.documentElement.scrollHeight - window.innerHeight;
+      const nuevo = decidirRecogida(recogida, window.scrollY, window.innerHeight,
+                                    maximo, movimientoReducido());
+      if (nuevo.recogida !== recogida.recogida) ponerRecogida(nuevo.recogida);
+      recogida = nuevo;
+    });
+  }, { passive: true });
 }
 
 function cambiarSemana(cuantas) {
@@ -2222,6 +2300,8 @@ function avisoBreve(titulo, detalle) {
   void tiempo.offsetWidth;
   tiempo.classList.add('corre');
 
+  // El aviso cuelga de la barra: si estaba recogida, se abre para que se lea.
+  abrirBarra();
   document.getElementById('aviso-breve').classList.add('visible');
   clearTimeout(relojAvisoBreve);
   relojAvisoBreve = setTimeout(cerrarAvisoBreve, DURACION_AVISO_BREVE);
@@ -4143,6 +4223,7 @@ pintarMarca();
 // de estilos.css) si la página no escucha los toques. Escuchar basta; no hace
 // falta hacer nada con ellos. `passive` le promete que no frenará el scroll.
 document.addEventListener('touchstart', () => {}, { passive: true });
+vigilarScroll();
 
 const faltan = FUNCIONES_NECESARIAS.filter(n => typeof window[n] !== 'function');
 

@@ -106,7 +106,9 @@ versión en movimiento reducido (`estilos.css`, sección A6). El diálogo y la
 hoja de ayuda se enseñan y se esconden con `mostrarCapa()` / `ocultarCapa()`,
 nunca tocando `oculto` a mano. Los segmentados se dibujan con
 `pintarSegmentado()`, que no rehace los botones: si se rehacen, la píldora no
-se desliza. Un error nunca va en el aviso breve, que se va solo.
+se desliza. Un error nunca va en el aviso breve, que se va solo. Lo que
+reacciona al scroll (la barra que se recoge) solo puede cambiar `transform`,
+`opacity` o colores: nunca el alto de la página.
 
 **Al añadir a `logica.js` una función que use `index.html`**, añadirla a
 `FUNCIONES_NECESARIAS` (sección U).

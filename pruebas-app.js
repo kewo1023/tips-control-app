@@ -2785,6 +2785,66 @@ avisos.length = 0;
 
 
 /* ==========================================================================
+   La barra de abajo: velo, espacio del final y se recoge al bajar (v44)
+   --------------------------------------------------------------------------
+   El scroll de verdad no existe aquí. Lo que se prueba es la regla que
+   decide (`decidirRecogida`, una función pura) con los casos que engañan en
+   el teléfono: el temblor del dedo, el rebote elástico y la ventana que iOS
+   alarga y encoge sola en un iPhone con la franja.
+   ========================================================================== */
+grupo('La barra se recoge al bajar');
+const decide = (antes, y, alto, maximo, reducido) =>
+  run(`decidirRecogida(${JSON.stringify(antes)}, ${y}, ${alto}, ${maximo}, ${!!reducido})`);
+const abierta = { recogida: false, desde: 100, alto: 894 };
+ok('bajar 20 px la recoge', decide(abierta, 120, 894, 2000).recogida === true);
+ok('bajar 8 px no (el temblor del dedo al leer)', decide(abierta, 108, 894, 2000).recogida === false);
+const recogidaEn400 = { recogida: true, desde: 400, alto: 894 };
+ok('subir 20 px la abre', decide(recogidaEn400, 380, 894, 2000).recogida === false);
+ok('subir 8 px no', decide(recogidaEn400, 392, 894, 2000).recogida === true);
+ok('arriba del todo, siempre abierta', decide(recogidaEn400, 10, 894, 2000).recogida === false);
+ok('si iOS cambió el alto de la ventana, ese salto no cuenta',
+   decide(recogidaEn400, 340, 956, 2000).recogida === true
+   && decide(abierta, 170, 956, 2000).recogida === false);
+ok('y después se mide desde ahí', decide({ recogida: true, desde: 340, alto: 956 }, 320, 956, 2000).recogida === false);
+// El rebote, como pasa en el teléfono: el scroll se pasa 40 px del final y
+// vuelve. Sin recortarlo, la vuelta parece una subida de 40 px y la abre.
+const enElRebote = decide({ recogida: true, desde: 1000, alto: 894 }, 1040, 894, 1000);
+ok('el rebote de abajo no la abre (se recorta al final real)',
+   enElRebote.recogida === true && decide(enElRebote, 1000, 894, 1000).recogida === true);
+// Siguiendo al dedo: recogida, baja hasta 900; subir 20 desde ahí la abre,
+// aunque siga muy por debajo de donde se recogió.
+const siguiendo = decide({ recogida: true, desde: 400, alto: 894 }, 900, 894, 2000);
+ok('el punto de partida sigue al dedo', siguiendo.desde === 900
+   && decide(siguiendo, 880, 894, 2000).recogida === false);
+ok('con movimiento reducido no se recoge nunca', decide(abierta, 300, 894, 2000, true).recogida === false);
+ok('en una pantalla que no llega a tener scroll, abierta', decide(abierta, 50, 894, -100).recogida === false);
+
+run("ponerRecogida(true)");
+ok('la clase va en la raíz', d.documentElement._classes.has('barra-recogida'));
+run("irA('reportes')");
+ok('cambiar de pantalla la abre', !d.documentElement._classes.has('barra-recogida'));
+run("ponerRecogida(true); avisoBreve('Prueba', ''); cerrarAvisoBreve()");
+ok('un aviso breve la abre para que se lea', !d.documentElement._classes.has('barra-recogida'));
+run("irA('semana')");
+
+const reglasRecogida = css.match(/:root\.barra-recogida[^{]*\{[^}]*\}/g) || [];
+ok('recogerse solo mueve, apaga o cambia colores: nunca el alto de la página',
+   reglasRecogida.length >= 3 && reglasRecogida.every(r =>
+     !/(^|[\s;{])(height|width|margin|padding|top|bottom|font-size|display)\s*:/.test(r.slice(r.indexOf('{')))));
+ok('el sitio de la barra no se traga los toques; la barra sí los recibe',
+   /\.pestanas \{[^}]*pointer-events: none/.test(css)
+   && /\.pestanas-barra \{[^}]*pointer-events: auto/.test(css));
+ok('la página se apaga en papel antes de llegar a la barra (el velo)',
+   /\.pestanas::before \{[^}]*linear-gradient\([^)]*transparent[^)]*var\(--papel\)/.test(css));
+/* El espacio del final: en un iPhone Pro Max con la franja, la barra empieza
+   unos 135 px por encima del borde de la ventana larga (62 de la franja + 8 +
+   unos 65 de barra). Con 5.75rem (92) + la rayita (34) no llegaba. */
+const relleno = (css.match(/body \{[\s\S]*?padding: env\(safe-area-inset-top\) 14px calc\(([\d.]+)rem/) || [])[1];
+ok('el final de la página deja libre la barra también con la franja',
+   relleno && parseFloat(relleno) * 16 + 34 >= 135 + 40);
+
+
+/* ==========================================================================
    Reportes: qué turno conviene
    --------------------------------------------------------------------------
    El desastre que vigila este grupo: que la pantalla corone un día con un
