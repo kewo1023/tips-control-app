@@ -766,8 +766,10 @@ verde en negrita): chips, control segmentado, casillas y pestaña activa.
 - Las casillas siguen siendo `<input type="checkbox">`; solo cambia el dibujo
   (`appearance: none` + `:has(input:checked)`). El lector de pantalla y el
   código no cambian.
-- La píldora de la pestaña activa se dibuja con `::before`: la zona táctil
-  sigue siendo el tercio entero de la barra.
+- ~~La píldora de la pestaña activa se dibuja con `::before`~~ **Reemplazado
+  el 15 de octubre de 2026** (§19): una sola píldora que se desliza. La zona
+  táctil sigue siendo el tercio entero de la barra. Las casillas ganaron un
+  chulo en lugar del punto.
 - ~~Pendiente: verde sobre verde suave da 4.26:1 en claro.~~ **Resuelto el 27
   de septiembre de 2026** (opción 4b de una vista previa): `--verde` pasa de
   #15803d a #137537 en claro, 4.92:1 sobre el verde suave y 5.5:1 sobre el
@@ -986,4 +988,65 @@ portapapeles, lo enseña. Cancelar el menú no es un error.
   no con `new URL()`, que el doble de pruebas no tiene.
 - Quien lo recibe cae en la pantalla de instalación, que ya resuelve el caso
   de abrirlo dentro de WhatsApp.
+
+
+## 19. Movimiento (15 de octubre de 2026)
+
+La app se sentía plana: nada respondía al dedo y todo aparecía de golpe. Se
+buscaron referencias en uiverse.io (licencia MIT), se probó una maqueta con
+un interruptor antes/después en el teléfono, y el autor eligió. **Nada se
+copió:** todo se rehízo con los colores y las curvas de la app, así que no
+hay código de terceros ni avisos de copyright que mantener.
+
+Lo que entró, y por qué cada cifra:
+
+- **Todo lo que se toca se encoge al apretar: 0.95, baja en 80 ms.** La
+  maqueta probó 0.97 en 160 ms y en el iPhone no se notaba: un toque rápido
+  dura unos 100 ms y el dedo se iba antes de que la animación llegara. La
+  bajada rápida y la subida lenta (200 ms) hacen que se vea incluso en un
+  toque corto. En iOS hace falta escuchar `touchstart` para que `:active`
+  funcione (sección U).
+- **El botón principal tiene canto y se hunde 4 px.** Mismo problema que el
+  anterior con 3 px y un canto negro bajo un botón casi negro: no se veía.
+  Ahora la cara sube un escalón (`--principal-cara`) y el canto se queda con
+  la tinta, como el lado de una tecla.
+- **Aviso breve abajo ("Turno guardado"): 4 s con una raya que se vacía, y
+  una X.** Solo confirma lo que salió bien (guardar y borrar un turno, y solo
+  si `guardar()` lo consiguió). **Un error nunca va ahí:** un aviso que se va
+  solo se puede perder, y un error que nadie leyó es un error mudo. Los
+  errores siguen en el diálogo. Vive dentro de la barra de pestañas para
+  seguirla con el arreglo de iOS 26 (§17); pegado al borde de la ventana se
+  metía debajo de la barra cuando iOS alarga la ventana.
+- **La hoja de ayuda sube con la curva de los paneles de iOS; el diálogo sube
+  un poco mientras aparece.** La entrada va atada a `:not(.oculto)` en el CSS
+  y no a una clase que ponga el código: cualquier camino que enseñe la capa la
+  anima, incluido el diálogo que el arranque enseña a mano cuando textos.js no
+  llegó. La salida sí la pone el código, en dos pasos (`saliendo` y luego
+  `oculto`, con `mostrarCapa`/`ocultarCapa`). **Regla:** estas capas no se
+  esconden ni se enseñan tocando `oculto` a mano; una prueba lo vigila.
+- **Flechas de la semana:** la semana nueva entra por el lado de la flecha.
+  Se desplazan los días y el rango; **el total y las métricas solo se
+  funden**, porque lo que se lee se lee peor si se mueve.
+- **Casillas con chulo que salta**, en vez del punto. Se eligió entre dos
+  opciones; la otra ("gelatina", el círculo se aplasta y rebota) era una
+  animación que se habría repetido en cada `pintar()`, que vuelve a escribir
+  `.checked`. El chulo es una transición: solo corre si el valor cambia.
+- **La selección se desliza**, en el control segmentado y en las pestañas:
+  una sola píldora por control, que va de una opción a otra. Para que se
+  mueva, el elemento tiene que ser el mismo antes y después; por eso
+  `pintarSegmentado()` ya no rehace los botones en cada `pintar()`, solo les
+  cambia el texto y la clase. Una prueba comprueba que son los mismos objetos.
+  El selector de los siete días (semana de pago) no se tocó: se usa una vez.
+- **"Enviar un comentario" con un avioncito que despega.** El diálogo con los
+  datos espera a que se vaya (420 ms); la copia no espera, porque el
+  portapapeles hay que tocarlo dentro del toque.
+
+**Movimiento reducido** (Ajustes del iPhone → Accesibilidad): se quitan los
+desplazamientos y se quedan los fundidos. Menos movimiento, no cero.
+
+**Lo que se descartó:** la onda de Material Design al tocar (se ve a Android
+dentro de un iPhone), un esqueleto que late mientras carga (la app no espera
+nada: sería teatro), el contador de números que gira (pesado para la cifra
+que más se mira) y el interruptor "squishy" (la app no tiene interruptores:
+§17 decidió que toda selección se ve como chip).
 

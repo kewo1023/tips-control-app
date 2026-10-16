@@ -47,7 +47,7 @@ SOFTWARE o describe a una PERSONA? Lo primero va aquí; lo segundo, a
 | Archivo | Qué es |
 |---|---|
 | `index.html` | Pantallas y código de la interfaz y el guardado. Sus secciones (I…U) van en el orden en que aparecen: mantener ese orden |
-| `estilos.css` | Todo el CSS (secciones A…H y A2…A5), en el orden de la cascada |
+| `estilos.css` | Todo el CSS (secciones A…H y A2…A6), en el orden de la cascada |
 | `logica.js` | Cálculos puros sobre el dinero. Es lo que se prueba |
 | `textos.js` | Todos los textos de la app, en español y en inglés (`TEXTOS`) |
 | `pruebas.js` | Pruebas de las fórmulas. `node pruebas.js` |
@@ -100,6 +100,13 @@ cabecera, con aviso.
 **No guardar lo que se puede calcular**, salvo los valores históricos que se
 congelan en el turno (`tarifaHora`, `tipOut`, `tipoutDetalle`,
 `tipoutTramos`). Un turno por día. Identificadores con `nuevoId()` (UUID).
+
+**Movimiento.** Solo se animan `transform` y `opacity`, y todo tiene su
+versión en movimiento reducido (`estilos.css`, sección A6). El diálogo y la
+hoja de ayuda se enseñan y se esconden con `mostrarCapa()` / `ocultarCapa()`,
+nunca tocando `oculto` a mano. Los segmentados se dibujan con
+`pintarSegmentado()`, que no rehace los botones: si se rehacen, la píldora no
+se desliza. Un error nunca va en el aviso breve, que se va solo.
 
 **Al añadir a `logica.js` una función que use `index.html`**, añadirla a
 `FUNCIONES_NECESARIAS` (sección U).

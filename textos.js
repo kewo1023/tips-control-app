@@ -79,6 +79,9 @@ const TEXTOS = {
 
     // Los botones del diálogo
     dlgAceptar: 'Aceptar', dlgCancelar: 'Cancelar', dlgEntendido: 'Entendido',
+    // El aviso breve de abajo: solo confirma lo que salió bien. Los errores
+    // van en el diálogo de arriba, que no se va solo.
+    avisoGuardado: 'Turno guardado', avisoBorrado: 'Turno borrado', avisoCerrar: 'Cerrar aviso',
 
     // Aviso y pantalla de instalación
     instTitulo: 'Instala la app',
@@ -403,6 +406,7 @@ const TEXTOS = {
     trabajo: 'Job', restaurante: 'Restaurant', sueldoHora: 'Hourly wage',
     // Dialog buttons
     dlgAceptar: 'OK', dlgCancelar: 'Cancel', dlgEntendido: 'Got it',
+    avisoGuardado: 'Shift saved', avisoBorrado: 'Shift deleted', avisoCerrar: 'Close notice',
 
     // Install prompt and screen
     instTitulo: 'Install the app',

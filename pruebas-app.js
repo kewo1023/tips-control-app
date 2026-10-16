@@ -35,6 +35,7 @@ const script = bloques[bloques.length - 1];
 const avisos = [];
 let almacen = {};
 let sistemaOscuro = false;
+let movimientoReducido = false;
 // Si la app se está viendo desde la pantalla de inicio (instalada) o desde el
 // navegador. Por defecto, desde el navegador de un ordenador.
 let modoStandalone = false;
@@ -64,10 +65,19 @@ const ctx = {
      oscuro. Con el tema en oscuro, la app se creía instalada. Un doble de
      pruebas que contesta a todo lo mismo miente en cuanto le preguntas dos
      cosas distintas. */
-  matchMedia: consulta => ({
-    matches: /display-mode/.test(String(consulta)) ? modoStandalone : sistemaOscuro,
-    addEventListener: () => {}
-  }),
+  /* Y por lo mismo, desde que la app pregunta también por el movimiento
+     reducido (15 de octubre de 2026), una pregunta que no conoce REVIENTA en
+     vez de contestar lo del modo oscuro: con el tema oscuro puesto, la app se
+     habría creído en movimiento reducido sin que ninguna prueba lo notara. */
+  matchMedia: consulta => {
+    const q = String(consulta);
+    const respuesta = /display-mode: standalone/.test(q) ? modoStandalone
+                    : /prefers-color-scheme: dark/.test(q) ? sistemaOscuro
+                    : /prefers-reduced-motion: reduce/.test(q) ? movimientoReducido
+                    : undefined;
+    if (respuesta === undefined) throw new Error('matchMedia no sabe responder a ' + q);
+    return { matches: respuesta, addEventListener: () => {} };
+  },
   localStorage: {
     getItem: k => (k in almacen ? almacen[k] : null),
     setItem: (k, v) => { almacen[k] = String(v); },
@@ -76,7 +86,11 @@ const ctx = {
   location: { reload: () => {} },
   // La exportación aplaza la liberación del archivo. En las pruebas no
   // esperamos: lo que importa es que se llame, no cuándo.
+  // Las pruebas de movimiento cambian este reloj por uno que sí espera
+  // (`relojQueEspera`), para poder mirar a mitad de una salida.
   setTimeout: fn => { fn(); return 0; },
+  // Con el reloj de arriba ya no queda nada pendiente que cancelar.
+  clearTimeout: () => {},
   URL: { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} },
   Blob: function () {}, FileReader: function () {}
 };
@@ -113,6 +127,9 @@ const set = (id, v) => { d.getElementById(id).value = String(v);
 const texto = id => d.getElementById(id).textContent.replace(/\s+/g, ' ').trim();
 const dias = () => d.querySelectorAll('#dias .dia');
 const hijos = id => d.getElementById(id).children;
+// Los botones de un segmentado. Desde el 15 de octubre de 2026 la caja lleva
+// también la píldora que se desliza (un <span>), que no es una opción.
+const botones = id => d.getElementById(id).children.filter(c => c.tagName === 'BUTTON');
 const cuantasMetricas = id =>
   (d.getElementById(id).innerHTML.match(/class="metrica"/g) || []).length;
 
@@ -616,7 +633,7 @@ run("irA('semana')");
 
 grupo('Tamaño de la letra');
 run('irA("ajustes")');
-ok('ofrece tres tamaños', hijos('escalas').length === 3);
+ok('ofrece tres tamaños', botones('escalas').length === 3);
 // Arranca en Grande y no en Normal: el valor por defecto tiene que servirle a
 // quien no hizo la app, leyendo de pie al final del turno.
 ok('arranca en Grande', D().prefs.escala === 'grande');
@@ -642,23 +659,23 @@ ok('cambiar el tamaño no toca los turnos', D().turnos.length === 2);
 
 grupo('Tema claro y oscuro');
 run('irA("ajustes")');
-ok('ofrece tres temas', hijos('temas').length === 3);
+ok('ofrece tres temas', botones('temas').length === 3);
 // Arranca en Claro (el segundo de los tres: auto, claro, oscuro). La primera
 // pantalla que ve alguien que abre el enlace de un compañero tiene que ser la
 // misma para todos, y el cierre de caja se hace con las luces encendidas.
-ok('arranca en Claro', hijos('temas')[1]._classes.has('activo'));
+ok('arranca en Claro', botones('temas')[1]._classes.has('activo'));
 ok('el sistema dice claro, la app está clara',
    d.documentElement.dataset.tema === 'claro');
-hijos('temas')[2].click();
+botones('temas')[2].click();
 ok('elegir Oscuro lo aplica', d.documentElement.dataset.tema === 'oscuro');
-ok('marca el botón elegido', hijos('temas')[2]._classes.has('activo'));
-ok('y desmarca Automático', !hijos('temas')[0]._classes.has('activo'));
+ok('marca el botón elegido', botones('temas')[2]._classes.has('activo'));
+ok('y desmarca Automático', !botones('temas')[0]._classes.has('activo'));
 ok('cambia el color de la barra de estado',
    d.querySelector('meta[name="theme-color"]').getAttribute('content') === '#0e0e0d');
 ok('lo recuerda al guardar', JSON.parse(almacen.tipsControl).prefs.tema === 'oscuro');
-hijos('temas')[1].click();
+botones('temas')[1].click();
 ok('elegir Claro lo aplica', d.documentElement.dataset.tema === 'claro');
-hijos('temas')[0].click();
+botones('temas')[0].click();
 ok('volver a Automático sigue al sistema', d.documentElement.dataset.tema === 'claro');
 sistemaOscuro = true;
 run('aplicarTema()');
@@ -801,15 +818,15 @@ run('cerrarNota()');
 
 grupo('Idioma');
 run("irA('ajustes')");
-ok('ofrece dos idiomas', hijos('idiomas').length === 2);
-ok('arranca en español', hijos('idiomas')[0]._classes.has('activo'));
+ok('ofrece dos idiomas', botones('idiomas').length === 2);
+ok('arranca en español', botones('idiomas')[0]._classes.has('activo'));
 ok('los idiomas se nombran en su propio idioma',
-   hijos('idiomas')[1].textContent === 'English');
+   botones('idiomas')[1].textContent === 'English');
 ok('los títulos están en español', texto('tab-semana') === 'Semana');
-hijos('idiomas')[1].click();
+botones('idiomas')[1].click();
 ok('cambia las pestañas', texto('tab-semana') === 'Week');
 ok('cambia los títulos de sección', texto('tab-ajustes') === 'Settings');
-ok('cambia los botones', d.getElementById('temas').children[0].textContent === 'Automatic');
+ok('cambia los botones', botones('temas')[0].textContent === 'Automatic');
 ok('lo recuerda', JSON.parse(almacen.tipsControl).prefs.idioma === 'en');
 run("irA('semana')");
 ok('cambia las etiquetas de las métricas', texto('metricas').includes('Per hour'));
@@ -2496,12 +2513,17 @@ ok('las leyendas ya no usan el gris que no cumple contraste',
    /color: var\(--tinta-2\)/.test(regla('.etiqueta')) && /color: var\(--tinta-2\)/.test(regla('h2.seccion')));
 ok('el título de la pantalla va en tinta y negrita',
    /color: var\(--tinta\)/.test(regla('.cabecera .lugar')) && /font-weight: 600/.test(regla('.cabecera .lugar')));
+// Desde el 15 de octubre de 2026 lo elegido no rellena el botón: una píldora
+// con la misma apariencia del chip se desliza por debajo hasta él.
 ok('el segmentado activo se rellena como el chip',
-   /background: var\(--verde-suave\)/.test(regla('.segmentado button.activo')));
+   /background: var\(--verde-suave\)/.test(regla('.segmentado .indicador'))
+   && /border: 1px solid var\(--verde\)/.test(regla('.segmentado .indicador')));
 ok('las casillas se rellenan como el chip',
    /background: var\(--verde-suave\)/.test(regla('.check:has(input:checked)')));
 ok('y dejan de ser la casilla azul del sistema', /appearance: none/.test(regla('.check input')));
-ok('la pestaña activa lleva la píldora', /background: var\(--verde-suave\)/.test(regla('.pestanas button.activa::before')));
+ok('la pestaña activa lleva la píldora',
+   /background: var\(--verde-suave\)/.test(regla('.pestanas-indicador'))
+   && /border: 1px solid var\(--verde\)/.test(regla('.pestanas-indicador')));
 /* Eran 4. El botón (i) pasó a tinta-2 el 27 de septiembre de 2026: con
    tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
@@ -2531,6 +2553,218 @@ ok('y el botón verde con letra de papel, también en claro',
 ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
 ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
    /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));
+
+
+/* ==========================================================================
+   Movimiento (15 de octubre de 2026)
+   --------------------------------------------------------------------------
+   Lo que se mueve no se ve aquí: eso se prueba en el teléfono. Lo que sí se
+   prueba es lo que hay detrás y que, si falla, no se nota mirando:
+   - que el aviso breve diga lo que pasó, solo cuando salió bien, y se vaya;
+   - que una capa que se está yendo no termine escondida si se volvió a abrir;
+   - que los segmentados no se rehagan (si se rehacen, la píldora no se mueve);
+   - que las flechas pidan la dirección correcta.
+
+   Hace falta un reloj que espere de verdad: con el de siempre, que lo hace
+   todo en el acto, el aviso aparece y desaparece en la misma línea.
+   ========================================================================== */
+grupo('Movimiento');
+const estadoAntesMov = JSON.stringify(D());
+const semanaAntesMov = run('semanaVista');
+const relojDeSiempre = { poner: ctx.setTimeout, quitar: ctx.clearTimeout };
+let pendientes = new Map();
+let siguienteReloj = 1;
+const relojQueEspera = () => {
+  pendientes = new Map();
+  ctx.setTimeout = (fn, ms) => {
+    const id = siguienteReloj++;
+    fn.espera = ms || 0;   // cuánto pidió esperar, para las pruebas que lo miran
+    pendientes.set(id, fn);
+    return id;
+  };
+  ctx.clearTimeout = id => { pendientes.delete(id); };
+};
+const pasarElTiempo = () => {
+  const toca = [...pendientes.values()];
+  pendientes.clear();
+  toca.forEach(fn => fn());
+};
+const clases = id => d.getElementById(id)._classes;
+relojQueEspera();
+
+// --- El aviso breve ---
+run("irA('semana'); abrirDia('2026-08-05')");
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '1000'); set('f-efectivo', '50'); set('f-tarjeta', '100');
+run('guardarTurno()');
+ok('al guardar, sale el aviso breve', clases('aviso-breve').has('visible'));
+ok('dice "Turno guardado"', texto('aviso-breve-titulo') === 'Turno guardado');
+const netoMov = run("$(cifrasPrincipales(calcularTurno(datos.turnos.find(x => x.fecha === '2026-08-05')), !!datos.prefs.contarSueldo).total)");
+ok('con el día y la cifra que se ve en la semana',
+   texto('aviso-breve-detalle').includes('Miércoles') && texto('aviso-breve-detalle').includes(netoMov));
+ok('la raya del tiempo dura lo mismo que el aviso',
+   d.getElementById('aviso-breve-tiempo').style['--dura'] === run('DURACION_AVISO_BREVE') + 'ms'
+   && clases('aviso-breve-tiempo').has('corre'));
+ok('mientras no pase el tiempo, sigue ahí', clases('aviso-breve').has('visible'));
+pasarElTiempo();
+ok('y se va solo', !clases('aviso-breve').has('visible'));
+
+run("avisoBreve('Uno', ''); avisoBreve('Dos', '')");
+ok('dos avisos seguidos dejan un solo reloj, el del segundo',
+   pendientes.size === 1 && texto('aviso-breve-titulo') === 'Dos');
+d.getElementById('aviso-breve-cerrar').onclick = d.getElementById('aviso-breve-cerrar').onclick
+  || (() => run('cerrarAvisoBreve()'));
+run('cerrarAvisoBreve()');
+ok('la X lo cierra antes de tiempo', !clases('aviso-breve').has('visible'));
+ok('y cancela su reloj', pendientes.size === 0);
+ok('la X tiene nombre para el lector de pantalla',
+   d.getElementById('aviso-breve-cerrar').getAttribute('aria-label') === 'Cerrar aviso');
+
+avisos.length = 0;
+run("abrirDia('2026-08-04')");
+set('f-entrada', ''); set('f-salida', '23:00');
+set('f-ventas', '1000'); set('f-efectivo', '50'); set('f-tarjeta', '100');
+run('guardarTurno()');
+ok('un error no sale en el aviso breve, sale en el diálogo',
+   avisos.length === 1 && !clases('aviso-breve').has('visible'));
+
+avisos.length = 0;
+set('f-entrada', '17:00');
+const guardarMov = ctx.localStorage.setItem;
+ctx.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+run('guardarTurno()');
+ctx.localStorage.setItem = guardarMov;
+ok('si no se pudo guardar, no dice "Turno guardado"',
+   !clases('aviso-breve').has('visible') && avisos.length > 0);
+run('datos = ' + estadoAntesMov + '; pintar();');
+
+run("abrirDia('2026-08-05')");
+run('borrarTurno()');
+ok('borrar un turno también lo confirma', clases('aviso-breve').has('visible')
+   && texto('aviso-breve-titulo') === 'Turno borrado');
+run('cerrarAvisoBreve()');
+
+// --- Las capas: se van en dos pasos ---
+avisarReal('Uno');
+ok('el diálogo aparece sin esperar a nada', !clases('dialogo').has('oculto'));
+run('cerrarDialogo(true)');
+ok('al cerrarlo, primero anima la salida', clases('dialogo').has('saliendo')
+   && !clases('dialogo').has('oculto'));
+pasarElTiempo();
+ok('y al terminar queda escondido y sin la salida puesta',
+   clases('dialogo').has('oculto') && !clases('dialogo').has('saliendo'));
+
+avisarReal('Primero'); avisarReal('Segundo');
+run('cerrarDialogo(true)');
+ok('con otro en la cola, el diálogo se queda abierto con el texto nuevo',
+   texto('dialogo-texto') === 'Segundo' && !clases('dialogo').has('saliendo'));
+pasarElTiempo();
+ok('y la salida que empezó no lo esconde después', !clases('dialogo').has('oculto'));
+run('cerrarDialogo(true)'); pasarElTiempo();
+
+run("abrirHojaAyuda('semana')");
+ok('la hoja de ayuda se abre', !clases('hoja-ayuda').has('oculto'));
+run('cerrarHojaAyuda()');
+ok('al cerrarla, baja antes de esconderse', clases('hoja-ayuda').has('saliendo'));
+run("abrirHojaAyuda('semana')");
+pasarElTiempo();
+ok('si se vuelve a abrir mientras baja, se queda abierta',
+   !clases('hoja-ayuda').has('oculto') && !clases('hoja-ayuda').has('saliendo'));
+run('cerrarHojaAyuda()'); pasarElTiempo();
+ok('y cerrada del todo, escondida', clases('hoja-ayuda').has('oculto'));
+ok('el código no esconde las capas a mano (solo el arranque sin textos)',
+   (script.match(/getElementById\('dialogo'\)\.classList/g) || []).length === 1
+   && !/getElementById\('hoja-ayuda'\)\.classList/.test(script));
+
+// --- Las píldoras que se deslizan ---
+run("irA('ajustes')");
+const temaAntesMov = D().prefs.tema;
+const botonesAntes = botones('temas');
+run("cambiarTema('oscuro')");
+const indicadorTemas = d.getElementById('temas').children[0];
+ok('cambiar de tema no rehace los botones (si se rehacen, la píldora no se mueve)',
+   botones('temas').every((b, i) => b === botonesAntes[i]));
+ok('la píldora del tema va a la tercera opción', indicadorTemas.style['--i'] === '2');
+ok('y el botón elegido queda marcado', botones('temas')[2]._classes.has('activo'));
+ok('la píldora del tamaño de la letra está en la opción elegida',
+   d.getElementById('escalas').children[0].style['--i']
+   === String(botones('escalas').findIndex(b => b._classes.has('activo'))));
+run(`cambiarTema('${temaAntesMov || 'auto'}')`);
+
+run("irA('reportes')");
+ok('la píldora de las pestañas va a Reportes', d.getElementById('pestanas-indicador').style['--i'] === '1');
+run("irA('ayuda')");
+ok('con la Ayuda abierta se queda en Ajustes', d.getElementById('pestanas-indicador').style['--i'] === '2');
+run("irA('semana')");
+ok('y vuelve a la Semana', d.getElementById('pestanas-indicador').style['--i'] === '0');
+
+// --- Las flechas de la semana ---
+const pedidas = {};
+['dias', 'rango', 'total-semana'].forEach(id => {
+  d.getElementById(id).animate = cuadros => { pedidas[id] = cuadros; };
+});
+run('cambiarSemana(-1)');
+ok('hacia atrás, los días entran desde la izquierda',
+   pedidas.dias && pedidas.dias[0].transform === 'translateX(-28px)');
+ok('y el rango de fechas con ellos', pedidas.rango && pedidas.rango[0].transform === 'translateX(-28px)');
+ok('el total solo se funde: lo que se lee no se desliza',
+   pedidas['total-semana'] && pedidas['total-semana'].every(c => c.transform === undefined));
+run('cambiarSemana(1)');
+ok('hacia adelante, desde la derecha', pedidas.dias[0].transform === 'translateX(28px)');
+movimientoReducido = true;
+run('cambiarSemana(-1)');
+ok('con movimiento reducido, nada se desplaza', pedidas.dias[0].transform === 'none');
+movimientoReducido = false;
+['dias', 'rango', 'total-semana'].forEach(id => { delete d.getElementById(id).animate; });
+
+// --- El avión de "Enviar un comentario" ---
+run("irA('ajustes')");
+ctx.navigator.clipboard = { writeText: () => ({ then: bien => bien() }) };
+avisos.length = 0;
+run('enviarComentario()');
+ok('el avión despega', clases('btn-comentario').has('vuela'));
+ok('y el diálogo no sale en el acto', avisos.length === 0);
+// Se sueltan los relojes uno a uno para saber cuál trae el diálogo y cuánto
+// esperó: con una espera de 0 saldría encima del avión y lo taparía.
+let esperaDialogo = null;
+[...pendientes.entries()].forEach(([id, fn]) => {
+  const antes = avisos.length;
+  pendientes.delete(id); fn();
+  if (avisos.length > antes) esperaDialogo = fn.espera;
+});
+ok('después sale el diálogo de siempre', avisos.length === 1);
+ok('cuando el avión ya despegó (espera más de 300 ms)', esperaDialogo >= 300);
+ok('y el avión vuelve a su sitio', !clases('btn-comentario').has('vuela'));
+movimientoReducido = true;
+run('enviarComentario()');
+ok('con movimiento reducido no despega', !clases('btn-comentario').has('vuela'));
+movimientoReducido = false;
+pasarElTiempo();
+delete ctx.navigator.clipboard;
+
+// --- Lo que se puede vigilar del CSS ---
+ok('todas las casillas llevan su chulo',
+   (html.match(/<label class="check"/g) || []).length === (html.match(/<span class="marca">[^]*?<svg/g) || []).length
+   && (html.match(/<label class="check"/g) || []).length === 5);
+const fotogramas = css.match(/@keyframes[^{]+\{([^{}]*\{[^}]*\})+\s*\}/g) || [];
+ok('las animaciones solo mueven transform y opacity',
+   fotogramas.length > 0 && fotogramas.every(k =>
+     (k.match(/([a-z-]+)\s*:/g) || []).every(p => /^(transform|opacity)\s*:$/.test(p))));
+ok('nada de "transition: all"', !/transition:\s*all/.test(css.replace(/\/\*[\s\S]*?\*\//g, '')));
+const reducido = (css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/) || [''])[0];
+ok('el movimiento reducido quita los desplazamientos de todo',
+   ['.principal:active', '.hoja', '.dialogo', '.aviso-breve', '.indicador', '.pestanas-indicador',
+    '.check .marca svg', '.avion'].every(x => reducido.includes(x)));
+ok('las capas entran solas al dejar de estar ocultas',
+   /\.dialogo-fondo:not\(\.oculto\)\s*\{[^}]*animation/.test(css)
+   && /\.hoja-fondo:not\(\.oculto\)\s*\{[^}]*animation/.test(css));
+ok('el aviso breve vive dentro de la barra de pestañas',
+   /<nav class="pestanas"[\s\S]*id="aviso-breve"[\s\S]*<\/nav>/.test(html));
+
+ctx.setTimeout = relojDeSiempre.poner;
+ctx.clearTimeout = relojDeSiempre.quitar;
+run('datos = ' + estadoAntesMov + '; semanaVista = ' + JSON.stringify(semanaAntesMov) + "; irA('semana');");
+avisos.length = 0;
 
 
 /* ==========================================================================

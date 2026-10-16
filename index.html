@@ -310,7 +310,8 @@
     </div>
 
     <label class="check">
-      <input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()">
+      <span class="marca"><input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
       <span data-t="sumarSueldo">Sumar el sueldo por hora al total</span>
     </label>
     <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
@@ -319,7 +320,8 @@
       El sueldo se sigue viendo aparte.</p>
 
     <label class="check" style="margin-top:15px">
-      <input type="checkbox" id="a-tipout-efectivo" onchange="cambiarTipOutEnEfectivo()">
+      <span class="marca"><input type="checkbox" id="a-tipout-efectivo" onchange="cambiarTipOutEnEfectivo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
       <span data-t="tipOutEfectivo">El tip-out se paga en efectivo</span>
     </label>
     <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
@@ -327,7 +329,8 @@
       Encendido, el tip-out se descuenta del efectivo, que es de donde sale.</p>
 
     <label class="check" style="margin-top:15px">
-      <input type="checkbox" id="a-incentivo" onchange="cambiarIncentivo()">
+      <span class="marca"><input type="checkbox" id="a-incentivo" onchange="cambiarIncentivo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
       <span data-t="incentivoActivar">Llevar la cuenta de un incentivo</span>
     </label>
     <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
@@ -351,7 +354,8 @@
   <h2 class="seccion" data-t="apariencia">Apariencia</h2>
   <div class="tarjeta">
     <label class="check" style="margin:0 0 15px">
-      <input type="checkbox" id="a-comparar" onchange="cambiarComparar()">
+      <span class="marca"><input type="checkbox" id="a-comparar" onchange="cambiarComparar()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
       <span data-t="verComparaciones">Comparar con la semana anterior</span>
     </label>
 
@@ -389,8 +393,12 @@
           onclick="irA('ayuda')">Cómo funciona la app</button>
   <button class="secundario" data-t="compartirApp"
           onclick="compartirApp()">Compartir la app</button>
-  <button class="secundario" data-t="enviarComentario"
-          onclick="enviarComentario()">Enviar un comentario</button>
+  <!-- El texto va en su propio <span>: `traducirEstaticos` escribe el texto
+       con `textContent`, y sobre el botón entero borraría el avión. -->
+  <button class="secundario enviar" id="btn-comentario"
+          onclick="enviarComentario()"><svg class="avion" viewBox="0 0 24 24"
+          aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span
+          data-t="enviarComentario">Enviar un comentario</span></button>
 
   <button class="secundario riesgo" data-t="borrarTodo"
           onclick="borrarTodo()">Borrar todos los datos</button>
@@ -451,7 +459,8 @@
       <strong id="b-total">0%</strong></p>
 
     <label class="check">
-      <input type="checkbox" id="b-sin-tipout" onchange="pintarBienvenida()">
+      <span class="marca"><input type="checkbox" id="b-sin-tipout" onchange="pintarBienvenida()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
       <span data-t="sinTipout">En mi restaurante no se paga tip-out</span>
     </label>
   </div>
@@ -544,9 +553,25 @@
 </div>
 
 <nav class="pestanas" id="pestanas">
-  <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
-  <button id="tab-reportes" data-t="reportes" onclick="irA('reportes')">Reportes</button>
-  <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
+  <!-- Una sola píldora para las tres pestañas: `pintar()` le dice cuál es la
+       activa (`--i`) y ella se desliza hasta allí. -->
+  <div class="pestanas-fila">
+    <span class="pestanas-indicador" id="pestanas-indicador" aria-hidden="true"></span>
+    <button id="tab-semana"  data-t="semana"  onclick="irA('semana')">Semana</button>
+    <button id="tab-reportes" data-t="reportes" onclick="irA('reportes')">Reportes</button>
+    <button id="tab-ajustes" data-t="ajustes" onclick="irA('ajustes')">Ajustes</button>
+  </div>
+
+  <!-- El aviso breve ("Turno guardado"). Va dentro de la barra para seguirla
+       a donde vaya; el porqué, en estilos.css. -->
+  <div class="aviso-breve" id="aviso-breve" role="status" aria-live="polite">
+    <span class="icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path
+          d="M6 12.5l4 4 8-9"/></svg></span>
+    <span class="texto"><span class="titulo" id="aviso-breve-titulo"></span><span
+          class="detalle" id="aviso-breve-detalle"></span></span>
+    <button class="cerrar" id="aviso-breve-cerrar" onclick="cerrarAvisoBreve()">✕</button>
+    <span class="tiempo" id="aviso-breve-tiempo" aria-hidden="true"></span>
+  </div>
 </nav>
 
 
@@ -630,7 +655,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v41';
+const VERSION_APP = 'v42';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1040,9 +1065,50 @@ function irA(nombre) {
 function cambiarSemana(cuantas) {
   semanaVista = sumarDias(semanaVista, cuantas * 7);
   pintar();
+  animarCambioDeSemana(Math.sign(cuantas));
 }
 
-function irAHoy() { semanaVista = inicioDeEstaSemana(hoy()); pintar(); }
+function irAHoy() {
+  // "Hoy" siempre lleva hacia adelante: solo sale cuando miras una semana pasada.
+  semanaVista = inicioDeEstaSemana(hoy());
+  pintar();
+  animarCambioDeSemana(1);
+}
+
+/** Si la persona pidió menos movimiento en su teléfono. */
+function movimientoReducido() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * La semana nueva entra por el lado de la flecha que se tocó: hacia atrás
+ * llega desde la izquierda, hacia adelante desde la derecha. Así se entiende
+ * hacia dónde te moviste sin leer las fechas.
+ *
+ * Solo se desplazan los días y el rango de fechas. El total y las métricas
+ * solo se funden: son lo que se lee, y un número que se desliza se lee peor.
+ *
+ * `pintar()` ya rehízo los días, así que no hay semana vieja que sacar: la
+ * nueva entra sola. Va con `element.animate()` porque es una animación de una
+ * vez, sin estado que guardar. Donde no exista (un navegador muy viejo, o el
+ * de mentira de las pruebas), el cambio se queda sin animar, que es lo mismo
+ * que hacía antes.
+ *
+ * @param {number} direccion -1 hacia atrás, 1 hacia adelante.
+ */
+function animarCambioDeSemana(direccion) {
+  if (pantalla !== 'semana' || !direccion) return;
+  const curva = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  const desde = movimientoReducido() ? 'none' : `translateX(${direccion * 28}px)`;
+  const animar = (id, cuadros, duracion) => {
+    const el = document.getElementById(id);
+    if (el && typeof el.animate === 'function') el.animate(cuadros, { duration: duracion, easing: curva });
+  };
+  ['dias', 'rango'].forEach(id => animar(id,
+    [{ opacity: 0, transform: desde }, { opacity: 1, transform: 'none' }], 260));
+  ['total-semana', 'contra-semana', 'metricas', 'metricas-extras'].forEach(id => animar(id,
+    [{ opacity: 0 }, { opacity: 1 }], 220));
+}
 
 /** El primer día de la semana de pago de una fecha, con el corte de Ajustes. */
 function inicioDeEstaSemana(fecha) {
@@ -1483,6 +1549,11 @@ function guardarTurno() {
   // otra semana, quieres verlo, no volver a donde estabas.
   semanaVista = inicioDeEstaSemana(turno.fecha);
   irA('semana');
+  // Antes se volvía a la semana sin decir nada, y la única confirmación era
+  // ver aparecer el monto en su día. Va DESPUÉS de comprobar que se guardó:
+  // un "Turno guardado" sobre un turno que no se guardó sería mentir.
+  avisoBreve(t('avisoGuardado'), `${fechaLarga(turno.fecha)} · `
+    + $(cifrasPrincipales(calcularTurno(turno), !!datos.prefs.contarSueldo).total));
 }
 
 function borrarTurno() {
@@ -1493,8 +1564,11 @@ function borrarTurno() {
   preguntar(`${t('confirmBorrarTurno')} ${fechaLarga(turno.fecha)}. `
           + `${t('confirmBorrarTurno2')}`, () => {
     datos.turnos = datos.turnos.filter(x => x.id !== turno.id);
-    guardar();
+    // Si no se pudo guardar, `guardar()` ya avisó en el diálogo, y decir
+    // "Turno borrado" encima lo contradiría.
+    const guardado = guardar();
     irA('semana');
+    if (guardado) avisoBreve(t('avisoBorrado'), fechaLarga(turno.fecha));
   });
 }
 
@@ -2024,6 +2098,40 @@ function confirmarBorrado(cuantos) {
    error desaparecía de la pantalla antes de que nadie lo leyera. */
 let colaDialogos = [];
 
+/* --- Las capas: el diálogo y la hoja de ayuda ---
+
+   Aparecen con una animación que va atada a `:not(.oculto)` en estilos.css:
+   en cuanto se les quita `oculto`, entran solas. Para irse, en cambio, hay que
+   esperar: si se les pone `oculto` de golpe, desaparecen antes de animar.
+   Por eso se van en dos pasos: `saliendo` (anima la salida) y, al terminar,
+   `oculto`.
+
+   La regla para lo que venga: enseñar y esconder estas capas SIEMPRE con
+   estas dos funciones, no tocando `oculto` a mano. Si se esconden a mano, se
+   van sin animar; si se enseñan a mano en plena salida, se quedan con
+   `saliendo` puesto y la salida termina escondiéndolas otra vez. */
+const salidas = new Map();   // capa → el reloj que la esconderá
+
+function mostrarCapa(capa) {
+  clearTimeout(salidas.get(capa));
+  salidas.delete(capa);
+  capa.classList.remove('saliendo', 'oculto');
+}
+
+/**
+ * Esconde una capa después de animar su salida.
+ * @param {number} ms Lo que dura la salida en estilos.css.
+ */
+function ocultarCapa(capa, ms) {
+  if (capa.classList.contains('oculto') || salidas.has(capa)) return;
+  capa.classList.add('saliendo');
+  salidas.set(capa, setTimeout(() => {
+    salidas.delete(capa);
+    capa.classList.remove('saliendo');
+    capa.classList.add('oculto');
+  }, ms));
+}
+
 /**
  * Muestra un mensaje con un solo botón. Reemplaza a `avisar()`.
  * @param {string} texto Lo que se le dice a la persona.
@@ -2064,7 +2172,7 @@ function mostrarDialogo() {
   cancelar.classList.toggle('oculto', !esPregunta);
   cancelar.textContent = t('dlgCancelar');
   ok.textContent = esPregunta ? t('dlgAceptar') : t('dlgEntendido');
-  caja.classList.remove('oculto');
+  mostrarCapa(caja);
 }
 
 /**
@@ -2073,7 +2181,9 @@ function mostrarDialogo() {
  */
 function cerrarDialogo(acepto) {
   const actual = colaDialogos.shift();
-  document.getElementById('dialogo').classList.add('oculto');
+  // Si hay otro en la cola, `mostrarDialogo` de abajo cancela esta salida y
+  // el diálogo se queda abierto con el texto nuevo.
+  ocultarCapa(document.getElementById('dialogo'), 160);
 
   /* El orden importa: primero se quita de la cola y se esconde, y solo después
      se ejecuta lo que había que hacer. Si se ejecutara antes, una acción que
@@ -2083,6 +2193,44 @@ function cerrarDialogo(acepto) {
   if (!actual) return;
   const seguir = acepto ? actual.alAceptar : actual.alCancelar;
   if (typeof seguir === 'function') seguir();
+}
+
+/* --- El aviso breve ---
+
+   "Turno guardado", abajo, encima de las pestañas. Se va solo o con la X.
+   Es para CONFIRMAR lo que salió bien y nada más: un error va siempre en
+   `avisar()`, que espera a que lo cierres. Un aviso que se va solo se puede
+   perder, y un error que nadie leyó es un error mudo (estilos.css, sección
+   A4, tiene el resto del porqué). */
+const DURACION_AVISO_BREVE = 4000;
+let relojAvisoBreve = null;
+
+/**
+ * @param {string} titulo  Lo que pasó: "Turno guardado".
+ * @param {string} detalle De qué: el día y la cifra.
+ */
+function avisoBreve(titulo, detalle) {
+  document.getElementById('aviso-breve-titulo').textContent = titulo;
+  document.getElementById('aviso-breve-detalle').textContent = detalle || '';
+
+  // La raya que enseña cuánto le queda vuelve a empezar con cada aviso. Para
+  // reiniciar una animación hay que quitarle la clase, dejar que el navegador
+  // se entere (leer `offsetWidth` lo obliga) y volver a ponerla.
+  const tiempo = document.getElementById('aviso-breve-tiempo');
+  tiempo.style.setProperty('--dura', DURACION_AVISO_BREVE + 'ms');
+  tiempo.classList.remove('corre');
+  void tiempo.offsetWidth;
+  tiempo.classList.add('corre');
+
+  document.getElementById('aviso-breve').classList.add('visible');
+  clearTimeout(relojAvisoBreve);
+  relojAvisoBreve = setTimeout(cerrarAvisoBreve, DURACION_AVISO_BREVE);
+}
+
+function cerrarAvisoBreve() {
+  clearTimeout(relojAvisoBreve);
+  relojAvisoBreve = null;
+  document.getElementById('aviso-breve').classList.remove('visible');
 }
 
 
@@ -2481,6 +2629,7 @@ function traducirEstaticos() {
   const siguiente = document.getElementById('btn-siguiente');
   if (anterior)  anterior.setAttribute('aria-label', t('semanaAnterior'));
   if (siguiente) siguiente.setAttribute('aria-label', t('semanaSiguiente'));
+  document.getElementById('aviso-breve-cerrar').setAttribute('aria-label', t('avisoCerrar'));
 }
 
 function pintar() {
@@ -2511,6 +2660,13 @@ function pintar() {
   // lee. Dejarla apagada haría parecer que te fuiste de la app.
   document.getElementById('tab-ajustes').classList
     .toggle('activa', pantalla === 'ajustes' || pantalla === 'ayuda');
+  // La píldora de la pestaña activa se desliza hasta su sitio (estilos.css,
+  // sección H). En las pantallas sin pestañas se queda donde estaba: la barra
+  // está escondida y nadie la ve.
+  const pestana = { semana: 0, reportes: 1, ajustes: 2, ayuda: 2 }[pantalla];
+  if (pestana !== undefined) {
+    document.getElementById('pestanas-indicador').style.setProperty('--i', String(pestana));
+  }
 
   if (pantalla === 'semana')     pintarSemana();
   /* Sin condición a propósito: el banner vive dentro de la sección de la semana,
@@ -3518,8 +3674,14 @@ function enviarComentario() {
   // teléfono puede bloquear la ventana nueva sin decir nada.
   if (destino) window.open(destino, '_blank', 'noopener');
 
-  const alCopiar = () => avisar(t(destino ? 'comentarioFormulario' : 'comentarioCopiado') + '\n\n' + texto);
-  const sinCopiar = () => avisar(t('comentarioSinCopiar') + '\n\n' + texto);
+  // El avioncito despega y el diálogo sale cuando ya se fue: si saliera en el
+  // acto, lo taparía. Se espera solo el diálogo, no la copia: el portapapeles
+  // tiene que tocarse dentro del toque o el teléfono puede negarse.
+  const espera = despegarAvion();
+  const alCopiar = () => setTimeout(() =>
+    avisar(t(destino ? 'comentarioFormulario' : 'comentarioCopiado') + '\n\n' + texto), espera);
+  const sinCopiar = () => setTimeout(() =>
+    avisar(t('comentarioSinCopiar') + '\n\n' + texto), espera);
   // Copiar toca el portapapeles, que puede fallar sin que el código tenga la
   // culpa. Si falla, los datos salen igual en el aviso para una captura.
   try {
@@ -3527,6 +3689,24 @@ function enviarComentario() {
   } catch (e) {
     sinCopiar();
   }
+}
+
+/**
+ * El avión de "Enviar un comentario" sale volando y, un rato después, vuelve
+ * a su sitio sin que se vea el regreso (estilos.css, sección A6).
+ * @returns {number} Cuánto esperar antes de enseñar el diálogo, en ms.
+ */
+function despegarAvion() {
+  if (movimientoReducido()) return 0;
+  const boton = document.getElementById('btn-comentario');
+  boton.classList.add('vuela');
+  setTimeout(() => {
+    boton.classList.remove('vuela');
+    boton.classList.add('vuelve');
+    void boton.offsetWidth;   // que el navegador vea dónde quedó antes de soltarlo
+    boton.classList.remove('vuelve');
+  }, 1200);
+  return 420;
 }
 
 function mostrarDiagnostico() {
@@ -3618,40 +3798,75 @@ function pintarAjustes() {
   document.getElementById('a-incentivo-nombre').placeholder =
     t('incentivoPorDefecto');
 
-  const idiomas = document.getElementById('idiomas');
-  idiomas.innerHTML = '';
-  IDIOMAS.forEach(idioma => {
-    const boton = document.createElement('button');
-    boton.textContent = idioma.nombre;
-    boton.className = (datos.prefs.idioma || 'es') === idioma.id ? 'activo' : '';
-    boton.onclick = () => cambiarIdioma(idioma.id);
-    idiomas.appendChild(boton);
-  });
+  pintarSegmentado('idiomas', opcionesDeIdioma());
 
-  const temas = document.getElementById('temas');
-  temas.innerHTML = '';
-  TEMAS.forEach(tema => {
-    const boton = document.createElement('button');
-    boton.textContent = t(tema.clave);
-    boton.className = (datos.prefs.tema || 'auto') === tema.id ? 'activo' : '';
-    boton.onclick = () => cambiarTema(tema.id);
-    temas.appendChild(boton);
-  });
+  pintarSegmentado('temas', TEMAS.map(tema => ({
+    texto: t(tema.clave),
+    activo: (datos.prefs.tema || 'auto') === tema.id,
+    alTocar: () => cambiarTema(tema.id)
+  })));
 
-  const escalas = document.getElementById('escalas');
-  escalas.innerHTML = '';
-  ESCALAS.forEach(escala => {
-    const boton = document.createElement('button');
-    boton.textContent = t(escala.clave);
+  pintarSegmentado('escalas', ESCALAS.map(escala => ({
+    texto: t(escala.clave),
     // Cada botón se muestra en el tamaño que representa: se elige viendo el
     // resultado, no leyendo una palabra que hay que imaginarse.
-    boton.style.fontSize = Math.round(escala.factor * 100) + '%';
-    boton.className = (datos.prefs.escala || 'normal') === escala.id ? 'activo' : '';
-    boton.onclick = () => cambiarEscala(escala.id);
-    escalas.appendChild(boton);
-  });
+    tamano: Math.round(escala.factor * 100) + '%',
+    activo: (datos.prefs.escala || 'normal') === escala.id,
+    alTocar: () => cambiarEscala(escala.id)
+  })));
 
   pintarListaRoles('roles', 'a-total');
+}
+
+/** Los idiomas, para el segmentado de Ajustes y el de la Bienvenida. */
+function opcionesDeIdioma() {
+  return IDIOMAS.map(idioma => ({
+    texto: idioma.nombre,
+    activo: (datos.prefs.idioma || 'es') === idioma.id,
+    alTocar: () => cambiarIdioma(idioma.id)
+  }));
+}
+
+/* Los botones de cada segmentado, por el id de su caja. */
+const segmentados = {};
+
+/**
+ * Dibuja un control segmentado (idioma, tema, tamaño de la letra).
+ *
+ * La primera vez fabrica los botones y la píldora. Las siguientes NO los
+ * rehace: les cambia el texto, la clase y lo que hacen al tocarlos, y mueve
+ * la píldora (`--i`). Si se rehicieran en cada `pintar()`, como antes, la
+ * píldora nacería ya en su sitio y no se deslizaría nunca: el navegador solo
+ * anima un cambio en un elemento que ya estaba.
+ *
+ * Solo esta función escribe dentro de estas cajas. Si otra las vaciara, los
+ * botones guardados aquí quedarían sueltos y el segmentado dejaría de verse.
+ *
+ * @param {string} id La caja (`.segmentado`).
+ * @param {{texto: string, activo: boolean, alTocar: Function, tamano?: string}[]} opciones
+ */
+function pintarSegmentado(id, opciones) {
+  const caja = document.getElementById(id);
+  let partes = segmentados[id];
+  if (!partes || partes.botones.length !== opciones.length) {
+    caja.innerHTML = '';
+    const indicador = document.createElement('span');
+    indicador.className = 'indicador';
+    indicador.setAttribute('aria-hidden', 'true');
+    caja.appendChild(indicador);
+    const botones = opciones.map(() => caja.appendChild(document.createElement('button')));
+    partes = segmentados[id] = { indicador, botones };
+  }
+  opciones.forEach((opcion, i) => {
+    const boton = partes.botones[i];
+    boton.textContent = opcion.texto;
+    boton.className = opcion.activo ? 'activo' : '';
+    boton.onclick = opcion.alTocar;
+    if (opcion.tamano) boton.style.fontSize = opcion.tamano;
+  });
+  const activo = opciones.findIndex(o => o.activo);
+  partes.indicador.classList.toggle('oculto', activo < 0);
+  partes.indicador.style.setProperty('--i', String(Math.max(0, activo)));
 }
 
 /**
@@ -3801,8 +4016,10 @@ function verTodaLaAyuda() {
 function pintarHojaAyuda() {
   const fondo = document.getElementById('hoja-ayuda');
   const claves = hojaAyuda && AYUDA_POR_PANTALLA[hojaAyuda];
-  fondo.classList.toggle('oculto', !claves);
-  if (!claves) return;
+  // Cerrada, se va bajando (`ocultarCapa`, sección S1). Mientras baja se le
+  // deja lo que tenía dentro: vaciarla ahora la vería bajar en blanco.
+  if (!claves) { ocultarCapa(fondo, 220); return; }
+  mostrarCapa(fondo);
 
   const nombres = { semana: 'semana', turno: 'turnoTitulo',
                     reportes: 'reportes', ajustes: 'ajustes' };
@@ -3816,15 +4033,7 @@ function pintarBienvenida() {
   document.getElementById('b-nombre').value = datos.trabajo.nombre || '';
   document.getElementById('b-tarifa').value = datos.trabajo.tarifaHora || '';
 
-  const idiomas = document.getElementById('b-idiomas');
-  idiomas.innerHTML = '';
-  IDIOMAS.forEach(idioma => {
-    const boton = document.createElement('button');
-    boton.textContent = idioma.nombre;
-    boton.className = (datos.prefs.idioma || 'es') === idioma.id ? 'activo' : '';
-    boton.onclick = () => cambiarIdioma(idioma.id);
-    idiomas.appendChild(boton);
-  });
+  pintarSegmentado('b-idiomas', opcionesDeIdioma());
 
   const sinTipOut = document.getElementById('b-sin-tipout').checked;
   pintarListaRoles('b-roles', 'b-total', sinTipOut);
@@ -3930,6 +4139,10 @@ aplicarTema();
 aplicarEscala();
 document.documentElement.lang = (datos.prefs.idioma || 'es');
 pintarMarca();
+// Safari del iPhone no aplica `:active` (el encogerse al apretar, sección A6
+// de estilos.css) si la página no escucha los toques. Escuchar basta; no hace
+// falta hacer nada con ellos. `passive` le promete que no frenará el scroll.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 const faltan = FUNCIONES_NECESARIAS.filter(n => typeof window[n] !== 'function');
 
