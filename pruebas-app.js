@@ -2489,21 +2489,20 @@ reiniciarHueco();
 const bloqueHueco = (htmlYcss.match(/@media \(orientation: portrait\) \{\s*:root\.hueco-ios[\s\S]*?\n\}/) || [''])[0];
 ok('todo el arreglo va dentro de "solo en vertical"', bloqueHueco.length > 0);
 ok('la barra se ancla arriba, no al borde que se mueve',
-   /\.pestanas \{[^}]*top: var\(--alto-estable\)[^}]*bottom: auto[^}]*translateY\(-100%\)/.test(bloqueHueco));
-ok('y pierde el margen de la rayita', /\.pestanas \{[^}]*padding-bottom: 0/.test(bloqueHueco));
-ok('su fondo se prolonga hacia abajo', /\.pestanas::after \{[^}]*top: 100%/.test(bloqueHueco));
-ok('y la raíz toma el color de la barra', /:root\.hueco-ios \{ background: var\(--tarjeta\); \}/.test(bloqueHueco));
+   /\.pestanas \{[^}]*top: calc\(var\(--alto-estable\)[^}]*bottom: auto[^}]*translateY\(-100%\)/.test(bloqueHueco));
+/* Desde la v43 la barra flota y la franja ya no se pinta del blanco de la
+   barra: lo de debajo es la página. Si alguien vuelve a poner el blanco (el
+   `::after` o la raíz en `--tarjeta`), la barra vuelve a verse perdida. */
+ok('la franja ya no se pinta con el blanco de la barra',
+   !/::after/.test(bloqueHueco) && !/var\(--tarjeta\)/.test(bloqueHueco));
 /* La regla que rompió la v31: nada de esto puede cambiar el alto de la
-   página. Solo se permiten la raíz (su fondo), la capa fija del cuerpo y la
-   barra, que es `fixed` y no ocupa sitio. */
+   página. Solo se permite la barra, que es `fixed` y no ocupa sitio. */
 const reglasHueco = bloqueHueco.match(/:root\.hueco-ios[^{]*\{[^}]*\}/g) || [];
-const selectoresPermitidos = [':root.hueco-ios', ':root.hueco-ios body::before',
-                              ':root.hueco-ios .pestanas', ':root.hueco-ios .pestanas::after'];
-ok('las reglas de la franja existen', reglasHueco.length === 4);
-ok('ninguna toca algo que ocupe sitio en la página (el bucle del parpadeo)',
-   reglasHueco.every(r => selectoresPermitidos.includes(r.slice(0, r.indexOf('{')).trim()))
-   && reglasHueco.every(r => !r.startsWith(':root.hueco-ios {') || !/height|margin|padding/.test(r)));
-ok('la capa de papel va fija', reglasHueco.some(r => /body::before/.test(r) && /position: fixed/.test(r)));
+ok('la regla de la franja existe', reglasHueco.length === 1);
+ok('y solo toca la barra, que no ocupa sitio (el bucle del parpadeo)',
+   reglasHueco.every(r => r.slice(0, r.indexOf('{')).trim() === ':root.hueco-ios .pestanas'));
+ok('la barra flota encima de la rayita de inicio, fuera del arreglo',
+   /\.pestanas \{[^}]*bottom: calc\(10px \+ env\(safe-area-inset-bottom\)\)/.test(css));
 
 /* La apariencia no se puede probar aquí (el mini-dom no calcula CSS), pero sí
    que las reglas de fondo sigan escritas. Si alguien las revierte, esto avisa. */
@@ -2521,9 +2520,10 @@ ok('el segmentado activo se rellena como el chip',
 ok('las casillas se rellenan como el chip',
    /background: var\(--verde-suave\)/.test(regla('.check:has(input:checked)')));
 ok('y dejan de ser la casilla azul del sistema', /appearance: none/.test(regla('.check input')));
-ok('la pestaña activa lleva la píldora',
-   /background: var\(--verde-suave\)/.test(regla('.pestanas-indicador'))
-   && /border: 1px solid var\(--verde\)/.test(regla('.pestanas-indicador')));
+// Desde la v43 la píldora de las pestañas es gris (la excepción de §17).
+ok('la pestaña activa lleva la píldora', /background: var\(--pestana-activa\)/.test(regla('.pestanas-indicador')));
+ok('cada pestaña tiene su ícono',
+   ['#tab-semana', '#tab-reportes', '#tab-ajustes'].every(id => /--icono: url\("data:image\/svg/.test(regla(id))));
 /* Eran 4. El botón (i) pasó a tinta-2 el 27 de septiembre de 2026: con
    tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
@@ -2550,6 +2550,23 @@ ok('el verde sobre el verde suave llega a 4.5:1 en claro',
 ok('y en oscuro', contraste(colorDe(bloqueOscuro, '--verde'), colorDe(bloqueOscuro, '--verde-suave')) >= 4.5);
 ok('y el botón verde con letra de papel, también en claro',
    contraste(colorDe(bloqueClaro, '--verde'), colorDe(bloqueClaro, '--papel')) >= 4.5);
+/* La letra verde de la pestaña activa va sobre tres capas: la píldora gris
+   (transparente), el vidrio (transparente) y el papel. Se mezclan como lo
+   haría la pantalla y se mide el resultado. */
+const rgbaDe = (bloque, nombre) => {
+  const m = bloque.match(new RegExp(nombre + ':\\s*rgba\\(([^)]*)\\)'));
+  return m ? m[1].split(',').map(Number) : null;
+};
+const aHex = c => '#' + c.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+const deHex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const encima = ([r, g, b, a], fondo) => [r, g, b].map((x, i) => x * a + fondo[i] * (1 - a));
+const fondoPestana = bloque => {
+  const papel = deHex(colorDe(bloque, '--papel'));
+  return aHex(encima(rgbaDe(bloque, '--pestana-activa'), encima(rgbaDe(bloque, '--vidrio'), papel)));
+};
+ok('la letra verde de la pestaña activa llega a 4.5:1 sobre su píldora, en claro',
+   contraste(colorDe(bloqueClaro, '--verde'), fondoPestana(bloqueClaro)) >= 4.5);
+ok('y en oscuro', contraste(colorDe(bloqueOscuro, '--verde'), fondoPestana(bloqueOscuro)) >= 4.5);
 ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
 ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
    /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));

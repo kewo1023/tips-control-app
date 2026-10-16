@@ -63,6 +63,17 @@
   --principal-cara:   #2b2924;
   --principal-canto:  #16150f;
   --principal-sombra: rgba(22, 21, 15, .28);
+
+  /* La barra de pestañas flotante (sección H): vidrio esmerilado, como la de
+     habitos-app. La pestaña activa va en gris y no en el verde suave del
+     chip; el gris es casi el doble de oscuro que el de Hábitos para que se
+     vea de un vistazo dónde estás, y lo justo para que el verde de la letra
+     siga dando 4.65:1 encima (una prueba lo calcula). */
+  --vidrio:          rgba(255, 255, 255, .74);
+  --vidrio-borde:    rgba(22, 21, 15, .08);
+  --vidrio-brillo:   rgba(255, 255, 255, .9);
+  --vidrio-sombra:   rgba(22, 21, 15, .16);
+  --pestana-activa:  rgba(22, 21, 15, .10);
 }
 /* El modo oscuro ya NO se activa con `prefers-color-scheme` desde el CSS, sino
    con el atributo `data-tema` en la etiqueta <html>. Quien decide el valor de
@@ -102,6 +113,11 @@
     --principal-cara:   #f7f6f3;
     --principal-canto:  #a9a7a0;
     --principal-sombra: rgba(0, 0, 0, .6);
+    --vidrio:          rgba(36, 36, 34, .74);
+    --vidrio-borde:    rgba(255, 255, 255, .08);
+    --vidrio-brillo:   rgba(255, 255, 255, .10);
+    --vidrio-sombra:   rgba(0, 0, 0, .55);
+    --pestana-activa:  rgba(255, 255, 255, .16);
 }
 
 /* ============================================================================
@@ -157,43 +173,32 @@ html { font-size: 100%; touch-action: manipulation; }
 
    Lo que se descubrió después, con un video del teléfono: al hacer scroll iOS
    no corrige la ventana UNA vez, la hace ALTERNAR entre 894 y 956. Una barra
-   pegada abajo (`bottom: 0`) sigue ese borde y salta 62 cada vez. Por eso,
-   cuando se detecta el fallo (`hueco-ios`, lo pone `medirHuecoIOS()`):
+   pegada abajo (`bottom`) sigue ese borde y salta 62 cada vez. Por eso,
+   cuando se detecta el fallo (`hueco-ios`, lo pone `medirHuecoIOS()`), la
+   barra se ancla ARRIBA: a la altura corta que iOS da al abrir
+   (`--alto-estable`), 8 px por encima, y subida su propio alto con
+   `translateY`. El borde de arriba de la ventana no se mueve nunca, así que
+   la barra tampoco.
 
-     - La barra se ancla ARRIBA, no abajo: `top` a la altura corta que iOS da
-       al abrir (`--alto-estable`) y subida su propio alto con `translateY`.
-       El borde de arriba de la ventana no se mueve nunca, así que la barra
-       tampoco. La etiqueta queda siempre donde estaba con la ventana corta.
-     - Su fondo se prolonga hacia abajo (`::after`). Con la ventana larga tapa
-       la franja que queda debajo; con la corta cae en la franja muerta, que
-       ya es del mismo color porque la raíz se pinta como la barra.
-     - Pierde el margen de la rayita de inicio: la rayita está en el borde
-       real, dentro de la franja.
-     - Una capa fija de papel tapa la ventana, para que el color de la raíz no
-       asome detrás del contenido en una pantalla corta.
+   Hasta la v42 la barra iba a lo ancho y su fondo blanco bajaba por la franja
+   hasta el borde (un `::after`, y la raíz pintada del mismo blanco). Se veía
+   como un bloque vacío y la barra parecía perdida en lo alto. Desde la v43 la
+   barra flota (sección H): debajo se ve la página, y la franja, que iOS
+   pinta con el fondo de la raíz, sale del mismo papel que el cuerpo. Los 62
+   siguen ahí, pero se leen como margen.
 
    La clase NO se quita al hacer scroll: se pone una vez y se queda. Quitarla
    y ponerla fue lo que hizo parpadear la barra en la v31 y la v32. La
    `--alto-estable` solo cambia si aparece una ventana todavía más corta.
-   Todo va dentro de `orientation: portrait`: en horizontal, anclar la barra a
+   Va dentro de `orientation: portrait`: en horizontal, anclar la barra a
    894 la mandaría fuera de la pantalla.
 
    REGLA: nada de esto puede cambiar el ALTO DE LA PÁGINA. La v31 le ponía al
-   cuerpo un alto mínimo y armó un bucle con iOS. Solo se tocan cosas que no
-   ocupan sitio: la barra (`fixed`), el fondo de la raíz y la capa fija. Una
-   prueba lo vigila. */
+   cuerpo un alto mínimo y armó un bucle con iOS. Solo se toca la barra, que es
+   `fixed` y no ocupa sitio. Una prueba lo vigila. */
 @media (orientation: portrait) {
-  :root.hueco-ios { background: var(--tarjeta); }
-  :root.hueco-ios body::before {
-    content: ''; position: fixed; inset: 0; z-index: -1; background: var(--papel);
-  }
   :root.hueco-ios .pestanas {
-    top: var(--alto-estable); bottom: auto; transform: translateY(-100%);
-    padding-bottom: 0;
-  }
-  :root.hueco-ios .pestanas::after {
-    content: ''; position: absolute; left: 0; right: 0; top: 100%;
-    height: 200px; background: var(--tarjeta);
+    top: calc(var(--alto-estable) - 8px); bottom: auto; transform: translateY(-100%);
   }
 }
 
@@ -206,8 +211,11 @@ body {
      del reloj y este relleno valía 0. El diagnóstico del 23 de septiembre de
      2026 lo desmintió: en iOS 26, instalada, vale 62px en un iPhone grande y
      la página se dibuja debajo del reloj igual. Este relleno es lo que evita
-     que el título y el botón Cerrar del formulario queden tapados. */
-  padding: env(safe-area-inset-top) 14px calc(4.75rem + env(safe-area-inset-bottom));
+     que el título y el botón Cerrar del formulario queden tapados.
+
+     El de abajo es el sitio de la barra flotante (sección H), para que no
+     tape lo último de la página. */
+  padding: env(safe-area-inset-top) 14px calc(5.75rem + env(safe-area-inset-bottom));
   background: var(--papel);
   color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -742,36 +750,68 @@ button { font-family: inherit; }
 /* ============================================================================
    SECCIÓN H — Pestañas
    ========================================================================== */
+/* La barra flota (v43), como la de habitos-app: no toca los bordes, 12 px a
+   cada lado y 10 px encima de la rayita de inicio. `max-width` + `margin:
+   auto` la centran en una pantalla ancha (iPad, Mac) sin estirarla.
+
+   Antes iba a lo ancho, pegada abajo, con fondo blanco. En un iPhone con el
+   fallo de la franja (sección B) ese blanco bajaba hasta el borde y la barra
+   se veía alta y perdida; flotando, lo de debajo es la página.
+
+   Vidrio esmerilado: un color medio transparente (`--vidrio`) más
+   `backdrop-filter`, que desenfoca lo que pasa por detrás al hacer scroll.
+   `-webkit-` va repetido porque un iPhone sin actualizar solo entiende ese.
+   Dos sombras: una línea de luz por dentro arriba y la de verdad por fuera,
+   que la despega de la página. */
 .pestanas {
-  position: fixed; left: 0; right: 0; bottom: 0; display: flex;
-  background: var(--tarjeta); border-top: 1px solid var(--linea);
-  padding-bottom: env(safe-area-inset-bottom); z-index: 10;
+  position: fixed; left: 12px; right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  max-width: 520px; margin: 0 auto;
+  display: flex; padding: 5px; border-radius: 26px; z-index: 10;
+  background: var(--vidrio); border: 1px solid var(--vidrio-borde);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+          backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: inset 0 1px 0 var(--vidrio-brillo), 0 8px 30px var(--vidrio-sombra);
 }
-/* La fila de los botones, aparte de la barra: la píldora se mide contra los
-   botones y no contra la barra, que lleva debajo el margen de la rayita de
-   inicio (y en el arreglo de iOS 26 lo pierde). */
+/* La fila de los botones: la píldora se mide contra ella. */
 .pestanas-fila { position: relative; isolation: isolate; flex: 1; display: flex; }
+/* Cada pestaña es un ícono con su nombre debajo, como en cualquier app de
+   iPhone: el ícono se reconoce sin leer y el nombre lo confirma. */
 .pestanas button {
-  position: relative;
-  flex: 1; border: none; background: none; padding: 11px 0 13px;
-  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--tinta-2); cursor: pointer;
+  position: relative; min-width: 0;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: none; background: none; padding: 7px 0 6px;
+  font-size: 0.6875rem; font-weight: 600; white-space: nowrap;
+  color: var(--tinta-2); cursor: pointer;
   transition: transform 200ms var(--ease-out), color 200ms ease;
 }
-.pestanas button.activa { color: var(--verde); }
-/* La pestaña activa lleva la píldora del chip. Es UNA sola píldora para las
-   tres pestañas, y se desliza hasta la elegida (`--i`, lo pone `pintar()`).
-   Antes cada botón dibujaba la suya con `::before` y saltaba de golpe.
-
-   Va por debajo de los botones y no los encoge: la zona que recibe el dedo
-   sigue siendo un tercio entero de la barra. Es la misma idea que los días
-   libres de la semana: la caja que se ve y la caja que se toca van por
-   separado. Las medidas suponen TRES pestañas: si se añade una, cambian. */
+.pestanas button.activa { color: var(--verde); font-weight: 700; }
+/* El ícono: un cuadrito del color de la letra (`currentColor`) recortado con
+   la forma del dibujo (`mask`). Así cambia de color solo al activarse la
+   pestaña, en los dos temas, sin una segunda imagen. Mide en `rem` para
+   crecer con el tamaño de letra. Los "black" de los SVG no se ven nunca: una
+   máscara solo lee dónde hay trazo. Es la técnica de habitos-app. */
+.pestanas button::before {
+  content: ''; width: 1.375rem; height: 1.375rem;
+  background: currentColor;
+  -webkit-mask: var(--icono) center / contain no-repeat;
+          mask: var(--icono) center / contain no-repeat;
+}
+#tab-semana   { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='2.5'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E"); }
+#tab-reportes { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 20v-7M12 20V5M18.5 20v-10M3 20.5h18'/%3E%3C/svg%3E"); }
+#tab-ajustes  { --icono: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9'/%3E%3Ccircle cx='15' cy='7' r='2.2'/%3E%3Ccircle cx='9' cy='17' r='2.2'/%3E%3C/svg%3E"); }
+/* La pestaña activa lleva una píldora gris, UNA sola para las tres, que se
+   desliza hasta la elegida (`--i`, lo pone `pintar()`). Es la excepción a
+   "toda selección se ve como el chip" (DECISIONES §17): dentro del vidrio,
+   un borde verde con relleno verde suave competía con el ícono; el gris con
+   la letra verde dice lo mismo con menos ruido. Va por debajo de los botones
+   y no los encoge: la zona que recibe el dedo sigue siendo un tercio entero.
+   Las medidas suponen TRES pestañas: si se añade una, cambian. */
 .pestanas-indicador {
-  position: absolute; top: 6px; bottom: 8px; left: 14px; z-index: -1;
-  width: calc(100% / 3 - 28px);
-  border: 1px solid var(--verde); border-radius: 999px; background: var(--verde-suave);
-  transform: translateX(calc(var(--i, 0) * (100% + 28px)));
+  position: absolute; top: 0; bottom: 0; left: 0; z-index: -1;
+  width: calc(100% / 3); border-radius: 21px;
+  background: var(--pestana-activa);
+  transform: translateX(calc(var(--i, 0) * 100%));
   transition: transform 260ms var(--ease-in-out);
 }
 
@@ -1075,14 +1115,14 @@ button { font-family: inherit; }
    Vive DENTRO de la barra de pestañas y se coloca encima de ella. Así sigue a
    la barra también con el arreglo de iOS 26, que la ancla arriba (sección B):
    un aviso pegado al borde de abajo de la ventana se metía debajo de ella
-   cada vez que iOS alarga la ventana.
+   cada vez que iOS alarga la ventana. Mide lo mismo que la barra flotante.
 
    Entra y sale con transiciones, no con animaciones: si se guardan dos
    turnos seguidos, el segundo aviso sigue desde donde iba el primero en vez
    de empezar de cero.
    -------------------------------------------------------------------------- */
 .aviso-breve {
-  position: absolute; left: 12px; right: 12px; bottom: calc(100% + 10px); z-index: 1;
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); z-index: 1;
   display: flex; align-items: center; gap: 11px;
   padding: 11px 6px 11px 12px; overflow: hidden;
   background: var(--tinta); color: var(--papel); border-radius: 13px;

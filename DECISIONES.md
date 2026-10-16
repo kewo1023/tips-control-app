@@ -831,7 +831,9 @@ de la ventana nunca se mueve; su fondo se prolonga hacia abajo con `::after`; y
 la clase se pone una vez y no se quita. Todo en `orientation: portrait`.
 El precio: la franja de color de la barra bajo las etiquetas se queda siempre,
 también cuando iOS da la pantalla entera. Se prefirió una barra quieta con
-espacio debajo a una barra que salta. `mini-dom.js` aprendió
+espacio debajo a una barra que salta. ~~El fondo blanco por la franja~~ **Reemplazado el
+15 de octubre de 2026** (v43, §20): la barra flota y la franja se ve del
+papel de la página. El anclaje arriba se queda. `mini-dom.js` aprendió
 `style.setProperty` para poder probarlo.
 
 
@@ -1049,4 +1051,34 @@ dentro de un iPhone), un esqueleto que late mientras carga (la app no espera
 nada: sería teatro), el contador de números que gira (pesado para la cifra
 que más se mira) y el interruptor "squishy" (la app no tiene interruptores:
 §17 decidió que toda selección se ve como chip).
+
+
+## 20. Barra de pestañas flotante (15 de octubre de 2026)
+
+El autor pidió la barra de habitos-app (flotante, con un ícono por pestaña) y
+que no se viera "alta y perdida" en su iPhone Pro Max instalado. Se probó una
+maqueta con dos opciones y eligió la de Hábitos con un gris más marcado.
+
+- **Flota** a 12 px de los lados y 10 px encima de la rayita de inicio, con
+  vidrio esmerilado (`backdrop-filter`), como en Hábitos.
+- **Un ícono por pestaña** (calendario, barras, controles), dibujado con
+  `mask` y `currentColor`: cambia de color con la pestaña sin otra imagen.
+  Las etiquetas pasan de mayúsculas espaciadas a letra normal, como en
+  Hábitos: con ícono, la mayúscula sobraba.
+- **La pestaña activa va en gris, no en verde suave.** Es la excepción a "toda
+  selección se ve como el chip" (§17): dentro del vidrio, el borde y el
+  relleno verdes competían con el ícono. El gris es casi el doble de oscuro
+  que el de Hábitos (`.10` contra `.06` en claro, `.16` contra `.10` en
+  oscuro) para ver de un vistazo dónde se está; más oscuro, el verde de la
+  letra bajaría de 4.5:1. Una prueba mezcla las capas y lo calcula.
+- **Por qué sigue sin pegarse al borde en un iPhone instalado:** la franja de
+  62 pt es el fallo de WebKit 301108, que sigue abierto (última modificación
+  en julio de 2026, sin arreglo publicado). La barra se sigue anclando a la
+  ventana corta (§17, v33) porque pegada abajo salta al hacer scroll. Lo que
+  cambió es lo de debajo: antes era el blanco de la barra hasta el borde
+  (por eso se veía un bloque vacío); ahora es la página.
+- **Pendiente, si sigue sintiéndose alta:** probar en el teléfono si iOS
+  pinta y deja tocar algo dentro de la franja. Si lo deja, la barra puede
+  bajar. §17 lo descartó en su día porque no se podía probar sin arriesgar la
+  navegación; la prueba tiene que ir aparte, sin tocar la barra de verdad.
 
