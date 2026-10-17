@@ -170,10 +170,13 @@ const TEXTOS = {
 
     // Ajustes
     trabajo: 'Trabajo', restaurante: 'Restaurante', sueldoHora: 'Sueldo por hora',
-    idioma: 'Idioma', apariencia: 'Apariencia',
+    idioma: 'Idioma',
+    // Los grupos de Ajustes desde la v46, ordenados por lo que cambia cada uno.
+    ajTuRestaurante: 'Tu restaurante', ajNombre: 'Nombre', ajSueldo: 'Sueldo',
+    ajLaSemana: 'La semana', ajPantalla: 'Pantalla', ajTema: 'Tema',
+    ajTusDatos: 'Tus datos', ajAyuda: 'Ayuda',
     ayudantesTipout: 'Ayudantes y tip-out', agregarRol: '+ Agregar rol',
     sobreVentas: 'Porcentaje sobre las ventas del turno. Con todos:',
-    respaldo: 'Respaldo',
     soloTelefono: 'Los datos viven solo en este teléfono. Exporta de vez en cuando.',
     ultimoRespaldoNunca: 'Todavía no has hecho ningún respaldo en este teléfono.',
     ultimoRespaldoHoy: 'Último respaldo: hoy.',
@@ -212,7 +215,7 @@ const TEXTOS = {
     cortePasa: 'Un cambio de equipo no puede tener más ventas que el turno entero (%1). Revisa las ventas del turno o el número del cambio.',
     // El incentivo
     incentivoActivar: 'Llevar la cuenta de un incentivo',
-    incentivoNota: 'Añade un campo opcional en cada turno y su total en la semana, dentro de más estadísticas. Para los puntos que dan por vender ciertos productos.',
+    incentivoNota: 'Un campo más en cada turno, para los puntos por vender ciertos productos.',
     incentivoNombre: 'Cómo se llama',
     incentivoPorDefecto: 'Puntos',
     incentivoEnTurnos: 'en %1 de %2 turnos',
@@ -235,11 +238,15 @@ const TEXTOS = {
     faltaTarifa: 'Pon tu sueldo por hora. Si te pagan solo con propinas, escribe 0.',
     faltaTipout: 'Falta el porcentaje de al menos un ayudante. Si en tu restaurante no se paga tip-out, marca la casilla de abajo.',
     sumarSueldo: 'Sumar el sueldo por hora al total',
-    sumarSueldoNota: 'Apagado, el total de cada turno son solo las propinas menos el tip-out. El sueldo se sigue viendo aparte.',
-    /* Esta casilla no es un gusto: es un dato del restaurante, como el sueldo
-       por hora. Por eso vive en Trabajo y no en Apariencia. */
+    /* Las notas de Ajustes van en una o dos frases cortas desde la v46: eran
+       párrafos y la pantalla se leía como un manual. El porqué largo vive en
+       la Ayuda (ayudaSueldoR). Lo que NO se quita de la del tip-out es que el
+       total no cambia: es lo que da miedo al apagarla. */
+    sumarSueldoNota: 'Apagado, el sueldo se ve aparte y no entra al total.',
+    /* Esta casilla no es un gusto: es un dato del restaurante, como los
+       porcentajes. Por eso vive con los ayudantes y no en Pantalla. */
     tipOutEfectivo: 'El tip-out se paga en efectivo',
-    tipOutEfectivoNota: 'Encendido, el tip-out se descuenta del efectivo, que es de donde sale: los billetes se entregan en la mano al terminar. Apágalo si en tu restaurante lo descuentan del cheque. El total del turno no cambia en ninguno de los dos casos.',
+    tipOutEfectivoNota: 'Apágalo si en tu restaurante lo descuentan del cheque. El total del turno no cambia.',
     verComparaciones: 'Comparar con la semana anterior',
     tamanoLetra: 'Tamaño de la letra',
     escalaNormal: 'Normal', escalaGrande: 'Grande', escalaMayor: 'Mayor',
@@ -437,10 +444,12 @@ const TEXTOS = {
     instLuego: 'Not now',
     instAviso: 'Important: install it before logging any shifts. What you enter here in the browser does not carry over to the installed app, and your phone may delete it if you go a week without opening it.',
 
-    idioma: 'Language', apariencia: 'Appearance',
+    idioma: 'Language',
+    ajTuRestaurante: 'Your restaurant', ajNombre: 'Name', ajSueldo: 'Wage',
+    ajLaSemana: 'Week', ajPantalla: 'Display', ajTema: 'Theme',
+    ajTusDatos: 'Your data', ajAyuda: 'Help',
     ayudantesTipout: 'Support staff and tip-out', agregarRol: '+ Add role',
     sobreVentas: 'Percentage of shift sales. With everyone:',
-    respaldo: 'Backup',
     soloTelefono: 'Your data lives only on this phone. Export it now and then.',
     ultimoRespaldoNunca: 'You have not made a backup on this phone yet.',
     ultimoRespaldoHoy: 'Last backup: today.',
@@ -473,7 +482,7 @@ const TEXTOS = {
     corteOrden: 'Each change must have higher sales than the previous one, and above zero. These are the shift sales accumulated up to that moment, as printed on the receipt.',
     cortePasa: 'A team change cannot have more sales than the whole shift (%1). Check the shift sales or the change figure.',
     incentivoActivar: 'Track an incentive count',
-    incentivoNota: 'Adds an optional field on every shift and its weekly total, inside more stats. For the points earned by selling certain products.',
+    incentivoNota: 'One more field on every shift, for points earned selling certain products.',
     incentivoNombre: 'What to call it',
     incentivoPorDefecto: 'Points',
     incentivoEnTurnos: 'on %1 of %2 shifts',
@@ -496,9 +505,9 @@ const TEXTOS = {
     faltaTarifa: 'Enter your hourly wage. If you are paid in tips only, type 0.',
     faltaTipout: 'At least one helper needs a percentage. If your restaurant has no tip-out, check the box below.',
     sumarSueldo: 'Add hourly wage to the total',
-    sumarSueldoNota: 'When off, each shift’s total is just tips minus tip-out. The wage is still shown separately.',
+    sumarSueldoNota: 'When off, the wage is shown separately and not added to the total.',
     tipOutEfectivo: 'Tip-out is paid in cash',
-    tipOutEfectivoNota: 'When on, tip-out comes out of your cash, which is where it actually comes from: the bills are handed over at the end of the shift. Turn it off if your restaurant deducts it from your paycheck. Either way, the shift total stays the same.',
+    tipOutEfectivoNota: 'Turn it off if your restaurant deducts it from your paycheck. The shift total stays the same.',
     verComparaciones: 'Compare with last week',
     tamanoLetra: 'Text size',
     escalaNormal: 'Normal', escalaGrande: 'Large', escalaMayor: 'Larger',

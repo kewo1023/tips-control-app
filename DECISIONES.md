@@ -353,7 +353,8 @@ completa (lista de productos, unas 400 líneas): construir con lo que la gente
 cree que va a necesitar, antes del piloto, es gastarse el presupuesto del
 piloto. Se hizo la versión pequeña:
 
-- Casilla en Ajustes → Trabajo, apagada de fábrica.
+- Casilla en Ajustes, apagada de fábrica (en Trabajo hasta la v45; desde la
+  v46, en "La semana": ver §23).
 - **Nombre configurable del contador** ("Puntos" de marcador). Así la app no
   necesita saber qué cuenta: recibe un número por turno y lo suma. Cuando una
   decisión depende de un dato que varía entre usuarios, a veces la salida es
@@ -1135,3 +1136,73 @@ primeros 60 ms en transparente (`aparecerPantalla()`); solo opacidad, y no
 si se toca la pestaña en la que ya se está. Se descartó darle a la página un
 alto mínimo para que la ventana no cambie: es lo que armó el bucle de la v31.
 
+
+## 22. Fallos de diseño en teléfonos estrechos y con letra grande (17 de octubre de 2026)
+
+Salieron al sacar capturas de cada pantalla a 320, 375 y 393 px, en los dos
+temas, los dos idiomas y los tres tamaños de letra. Ninguno lo podían ver las
+pruebas: el mini-dom no calcula CSS. Las pruebas nuevas vigilan que las reglas
+del arreglo sigan escritas, no cómo se ve.
+
+- **Una clase de estado no puede ser también una regla suelta.** El texto
+  "Toca un día…" usaba `.vacio`, el mismo nombre del estado del día libre
+  (`.dia.vacio`) y del mes sin turnos. Esa regla iba más abajo en la hoja y
+  les ganaba a los dos: el día libre heredaba 30 px de relleno (su letra caía
+  por debajo de la de los días trabajados) y los meses sin turnos de "Tu año"
+  salían altos y con el nombre corrido. Ahora el texto es `.texto-vacio` y el
+  mes es `.anio-fila.sin-turnos`. Es la misma trampa que ya explicaba el
+  prefijo `rep-` (§16): un nombre compartido no da error, solo se ve mal.
+- **Pero la letra del día libre se queda abajo, a propósito** (decisión del
+  mantenedor, vista en el antes y después). Alineada con los días trabajados
+  se perdía el desnivel que deja distinguir un día libre sin leerlo. Ahora lo
+  escribe su propia regla (`.dia.vacio { padding-top: 30px }`), con una prueba,
+  en vez de depender de un choque de nombres.
+- **Las columnas de números llevan hueco** (`column-gap`). Van alineadas a la
+  derecha, y sin hueco quedaban pegadas: "POR HORATURNOS", "NETO POR HORA".
+- **El segmentado tiene tantas columnas como opciones** (`--n`). El idioma, con
+  dos, dejaba un hueco vacío a la derecha.
+- **"Más estadísticas" pasa a dos columnas cuando no caben tres**: a 320 px
+  (iPhone SE con la pantalla ampliada) y con la letra Mayor en un teléfono
+  normal, la tercera columna se salía y el borde la cortaba. Se decide con una
+  consulta de contenedor (`@container`) medida en `em`, y no con `@media`:
+  según la especificación (CSS Containment 3), los `em` de una consulta de
+  contenedor se miden con la letra del contenedor, que crece con el tamaño
+  elegido en Ajustes; los de `@media`, siempre con los 16 px de fábrica. El
+  contenedor es una caja propia porque declararlo también contiene a los
+  hijos con `position: fixed`. Un Safari sin consultas de contenedor
+  (anterior a iOS 16) se queda con las tres columnas de antes.
+  Sin verificar en un iPhone de verdad: se vio en Chrome a esos anchos.
+- **Descartado:** encoger la letra de las etiquetas o abreviarlas ("N.º" en vez
+  de "Turnos"). Con la letra Mayor volvería a romperse, y una abreviatura es
+  una cosa más que entender de pie al final del turno.
+
+## 23. Ajustes, ordenado por lo que cambia cada cosa (17 de octubre de 2026)
+
+Ajustes se sentía desordenada. Se le mostraron al mantenedor tres opciones en
+una vista previa, en los dos temas: A (reordenar), B (A con las notas detrás
+de un botón (i)) y C (un índice de pantallas, como los Ajustes del iPhone).
+**Eligió la A.**
+
+- **El orden sigue a lo que cambia cada ajuste**: Tu restaurante → Ayudantes y
+  tip-out → Sueldo → La semana → Pantalla → Tus datos → Ayuda. Lo que mueve el
+  dinero va antes que lo cosmético: unos porcentajes mal puestos cuestan más
+  que un tema equivocado.
+- **Cada casilla va junto a lo que afecta.** "El tip-out se paga en efectivo"
+  vivía en Trabajo, tres tarjetas arriba de los ayudantes; ahora va con ellos.
+  "Sumar el sueldo al total" va con el sueldo. "Comparar con la semana
+  anterior" estaba en Apariencia, pero no cambia cómo se ve la app: cambia qué
+  números salen, y va con el incentivo en "La semana".
+- **Las notas, de una o dos frases.** Eran párrafos: la pantalla se leía como
+  un manual. El porqué largo sigue en la Ayuda. La del tip-out conserva "el
+  total del turno no cambia", que es lo que da miedo al apagarla. Una prueba
+  vigila el largo y esa frase, en los dos idiomas.
+- **Borrar todo va dentro de "Tus datos"**, debajo de una raya y en texto rojo
+  sin caja. Antes era el cuarto de una pila de botones iguales, con la misma
+  forma que "Compartir la app".
+- **Ayuda y contacto, como lista**: una tarjeta con filas e íconos, como la
+  pantalla de Ayuda. Al apretar, la fila se oscurece en vez de encogerse.
+- **Descartado**: B, porque el porqué de cada casilla quedaba a un toque y la
+  pantalla ya cabe bien con notas cortas; C, porque cada cambio cuesta un toque
+  más y pedía pantallas nuevas con su botón para volver.
+- La Bienvenida no cambia: es otra pantalla, se ve una vez y tiene su propio
+  orden (ver "Bienvenida", en §3).

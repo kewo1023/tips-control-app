@@ -130,11 +130,11 @@
   </div>
 
   <div class="metricas" id="metricas"></div>
-  <div class="metricas extras oculto" id="metricas-extras"></div>
+  <div class="extras-caja"><div class="metricas extras oculto" id="metricas-extras"></div></div>
   <div class="dato-suelto oculto" id="mejor-dia"></div>
   <button class="mas" id="btn-mas" onclick="alternarEstadisticas()"></button>
 
-  <p class="vacio" id="pista" data-t="pista">Toca un día para registrar el turno.</p>
+  <p class="texto-vacio" id="pista" data-t="pista">Toca un día para registrar el turno.</p>
 
 </section>
 
@@ -288,16 +288,15 @@
             onclick="abrirHojaAyuda('ajustes')">Ayuda</button>
   </div>
 
-  <h2 class="seccion" data-t="trabajo">Trabajo</h2>
+  <!-- Ordenado por lo que cambia cada ajuste (v46, DECISIONES §23): primero
+       lo que mueve el dinero, después lo que solo cambia cómo se ve, al final
+       los datos y la ayuda. Cada casilla va junto a lo que afecta: la del
+       tip-out en efectivo con los ayudantes, la del sueldo con el sueldo. -->
+  <h2 class="seccion" data-t="ajTuRestaurante">Tu restaurante</h2>
   <div class="tarjeta">
     <div class="campo">
-      <label class="etiqueta" data-t="restaurante" for="a-nombre">Restaurante</label>
+      <label class="etiqueta" data-t="ajNombre" for="a-nombre">Nombre</label>
       <input type="text" id="a-nombre" onchange="guardarAjustes()">
-    </div>
-    <div class="campo">
-      <label class="etiqueta" data-t="sueldoHora" for="a-tarifa">Sueldo por hora</label>
-      <input type="text" id="a-tarifa" inputmode="decimal"
-             onchange="guardarAjustes()" placeholder="0.00">
     </div>
     <!-- Siete letras en vez de un selector: elegir es un toque y se ven las
          siete a la vez. La frase de debajo confirma el rango entero, porque
@@ -308,60 +307,6 @@
       <div class="siete" id="a-inicio-semana"></div>
       <p class="confirma" id="a-inicio-confirma"></p>
     </div>
-
-    <label class="check">
-      <span class="marca"><input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()"><svg
-            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
-      <span data-t="sumarSueldo">Sumar el sueldo por hora al total</span>
-    </label>
-    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
-       data-t="sumarSueldoNota">
-      Apagado, el total de cada turno son solo las propinas menos el tip-out.
-      El sueldo se sigue viendo aparte.</p>
-
-    <label class="check" style="margin-top:15px">
-      <span class="marca"><input type="checkbox" id="a-tipout-efectivo" onchange="cambiarTipOutEnEfectivo()"><svg
-            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
-      <span data-t="tipOutEfectivo">El tip-out se paga en efectivo</span>
-    </label>
-    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
-       data-t="tipOutEfectivoNota">
-      Encendido, el tip-out se descuenta del efectivo, que es de donde sale.</p>
-
-    <label class="check" style="margin-top:15px">
-      <span class="marca"><input type="checkbox" id="a-incentivo" onchange="cambiarIncentivo()"><svg
-            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
-      <span data-t="incentivoActivar">Llevar la cuenta de un incentivo</span>
-    </label>
-    <p class="intro" style="margin:9px 0 0; font-size: 0.75rem"
-       data-t="incentivoNota">
-      Añade un campo opcional en cada turno y su total en la semana. Para los
-      puntos que dan por vender ciertos productos.</p>
-
-    <div class="campo oculto" id="campo-nombre-incentivo" style="margin-top:13px">
-      <label class="etiqueta" data-t="incentivoNombre"
-             for="a-incentivo-nombre">Cómo se llama</label>
-      <input type="text" id="a-incentivo-nombre"
-             onchange="guardarNombreIncentivo()">
-    </div>
-  </div>
-
-  <h2 class="seccion" data-t="idioma">Idioma</h2>
-  <div class="tarjeta">
-    <div class="segmentado" id="idiomas"></div>
-  </div>
-
-  <h2 class="seccion" data-t="apariencia">Apariencia</h2>
-  <div class="tarjeta">
-    <label class="check" style="margin:0 0 15px">
-      <span class="marca"><input type="checkbox" id="a-comparar" onchange="cambiarComparar()"><svg
-            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
-      <span data-t="verComparaciones">Comparar con la semana anterior</span>
-    </label>
-
-    <div class="segmentado" id="temas"></div>
-    <p class="etiqueta" style="margin:15px 0 8px" data-t="tamanoLetra">Tamaño de la letra</p>
-    <div class="segmentado" id="escalas"></div>
   </div>
 
   <h2 class="seccion" data-t="ayudantesTipout">Ayudantes y tip-out</h2>
@@ -371,9 +316,66 @@
     <p style="margin:13px 0 0; font-size: 0.8125rem; color:var(--tinta-2)">
       <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="a-total">0%</strong></p>
+    <label class="check" style="margin-top:15px">
+      <span class="marca"><input type="checkbox" id="a-tipout-efectivo" onchange="cambiarTipOutEnEfectivo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+      <span data-t="tipOutEfectivo">El tip-out se paga en efectivo</span>
+    </label>
+    <p class="nota-ajuste" data-t="tipOutEfectivoNota"></p>
   </div>
 
-  <h2 class="seccion" data-t="respaldo">Respaldo</h2>
+  <h2 class="seccion" data-t="ajSueldo">Sueldo</h2>
+  <div class="tarjeta">
+    <div class="campo">
+      <label class="etiqueta" data-t="sueldoHora" for="a-tarifa">Sueldo por hora</label>
+      <input type="text" id="a-tarifa" inputmode="decimal"
+             onchange="guardarAjustes()" placeholder="0.00">
+    </div>
+    <label class="check">
+      <span class="marca"><input type="checkbox" id="a-contar-sueldo" onchange="cambiarContarSueldo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+      <span data-t="sumarSueldo">Sumar el sueldo por hora al total</span>
+    </label>
+    <p class="nota-ajuste" data-t="sumarSueldoNota"></p>
+  </div>
+
+  <!-- Lo que cambia qué enseña la pantalla de la Semana. "Comparar" vivía en
+       Apariencia, pero no cambia cómo se ve la app: cambia qué números salen. -->
+  <h2 class="seccion" data-t="ajLaSemana">La semana</h2>
+  <div class="tarjeta">
+    <label class="check" style="margin:0">
+      <span class="marca"><input type="checkbox" id="a-comparar" onchange="cambiarComparar()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+      <span data-t="verComparaciones">Comparar con la semana anterior</span>
+    </label>
+    <label class="check">
+      <span class="marca"><input type="checkbox" id="a-incentivo" onchange="cambiarIncentivo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+      <span data-t="incentivoActivar">Llevar la cuenta de un incentivo</span>
+    </label>
+    <p class="nota-ajuste" data-t="incentivoNota"></p>
+    <div class="campo oculto" id="campo-nombre-incentivo" style="margin-top:13px">
+      <label class="etiqueta" data-t="incentivoNombre"
+             for="a-incentivo-nombre">Cómo se llama</label>
+      <input type="text" id="a-incentivo-nombre"
+             onchange="guardarNombreIncentivo()">
+    </div>
+  </div>
+
+  <h2 class="seccion" data-t="ajPantalla">Pantalla</h2>
+  <div class="tarjeta">
+    <p class="etiqueta" style="margin:0 0 8px" data-t="idioma">Idioma</p>
+    <div class="segmentado" id="idiomas"></div>
+    <p class="etiqueta" style="margin:15px 0 8px" data-t="ajTema">Tema</p>
+    <div class="segmentado" id="temas"></div>
+    <p class="etiqueta" style="margin:15px 0 8px" data-t="tamanoLetra">Tamaño de la letra</p>
+    <div class="segmentado" id="escalas"></div>
+  </div>
+
+  <!-- Borrar todo va aquí, con el respaldo y debajo de una raya, y no en la
+       pila de botones de abajo: allí tenía la misma forma que "Compartir la
+       app", y lo que no se puede deshacer no puede parecerse a lo que sí. -->
+  <h2 class="seccion" data-t="ajTusDatos">Tus datos</h2>
   <div class="tarjeta">
     <p data-t="soloTelefono"
        style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)">
@@ -387,21 +389,25 @@
     </div>
     <input type="file" id="archivo" accept=".json" class="oculto"
            onchange="importar(event)">
+    <button class="borrar-todo" data-t="borrarTodo"
+            onclick="borrarTodo()">Borrar todos los datos</button>
   </div>
 
-  <button class="secundario" data-t="verAyuda"
-          onclick="irA('ayuda')">Cómo funciona la app</button>
-  <button class="secundario" data-t="compartirApp"
-          onclick="compartirApp()">Compartir la app</button>
-  <!-- El texto va en su propio <span>: `traducirEstaticos` escribe el texto
-       con `textContent`, y sobre el botón entero borraría el avión. -->
-  <button class="secundario enviar" id="btn-comentario"
-          onclick="enviarComentario()"><svg class="avion" viewBox="0 0 24 24"
-          aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span
-          data-t="enviarComentario">Enviar un comentario</span></button>
-
-  <button class="secundario riesgo" data-t="borrarTodo"
-          onclick="borrarTodo()">Borrar todos los datos</button>
+  <!-- El texto de cada fila va en su propio <span>: `traducirEstaticos` escribe
+       con `textContent`, y sobre el botón entero borraría el dibujo. -->
+  <h2 class="seccion" data-t="ajAyuda">Ayuda</h2>
+  <div class="lista-ajustes">
+    <button onclick="irA('ayuda')"><svg class="ico" viewBox="0 0 24 24"
+            aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg><span
+            data-t="verAyuda">Cómo funciona la app</span><span class="chevron" aria-hidden="true">›</span></button>
+    <button onclick="compartirApp()"><svg class="ico" viewBox="0 0 24 24"
+            aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span
+            data-t="compartirApp">Compartir la app</span></button>
+    <button class="enviar" id="btn-comentario"
+            onclick="enviarComentario()"><svg class="avion ico" viewBox="0 0 24 24"
+            aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span
+            data-t="enviarComentario">Enviar un comentario</span></button>
+  </div>
 
   <!-- El pie. Lleva la versión porque cuando alguien reporte un fallo por
        WhatsApp, la primera pregunta va a ser si tiene la versión nueva, y hasta
@@ -660,7 +666,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v45';
+const VERSION_APP = 'v46';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3246,7 +3252,7 @@ function pintarAnio() {
     const nombre = new Date(anioReporte, i, 1).toLocaleDateString(locale(), { month: 'long' });
     const mes = nombre.charAt(0).toUpperCase() + nombre.slice(1);
     if (m.turnos === 0) {
-      filas += `<div class="anio-fila vacio"><span>${mes}</span><span>—</span><span>—</span></div>`;
+      filas += `<div class="anio-fila sin-turnos"><span>${mes}</span><span>—</span><span>—</span></div>`;
       return;
     }
     const c = cifrasPrincipales(m, conSueldo);
@@ -3976,6 +3982,8 @@ function pintarSegmentado(id, opciones) {
     boton.onclick = opcion.alTocar;
     if (opcion.tamano) boton.style.fontSize = opcion.tamano;
   });
+  // Cuántas columnas: el CSS reparte el ancho y mide la píldora con esto.
+  caja.style.setProperty('--n', String(opciones.length));
   const activo = opciones.findIndex(o => o.activo);
   partes.indicador.classList.toggle('oculto', activo < 0);
   partes.indicador.style.setProperty('--i', String(Math.max(0, activo)));

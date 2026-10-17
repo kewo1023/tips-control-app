@@ -2512,6 +2512,58 @@ ok('las leyendas ya no usan el gris que no cumple contraste',
    /color: var\(--tinta-2\)/.test(regla('.etiqueta')) && /color: var\(--tinta-2\)/.test(regla('h2.seccion')));
 ok('el título de la pantalla va en tinta y negrita',
    /color: var\(--tinta\)/.test(regla('.cabecera .lugar')) && /font-weight: 600/.test(regla('.cabecera .lugar')));
+/* Fallos de diseño encontrados el 17 de octubre de 2026 (v46). Lo visual no se
+   puede ver aquí; lo que sí se vigila es que las reglas que lo arreglan sigan
+   escritas. */
+// El texto de "no hay nada" se llamaba `.vacio`, como el estado del día libre,
+// y le ganaba: el día libre heredaba 30 px de relleno y su letra caía.
+ok('ninguna regla suelta se llama .vacio (es un estado del día, no un texto)',
+   !/^\s*\.vacio\s*[{,]/m.test(css));
+ok('el texto "Toca un día…" usa su propia clase', d.getElementById('pista')._classes.has('texto-vacio'));
+// Columnas de números alineadas a la derecha y sin hueco: "POR HORATURNOS".
+ok('las tablas de Reportes dejan hueco entre columnas',
+   /column-gap/.test(regla('.rep-fila')) && /column-gap/.test(regla('.anio-fila')));
+// Tres columnas de estadísticas no caben a 320 px ni con la letra Mayor.
+ok('las estadísticas de más viven en una caja que mide su ancho',
+   /<div class="extras-caja"><div class="metricas extras[^"]*" id="metricas-extras">/.test(html)
+   && /container-type: inline-size/.test(regla('.extras-caja')));
+ok('y en una caja estrecha pasan a dos columnas',
+   /@container \(max-width: 19\.5em\) \{\s*\.metricas\.extras \{ grid-template-columns: repeat\(2/.test(css));
+// El día libre baja su letra a propósito (v46): se arregló el choque con
+// `.vacio`, se alinearon con los trabajados, y se vio que el desnivel ayudaba.
+ok('el día sin turno lleva la letra más abajo, escrito a propósito',
+   /padding-top: 30px/.test(regla('.dia.vacio')));
+
+/* Ajustes, ordenado por lo que cambia cada cosa (v46, DECISIONES §23). Si
+   alguien mueve un grupo o separa una casilla de lo que afecta, esto avisa. */
+const htmlAjustes = html.slice(html.indexOf('<section id="p-ajustes"'),
+                               html.indexOf('</section>', html.indexOf('<section id="p-ajustes"')));
+const gruposAjustes = (htmlAjustes.match(/<h2 class="seccion" data-t="(\w+)"/g) || [])
+  .map(h => h.match(/data-t="(\w+)"/)[1]);
+ok('Ajustes va en el orden de la opción A',
+   gruposAjustes.join() === 'ajTuRestaurante,ayudantesTipout,ajSueldo,ajLaSemana,ajPantalla,ajTusDatos,ajAyuda');
+const tarjetaDe = grupo => {
+  const desde = htmlAjustes.indexOf(`data-t="${grupo}"`);
+  const hasta = htmlAjustes.indexOf('<h2 class="seccion"', desde + 1);
+  return htmlAjustes.slice(desde, hasta < 0 ? undefined : hasta);
+};
+ok('la casilla del tip-out en efectivo va con los ayudantes',
+   tarjetaDe('ayudantesTipout').includes('id="roles"') && tarjetaDe('ayudantesTipout').includes('id="a-tipout-efectivo"'));
+ok('la de sumar el sueldo va con el sueldo',
+   tarjetaDe('ajSueldo').includes('id="a-tarifa"') && tarjetaDe('ajSueldo').includes('id="a-contar-sueldo"'));
+ok('comparar e incentivo van en La semana, no en Pantalla',
+   tarjetaDe('ajLaSemana').includes('id="a-comparar"') && tarjetaDe('ajLaSemana').includes('id="a-incentivo"')
+   && !tarjetaDe('ajPantalla').includes('type="checkbox"'));
+ok('Borrar todo va con el respaldo y no se parece a los demás botones',
+   /id="archivo"[\s\S]*class="borrar-todo"/.test(tarjetaDe('ajTusDatos'))
+   && !/secundario[^"]*"[^>]*onclick="borrarTodo\(\)"/.test(htmlAjustes));
+ok('la nota del tip-out sigue diciendo que el total no cambia, en los dos idiomas',
+   run("TEXTOS.es.tipOutEfectivoNota").includes('no cambia')
+   && run("TEXTOS.en.tipOutEfectivoNota").includes('stays the same'));
+ok('las notas de Ajustes son cortas (antes eran párrafos)',
+   ['sumarSueldoNota', 'tipOutEfectivoNota', 'incentivoNota']
+     .every(k => run(`TEXTOS.es.${k}`).length <= 100 && run(`TEXTOS.en.${k}`).length <= 100));
+
 // Desde el 15 de octubre de 2026 lo elegido no rellena el botón: una píldora
 // con la misma apariencia del chip se desliza por debajo hasta él.
 ok('el segmentado activo se rellena como el chip',
@@ -2525,9 +2577,12 @@ ok('la pestaña activa lleva la píldora', /background: var\(--pestana-activa\)/
 ok('cada pestaña tiene su ícono',
    ['#tab-semana', '#tab-reportes', '#tab-ajustes'].every(id => /--icono: url\("data:image\/svg/.test(regla(id))));
 /* Eran 4. El botón (i) pasó a tinta-2 el 27 de septiembre de 2026: con
-   tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar. */
+   tinta-3 casi no se veía, y es lo que alguien nuevo tiene que encontrar.
+   Vuelven a ser 4 en la v46 con la flecha de "Cómo funciona la app" en
+   Ajustes: es la misma flecha de adorno que la de la Ayuda, no algo que leer. */
 ok('el gris claro ya solo queda en lo que no hay que leer',
-   (htmlYcss.match(/color: var\(--tinta-3\)/g) || []).length === 3);
+   (htmlYcss.match(/color: var\(--tinta-3\)/g) || []).length === 4
+   && /color: var\(--tinta-3\)/.test(regla('.lista-ajustes .chevron')));
 ok('dos toques no hacen zoom: manipulation en la raíz y en la hoja, que tiene scroll propio',
    /touch-action: manipulation/.test(regla('html')) && /touch-action: manipulation/.test(regla('.hoja')));
 ok('y el pellizco para ampliar no se bloquea',
@@ -2707,6 +2762,13 @@ ok('la píldora del tamaño de la letra está en la opción elegida',
    d.getElementById('escalas').children[0].style['--i']
    === String(botones('escalas').findIndex(b => b._classes.has('activo'))));
 run(`cambiarTema('${temaAntesMov || 'auto'}')`);
+
+// El segmentado tiene tantas columnas como opciones. Con tres fijas, el
+// idioma (dos) dejaba un hueco vacío a la derecha (hasta la v45).
+ok('el segmentado del idioma tiene dos columnas', d.getElementById('idiomas').style['--n'] === '2');
+ok('y el del tema, tres', d.getElementById('temas').style['--n'] === '3');
+ok('la rejilla y la píldora se miden con ese número',
+   /repeat\(var\(--n, 3\)/.test(regla('.segmentado')) && /var\(--n, 3\)/.test(regla('.segmentado .indicador')));
 
 run("irA('reportes')");
 ok('la píldora de las pestañas va a Reportes', d.getElementById('pestanas-indicador').style['--i'] === '1');
@@ -2986,6 +3048,11 @@ const htmlAnio = () => d.getElementById('anio-meses').innerHTML;
 ok('siempre doce meses más los títulos', (htmlAnio().match(/class="anio-fila/g) || []).length === 13);
 ok('marzo con lo suyo', /Marzo<\/span><span>\$600<\/span>/.test(htmlAnio()));
 ok('y un mes sin turnos con guion, no con $0', /Enero<\/span><span>—<\/span>/.test(htmlAnio()));
+/* El mes sin turnos llevaba la clase `vacio`, que también era la regla suelta
+   del texto "Toca un día…" (centrado, 30 px de relleno): las filas salían
+   altas y con el mes corrido (hasta la v45). */
+ok('el mes sin turnos lleva su propia clase, no la del texto de "no hay nada"',
+   /class="anio-fila sin-turnos"/.test(htmlAnio()) && !/anio-fila vacio/.test(htmlAnio()));
 ok('el tip-out pagado del año está a la vista',
    d.getElementById('anio-metricas').innerHTML.includes(run("t('tipOutPagado')")));
 ok('y dice que no es un documento de impuestos',

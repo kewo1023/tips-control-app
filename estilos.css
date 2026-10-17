@@ -336,6 +336,14 @@ body {
    número más pequeño, es un número equivocado. */
 .dia .monto.largo { font-size: 0.5625rem; letter-spacing: -0.03em; }
 .dia.vacio .num { color: var(--tinta-3); font-weight: 400; }
+/* El día sin turno lleva la letra y el número más abajo que los trabajados.
+   Nació sin querer: hasta la v45 lo hacía la regla suelta `.vacio` del texto
+   "Toca un día…", que le ganaba a `.dia` y le metía 30 px arriba. Al
+   arreglar ese choque (v46) se alinearon con los demás, y se vio que el
+   desnivel servía: un día libre se distingue de uno trabajado sin leerlo. Así
+   que se queda, ahora escrito a propósito. Solo el relleno de arriba: era lo
+   único de aquella regla que cambiaba algo en la celda. */
+.dia.vacio { padding-top: 30px; }
 /* Hundido solo el día vacío que YA pasó. Los que están por venir se quedan
    neutros: hoy es miércoles y pintar de "libre" el jueves, viernes, sábado y
    domingo sería afirmar algo de cuatro días que todavía no han ocurrido. El
@@ -404,6 +412,31 @@ body {
    futuro sin volver a tocarlo. */
 .metricas.extras .metrica:last-child:nth-child(3n+1) { grid-column: 1 / -1; }
 .metricas.extras .metrica:last-child:nth-child(3n+2) { grid-column: span 2; }
+
+/* Las tres columnas no caben en un teléfono estrecho (320 px, el iPhone SE
+   con la pantalla ampliada) ni con la letra Mayor en uno normal: la tercera
+   se salía por la derecha y la tapaba el borde ("VENT…", "$6,0…") hasta la
+   v45. Ahí pasan a dos.
+
+   Es una consulta de contenedor y no de pantalla (`@media`) porque lo que
+   decide es el ancho medido en LETRAS, no en píxeles: la letra Mayor necesita
+   más sitio en el mismo teléfono. En `@container`, los `em` se miden con la
+   letra del contenedor, que crece con el tamaño elegido en Ajustes; en
+   `@media` se miden siempre con los 16 px de fábrica. El contenedor es una
+   caja propia (`.extras-caja`) y no la pantalla entera porque declararlo
+   también contiene a los hijos con `position: fixed`.
+   19.5em: con la letra Grande, 375 px da 20.1em (caben tres) y 320 px 16.9em;
+   con la Mayor, 393 px da 18.4em. Un Safari sin consultas de contenedor
+   (anterior a iOS 16) se queda con las tres columnas de siempre. */
+.extras-caja { container-type: inline-size; }
+@container (max-width: 19.5em) {
+  .metricas.extras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Mismo truco de la última tarjeta, contado de dos en dos: con un número
+     impar, la última ocupa la fila entera. Mismo peso que las reglas de
+     arriba y escritas después, para ganarles. */
+  .metricas.extras .metrica:last-child:nth-child(n)   { grid-column: auto; }
+  .metricas.extras .metrica:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 /* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
    anotar: si están todos, repetir "en 6 de 6" sería ruido. */
 .metrica .cuantos { font-size: 0.6875rem; color: var(--tinta-2); margin-top: 3px;
@@ -520,6 +553,7 @@ body {
 .rep-tabla { background: var(--tarjeta); border: 1px solid var(--linea);
              border-radius: 12px; overflow: hidden; }
 .rep-fila { display: grid; grid-template-columns: 1.3fr 1fr 0.7fr 1fr;
+            column-gap: 10px;
             align-items: baseline; padding: 9px 12px;
             border-top: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
 .rep-fila:first-child { border-top: 0; }
@@ -546,14 +580,20 @@ body {
   background: none; border: 0; font: inherit; font-weight: 600;
   color: var(--verde); padding: 12px 4px; margin: -12px 0; cursor: pointer;
 }
+/* El hueco entre columnas (`column-gap`) no es adorno. Sin él, las columnas
+   de números van alineadas a la derecha y pegadas: con la letra Grande en un
+   iPhone, "POR HORA" quedaba justo contra "TURNOS" y se leía "POR HORATURNOS"
+   (hasta la v45). Lo mismo en la tabla del año: "NETO POR HORA". */
+
 /* Los meses del año: tres columnas (mes, neto, por hora). Clase propia por
    la misma razón que `rep-`: la rejilla de `.rep-fila` es de cuatro. */
 .anio-fila { display: grid; grid-template-columns: 1.3fr 1fr 1fr;
+             column-gap: 10px;
              align-items: baseline; padding: 8px 12px;
              border-top: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
 .anio-fila:first-child { border-top: 0; }
 .anio-fila > :not(:first-child) { text-align: right; }
-.anio-fila.vacio > * { color: var(--tinta-2); }
+.anio-fila.sin-turnos > * { color: var(--tinta-2); }
 
 /* ============================================================================
    SECCIÓN F — Formulario del turno
@@ -752,6 +792,38 @@ button { font-family: inherit; }
          border-radius: 8px; background: var(--papel); color: var(--tinta);
          cursor: pointer; }
 
+/* Ajustes (v46). La nota de cada casilla, de una o dos frases: antes eran
+   párrafos de 0.75rem en `.intro` y la pantalla se leía como un manual. */
+.nota-ajuste { font-size: 0.75rem; line-height: 1.45; color: var(--tinta-2);
+               margin: 8px 6px 0; }
+/* Borrar todo, al pie de la tarjeta de "Tus datos" y debajo de una raya que
+   cruza la tarjeta entera. Texto rojo, sin caja: no se parece a ningún otro
+   botón de la pantalla. 46 px de alto para el pulgar. */
+.borrar-todo {
+  display: block; width: calc(100% + 28px); margin: 14px -14px -14px;
+  padding: 13px; border: 0; border-top: 1px solid var(--linea);
+  border-radius: 0 0 12px 12px; background: none;
+  color: var(--rojo); font-size: 0.875rem; cursor: pointer;
+}
+/* La ayuda y el contacto, como lista: una tarjeta con filas, como la Ayuda.
+   Al apretar, la fila se oscurece (sin animar: solo se animan `transform` y
+   `opacity`) en vez de encogerse; una fila de lado a lado encogida parece
+   que se despega. La flecha solo va en la que abre otra pantalla. */
+.lista-ajustes { background: var(--tarjeta); border: 1px solid var(--linea);
+                 border-radius: 12px; overflow: hidden; }
+.lista-ajustes button {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+  width: 100%; min-height: 48px; padding: 12px 14px;
+  border: 0; border-top: 1px solid var(--linea); background: none;
+  color: var(--tinta); font-size: 0.9375rem; text-align: left; cursor: pointer;
+}
+.lista-ajustes button:first-child { border-top: 0; }
+.lista-ajustes button:active { background: var(--hueco); }
+.lista-ajustes button .ico { width: 19px; height: 19px; flex: none; color: var(--tinta-2);
+                             fill: none; stroke: currentColor; stroke-width: 1.8;
+                             stroke-linecap: round; stroke-linejoin: round; }
+.lista-ajustes .chevron { margin-left: auto; color: var(--tinta-3); font-size: 1.25rem; line-height: 1; }
+
 /* ============================================================================
    SECCIÓN H — Pestañas
    ========================================================================== */
@@ -861,13 +933,23 @@ button { font-family: inherit; }
 :root.barra-recogida .pestanas button::before { transform: translateY(0.5rem); }
 
 .oculto { display: none !important; }
-.vacio { text-align: center; color: var(--tinta-2); padding: 30px 20px;
-         font-size: 0.875rem; }
-/* Control segmentado: tres opciones donde solo una puede estar activa. Se usa
-   en vez de un menú desplegable porque las tres caben a la vista: elegir es un
-   toque, no dos, y de paso ves qué opciones hay sin tener que abrir nada. */
+/* El texto de "no hay nada todavía" ("Toca un día para registrar el turno").
+   Se llamaba `.vacio`, igual que el estado del día libre (`.dia.vacio`) y el
+   del mes sin turnos, y como esta regla va después en la hoja, les ganaba a
+   los dos: el día libre heredaba 30 px de relleno y su letra caía más abajo
+   que la de los días trabajados, y los meses sin turnos de "Tu año" salían
+   altos y con el nombre corrido (hasta la v45). Un nombre propio para cada
+   cosa; una clase de estado no puede ser también una regla suelta. */
+.texto-vacio { text-align: center; color: var(--tinta-2); padding: 30px 20px;
+               font-size: 0.875rem; }
+/* Control segmentado: dos o tres opciones donde solo una puede estar activa.
+   Se usa en vez de un menú desplegable porque caben a la vista: elegir es un
+   toque, no dos, y de paso ves qué opciones hay sin tener que abrir nada.
+   Cuántas columnas lo dice `--n`, que pone `pintarSegmentado()`. Antes eran
+   tres fijas, y el idioma (dos opciones) dejaba un hueco vacío a la derecha
+   (hasta la v45). */
 .segmentado { position: relative; isolation: isolate;
-              display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+              display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
               gap: 6px; }
 /* Los botones van transparentes: por debajo pasa la píldora (`.indicador`),
    y un fondo propio la taparía al cruzar por detrás de ellos. */
@@ -882,10 +964,10 @@ button { font-family: inherit; }
    app), pero en una píldora que se desliza hasta la opción elegida en vez de
    saltar. La mueve `pintarSegmentado()`, que no rehace los botones: si los
    rehiciera, la píldora nacería ya en su sitio y no se movería nunca.
-   Las medidas son las de la rejilla: tres columnas y 6 px de hueco. */
+   Las medidas son las de la rejilla: `--n` columnas y 6 px de hueco. */
 .segmentado .indicador {
   position: absolute; top: 0; bottom: 0; left: 0; z-index: -1;
-  width: calc((100% - 12px) / 3);
+  width: calc((100% - (var(--n, 3) - 1) * 6px) / var(--n, 3));
   border: 1px solid var(--verde); border-radius: 999px; background: var(--verde-suave);
   transform: translateX(calc(var(--i, 0) * (100% + 6px)));
   transition: transform 260ms var(--ease-in-out);
