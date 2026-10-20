@@ -2839,6 +2839,12 @@ ok('las capas entran solas al dejar de estar ocultas',
    && /\.hoja-fondo:not\(\.oculto\)\s*\{[^}]*animation/.test(css));
 ok('el aviso breve vive dentro de la barra de pestañas',
    /<nav class="pestanas"[\s\S]*id="aviso-breve"[\s\S]*<\/nav>/.test(html));
+// Por vivir ahí, una regla escrita como `.pestanas button` le cae también a
+// su X: el ícono (un cuadrito recortado por `mask`) salía como un cuadrado
+// gris encima de ella, y con la barra recogida la X se volvía transparente.
+// Las reglas de las pestañas apuntan a `.pestanas-fila`, donde solo hay pestañas.
+ok('las reglas de las pestañas no alcanzan al botón del aviso breve',
+   !/\.pestanas\s+button/.test(css) && /\.pestanas-fila button::before/.test(css));
 
 ctx.setTimeout = relojDeSiempre.poner;
 ctx.clearTimeout = relojDeSiempre.quitar;

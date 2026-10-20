@@ -877,8 +877,10 @@ button { font-family: inherit; }
 /* La fila de los botones: la píldora se mide contra ella. */
 .pestanas-fila { position: relative; isolation: isolate; flex: 1; display: flex; }
 /* Cada pestaña es un ícono con su nombre debajo, como en cualquier app de
-   iPhone: el ícono se reconoce sin leer y el nombre lo confirma. */
-.pestanas button {
+   iPhone: el ícono se reconoce sin leer y el nombre lo confirma.
+   Las reglas apuntan a `.pestanas-fila`, no a toda la barra: el aviso breve
+   vive en la barra y su X heredaba el ícono (un cuadrado gris, v47). */
+.pestanas-fila button {
   position: relative; min-width: 0;
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
   border: none; background: none; padding: 7px 0 6px;
@@ -887,14 +889,14 @@ button { font-family: inherit; }
   color: var(--tono); cursor: pointer;
   transition: transform 200ms var(--ease-out), color 200ms ease;
 }
-.pestanas button.activa { --tono: var(--verde); font-weight: 700; }
+.pestanas-fila button.activa { --tono: var(--verde); font-weight: 700; }
 /* El ícono: un cuadrito del color de la pestaña (`--tono`) recortado con
    la forma del dibujo (`mask`). Va en `--tono` y no en `currentColor` para
    poder apagar el nombre sin apagar el ícono (al recogerse). Cambia de color
    solo al activarse la pestaña, en los dos temas, sin una segunda imagen. Mide en `rem` para
    crecer con el tamaño de letra. Los "black" de los SVG no se ven nunca: una
    máscara solo lee dónde hay trazo. Es la técnica de habitos-app. */
-.pestanas button::before {
+.pestanas-fila button::before {
   content: ''; width: 1.375rem; height: 1.375rem;
   background: var(--tono);
   transition: transform 280ms var(--ease-out);
@@ -929,8 +931,8 @@ button { font-family: inherit; }
    scroll puede cambiar el alto de la página (sección B, el bucle de la v31).
    Una prueba lo vigila. */
 :root.barra-recogida .pestanas-barra { transform: scale(0.88) translateY(6px); }
-:root.barra-recogida .pestanas button { color: transparent; }
-:root.barra-recogida .pestanas button::before { transform: translateY(0.5rem); }
+:root.barra-recogida .pestanas-fila button { color: transparent; }
+:root.barra-recogida .pestanas-fila button::before { transform: translateY(0.5rem); }
 
 .oculto { display: none !important; }
 /* El texto de "no hay nada todavía" ("Toca un día para registrar el turno").
@@ -1371,13 +1373,13 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
    En el iPhone, `:active` solo se activa si la página escucha los toques;
    de eso se encarga el arranque (sección U). */
 :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
-       .pildora, .semana-nav button, .mas, .check, .pestanas button,
+       .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
        .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
        .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario) {
   transition: transform 200ms var(--ease-out);
 }
 :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
-       .pildora, .semana-nav button, .mas, .check, .pestanas button,
+       .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
        .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
        .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario):active:not(:disabled) {
   transform: scale(0.95);
@@ -1386,7 +1388,7 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
 /* Las tres piezas que declaran su propia `transition` (por sus colores) le
    ganan a la línea de arriba, que no pesa nada; aquí recuperan la bajada
    rápida. */
-.check:active, .segmentado button:active, .pestanas button:active { transition-duration: 80ms; }
+.check:active, .segmentado button:active, .pestanas-fila button:active { transition-duration: 80ms; }
 
 /* "Enviar un comentario": el avioncito despega al tocar, y el diálogo con
    los datos sale cuando ya se fue (`enviarComentario`). */
@@ -1407,7 +1409,7 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
    fundidos, que ayudan a entender qué apareció y qué se fue. */
 @media (prefers-reduced-motion: reduce) {
   :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
-         .pildora, .semana-nav button, .mas, .check, .pestanas button,
+         .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
          .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
          .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario):active:not(:disabled),
   .principal:active { transform: none; }
@@ -1417,7 +1419,7 @@ h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
   .segmentado .indicador, .pestanas-indicador { transition: none; }
   /* Con menos movimiento la barra no se recoge (`decidirRecogida`); por si
      acaso la clase quedara puesta, no se encoge. */
-  :root.barra-recogida .pestanas-barra, :root.barra-recogida .pestanas button::before { transform: none; }
+  :root.barra-recogida .pestanas-barra, :root.barra-recogida .pestanas-fila button::before { transform: none; }
   .check .marca svg { transform: none; }
   .enviar.vuela .avion { transform: none; }
 }
