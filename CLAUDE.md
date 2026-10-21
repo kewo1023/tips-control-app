@@ -101,6 +101,11 @@ cabecera, con aviso.
 congelan en el turno (`tarifaHora`, `tipOut`, `tipoutDetalle`,
 `tipoutTramos`). Un turno por día. Identificadores con `nuevoId()` (UUID).
 
+**Letra.** Todo `font-size` sale de la escala `--letra-*` (`estilos.css`,
+sección B); una prueba rechaza los sueltos y el HTML no escribe tamaños a
+mano. La negrita es 600. Un tamaño nuevo se discute antes: casi siempre es un
+nivel que ya existe (DECISIONES §24).
+
 **Movimiento.** Solo se animan `transform` y `opacity`, y todo tiene su
 versión en movimiento reducido (`estilos.css`, sección A6). El diálogo y la
 hoja de ayuda se enseñan y se esconden con `mostrarCapa()` / `ocultarCapa()`,

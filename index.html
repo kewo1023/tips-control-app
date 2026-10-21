@@ -313,7 +313,7 @@
   <div class="tarjeta">
     <div id="roles"></div>
     <button class="chico" data-t="agregarRol" onclick="agregarRol()">+ Agregar rol</button>
-    <p style="margin:13px 0 0; font-size: 0.8125rem; color:var(--tinta-2)">
+    <p class="texto-nota" style="margin:13px 0 0">
       <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="a-total">0%</strong></p>
     <label class="check" style="margin-top:15px">
@@ -377,11 +377,11 @@
        app", y lo que no se puede deshacer no puede parecerse a lo que sí. -->
   <h2 class="seccion" data-t="ajTusDatos">Tus datos</h2>
   <div class="tarjeta">
-    <p data-t="soloTelefono"
-       style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)">
+    <p class="texto-nota" data-t="soloTelefono"
+       style="margin:0 0 11px">
       Los datos viven solo en este teléfono. Exporta de vez en cuando.</p>
-    <p id="ultimo-respaldo" class="oculto"
-       style="margin:0 0 11px; font-size: 0.8125rem; color:var(--tinta-2)"></p>
+    <p id="ultimo-respaldo" class="texto-nota oculto"
+       style="margin:0 0 11px"></p>
     <div class="fila">
       <button class="chico" data-t="exportar" onclick="exportar()">Exportar</button>
       <button class="chico" data-t="importar"
@@ -460,7 +460,7 @@
     <div id="b-roles"></div>
     <button class="chico" id="b-agregar-rol" data-t="agregarRol"
             onclick="agregarRol()">+ Agregar rol</button>
-    <p style="margin:13px 0 0; font-size: 0.8125rem; color:var(--tinta-2)">
+    <p class="texto-nota" style="margin:13px 0 0">
       <span data-t="sobreVentas">Porcentaje sobre las ventas del turno. Con todos:</span>
       <strong id="b-total">0%</strong></p>
 
@@ -666,7 +666,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v47';
+const VERSION_APP = 'v48';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -3342,7 +3342,7 @@ function pintarTramos() {
   notasVisibles = [];
 
   if (rolesQueCobran().length === 0) {
-    caja.innerHTML = '<span style="font-size: 0.8125rem;color:var(--tinta-2)">'
+    caja.innerHTML = '<span class="texto-nota">'
                    + t('rolesEnAjustes') + '</span>';
     // Sin roles no hay nada que repartir, así que tampoco nada que partir en
     // tramos. El botón sobra y ofrecerlo sería ofrecer un callejón.

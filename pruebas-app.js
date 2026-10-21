@@ -2640,6 +2640,63 @@ ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado'
    Hace falta un reloj que espere de verdad: con el de siempre, que lo hace
    todo en el acto, el aviso aparece y desaparece en la misma línea.
    ========================================================================== */
+/* La escala de letra (v48, DECISIONES §24). Hasta la v47 había 16 tamaños
+   escritos sueltos y la misma cosa se fue separando: la nota gris en tres
+   tamaños, una leyenda más chica que las otras. Lo que se vigila es que cada
+   `font-size` salga de la escala; cómo se ve, no se puede ver aquí. */
+grupo('Diseño: la escala de letra');
+const cssSinComentarios = css.replace(/\/\*[\s\S]*?\*\//g, '');
+// Los únicos tamaños sueltos permitidos, cada uno con su razón en estilos.css.
+const FUERA_DE_ESCALA = ['html', '.dia .letra', '.dia .monto.largo',
+                         '.lista-ajustes .chevron', '.aviso-breve .cerrar'];
+const tamanos = [...cssSinComentarios.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+  .flatMap(([, sel, cuerpo]) => [...cuerpo.matchAll(/font-size:\s*([^;}]+)/g)]
+    .map(m => ({ sel: sel.trim().replace(/\s+/g, ' '), valor: m[1].trim() })));
+const sueltos = tamanos.filter(x => !/^var\(--letra-[a-z-]+\)$/.test(x.valor)
+                                    && !FUERA_DE_ESCALA.includes(x.sel));
+ok('la hoja tiene tamaños de letra (si esto falla, el lector de reglas se rompió)', tamanos.length > 50);
+ok('todo tamaño de letra sale de la escala --letra-*'
+   + (sueltos.length ? ' (sueltos: ' + sueltos.map(x => x.sel + ' ' + x.valor).join(' | ') + ')' : ''),
+   sueltos.length === 0);
+ok('las excepciones siguen existiendo (si no, sobran en la lista)',
+   FUERA_DE_ESCALA.every(sel => tamanos.some(x => x.sel === sel)));
+const definidas = new Set([...css.matchAll(/--letra-([a-z-]+):/g)].map(m => m[1]));
+const usadas = new Set([...css.matchAll(/var\(--letra-([a-z-]+)\)/g)].map(m => m[1]));
+ok('cada nivel de la escala que se usa está definido',
+   definidas.size > 0 && [...usadas].every(n => definidas.has(n)));
+ok('y ninguno sobra', [...definidas].every(n => usadas.has(n)));
+ok('el campo de texto no baja de 1rem (Safari hace zoom)',
+   /--letra-campo:\s*1rem;/.test(css) && /var\(--letra-campo\)/.test(regla('input[type=text], input[type=time]')));
+// Un tamaño escrito a mano en el HTML se salta la escala sin que nada avise.
+ok('el HTML no escribe tamaños de letra a mano', !/font-size/.test(html));
+ok('y el código solo cambia la letra de la raíz y de los botones de tamaño',
+   (html.match(/\.style\.fontSize/g) || []).length === 2);
+ok('los textos grises sueltos usan su clase',
+   d.getElementById('ultimo-respaldo')._classes.has('texto-nota')
+   && (html.match(/class="texto-nota"/g) || []).length >= 4
+   && /\.texto-nota \{[^}]*var\(--letra-nota\)/.test(css));
+
+// Los arreglos de la revisión del 20 de octubre de 2026.
+const padding = sel => (regla(sel).match(/padding:\s*([^;]+);/) || [])[1];
+ok('el título está en el mismo sitio con las dos cabeceras',
+   padding('.cabecera') !== undefined && padding('.cabecera') === padding('.barra-titulo'));
+ok('la negrita es 600 también en <strong> y <b>', /font-weight: 600/.test(regla('strong, b')));
+ok('el título de la instalación no hereda el 700 del navegador',
+   /font-weight: 600/.test(regla('.inst-pantalla h1')));
+const espaciado = sel => (regla(sel).match(/letter-spacing:\s*([^;]+);/) || [])[1];
+ok('la leyenda del tramo es una leyenda como las demás',
+   /var\(--letra-leyenda\)/.test(regla('.tramo-cab .titulo'))
+   && espaciado('.tramo-cab .titulo') === espaciado('.etiqueta'));
+ok('el título de la hoja se espacia como el rango de la semana',
+   espaciado('.hoja-cabeza span') !== undefined
+   && espaciado('.hoja-cabeza span') === espaciado('.semana-nav .rango'));
+ok('las notas grises van todas en el tamaño de nota',
+   ['.nota-ajuste', '.confirma', '.rep-aclara', '.tramo-nota', '.delta', '.globo', '.total .contra']
+     .every(sel => /var\(--letra-nota\)/.test(regla(sel))));
+ok('la tabla del año pesa como la de los días',
+   /font-weight: 500/.test(regla('.anio-fila:not(.titulos):not(.sin-turnos) > :first-child'))
+   && /font-weight: 600/.test(regla('.anio-fila:not(.titulos):not(.sin-turnos) > :nth-child(2)')));
+
 grupo('Movimiento');
 const estadoAntesMov = JSON.stringify(D());
 const semanaAntesMov = run('semanaVista');

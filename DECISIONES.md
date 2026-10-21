@@ -1206,3 +1206,45 @@ de un botón (i)) y C (un índice de pantallas, como los Ajustes del iPhone).
   más y pedía pantallas nuevas con su botón para volver.
 - La Bienvenida no cambia: es otra pantalla, se ve una vez y tiene su propio
   orden (ver "Bienvenida", en §3).
+
+## 24. Una escala de letra (20 de octubre de 2026)
+
+Al recorrer todas las pantallas midiendo la letra que de verdad se ve (393 px,
+letra Grande, los dos temas), la jerarquía de §17 seguía bien pensada pero se
+había ido separando en los detalles. Se le mostró al mantenedor una vista
+previa con el antes y el después de cada caso, con capturas reales, y aprobó
+todo (con el título de la instalación en la opción "solo el peso").
+
+- **La causa: 16 tamaños escritos sueltos en `estilos.css`.** Nada impedía que
+  dos cosas del mismo nivel acabaran en tamaños distintos, y no daba error.
+  Ahora hay una escala de variables `--letra-*` al principio de la sección B,
+  como los colores en la sección A, y una prueba rechaza cualquier
+  `font-size` que no salga de ella. Las excepciones son cinco y están
+  nombradas en la prueba: la raíz (la cambia el tamaño elegido en Ajustes),
+  la letra del día y el monto largo del calendario, la flecha de las filas de
+  Ajustes y la X del aviso breve. El HTML tampoco puede escribir tamaños a
+  mano: los cinco textos grises que lo hacían usan `.texto-nota`.
+- **Niveles de texto**: título, subtítulo, cuerpo, texto, nota, pie y leyenda.
+  Las cifras van aparte y pueden ser más grandes que el título (§3).
+- **El título ya no salta al cambiar de pestaña.** `.cabecera` (Semana,
+  Reportes) y `.barra-titulo` (Ajustes, Turno, Ayuda, Bienvenida) tenían
+  rellenos distintos y el título se movía 2 px. Una prueba las compara.
+- **La negrita es 600 en toda la app**, también en `<strong>`, `<b>` y el
+  `<h1>` de la instalación, que traían 700 del navegador. La pestaña activa
+  sigue en 700 a propósito (§20).
+- **La nota gris tiene un solo tamaño.** Salía en tres (0.75, 0.8125 y 0.875
+  rem), a veces en la misma tarjeta. El precio: las notas de Ajustes crecen un
+  poco y la pantalla queda unas líneas más larga.
+- **La leyenda de un tramo ("Acumulado al cambio 1") es una leyenda como las
+  demás.** Iba más chica para caber junto al campo; con el tamaño normal el
+  "1" caía solo en otra línea, y `text-wrap: balance` la parte en dos líneas
+  parejas (Safari 17.5 o más nuevo, verificado en las notas de WebKit). En un
+  Safari más viejo el "1" vuelve a quedar solo, que se lee igual.
+- **La tabla del año pesa como la de los días**: el mes en 500 y el neto en
+  600.
+- **"Pocos datos" en la tabla de los días se queda en el tamaño de leyenda**:
+  más grande no cabe en su columna.
+- **Descartado:** igualar también el tamaño del título de la instalación al
+  de las demás pantallas (debajo del ícono de 68 px se ve débil: es una
+  portada), y tocar "Cerrar" junto a la píldora "Ayuda" en el turno, que es
+  una decisión de botones y no de letra.

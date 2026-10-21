@@ -131,6 +131,43 @@
       (periódicos, informes financieros) y hace que un dato se lea como un dato
       y no como una frase.
    ========================================================================== */
+/* La escala de letra. Todo `font-size` de esta hoja sale de aquí (una prueba
+   lo vigila), igual que los colores salen de la sección A. Hasta la v47 eran
+   16 tamaños escritos sueltos, y la misma cosa se fue separando sin que nadie
+   lo notara: la nota gris salía en tres tamaños, la leyenda de un tramo era
+   más chica que las demás. Un nivel, un tamaño.
+
+   Texto, de mayor a menor:
+     título     → el nombre de la pantalla (restaurante, Reportes, Ajustes…)
+     subtítulo  → el rango de la semana, el título de la hoja de ayuda
+     cuerpo     → el texto normal de la app
+     texto      → párrafos que explican, botones de texto
+     nota       → la frase gris debajo de algo
+     pie        → la versión, "en 4 de 6 turnos", el detalle dentro del recibo
+     leyenda    → las MAYÚSCULAS espaciadas (`.etiqueta`, `h2.seccion`)
+   Las cifras van aparte: son el contenido, no títulos, y por eso pueden ser
+   más grandes que el título (DECISIONES §3).
+
+   Fuera de la escala, a propósito y con la prueba sabiéndolo: la letra del
+   día y el monto largo del calendario (la celda manda), la flecha de las
+   filas de Ajustes y la X del aviso breve (son dibujos) y la raíz, que es la
+   que cambia el tamaño elegido en Ajustes. Todo va en `rem`: ver la sección
+   "Tamaño de letra" de DECISIONES §3. */
+:root {
+  --letra-cifra:        2.625rem;   /* el neto grande de cada pantalla */
+  --letra-cifra-recibo: 1.625rem;   /* "Total que te llevas" en el turno */
+  --letra-portada:      1.5rem;     /* el nombre de la app en la instalación */
+  --letra-valor:        1.375rem;   /* la cifra de cada tarjeta */
+  --letra-titulo:       1.25rem;
+  --letra-subtitulo:    1.0625rem;
+  --letra-campo:        1rem;       /* nunca menos: Safari hace zoom (sección F) */
+  --letra-cuerpo:       0.9375rem;
+  --letra-texto:        0.875rem;
+  --letra-nota:         0.8125rem;
+  --letra-pie:          0.75rem;
+  --letra-leyenda:      0.6875rem;
+}
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* ----------------------------------------------------------------------------
@@ -224,7 +261,7 @@ body {
   background: var(--papel);
   color: var(--tinta);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 0.9375rem;
+  font-size: var(--letra-cuerpo);
   line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
@@ -240,7 +277,7 @@ body {
    días vacíos, bordes, placeholders. Leyenda y comentario comparten color y
    se distinguen por las mayúsculas, el peso y el espaciado. */
 .etiqueta {
-  font-size: 0.6875rem;
+  font-size: var(--letra-leyenda);
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -251,6 +288,17 @@ body {
    letras un poco apretadas: un número grande con espaciado normal se ve
    desparramado. */
 .cifra { font-variant-numeric: tabular-nums; letter-spacing: -0.025em; }
+
+/* La negrita de la app es 600, en todo. `<strong>` y `<b>` traen 700 del
+   navegador, y el "5%" de los ayudantes salía más grueso que cualquier otra
+   cosa de la pantalla (hasta la v47). */
+strong, b { font-weight: 600; }
+
+/* La frase gris debajo de algo, cuando no tiene clase propia ("Porcentaje
+   sobre las ventas…", "Los datos viven solo en este teléfono…"). Hasta la
+   v47 eran cinco `style` escritos a mano en el HTML, y por eso podían
+   separarse de las notas de al lado sin que nada avisara. */
+.texto-nota { font-size: var(--letra-nota); color: var(--tinta-2); }
 
 .tarjeta {
   background: var(--tarjeta);
@@ -269,7 +317,7 @@ body {
 }
 /* El título de la pantalla, al mismo nivel que el de Ajustes o el del turno
    (`.barra-titulo .fecha`). Era pequeño y gris, y se leía como un comentario. */
-.cabecera .lugar { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em;
+.cabecera .lugar { font-size: var(--letra-titulo); font-weight: 600; letter-spacing: -0.02em;
                    color: var(--tinta); }
 /* Las píldoras de la cabecera: "Hoy" y "Ayuda". "Ayuda" va en palabra y no
    en un "?" porque la píldora ya se lee como algo que se toca (es la forma de
@@ -279,7 +327,7 @@ body {
 .cabecera-der { display: flex; align-items: center; gap: 6px; }
 .cabecera .pildora, .barra-titulo .pildora {
   position: relative;
-  font-size: 0.75rem; color: var(--tinta-2); font-weight: 600; font-family: inherit;
+  font-size: var(--letra-pie); color: var(--tinta-2); font-weight: 600; font-family: inherit;
   padding: 5px 10px; border: 1px solid var(--linea); border-radius: 999px;
   background: none; cursor: pointer;
 }
@@ -294,11 +342,11 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 12px;
 }
-.semana-nav .rango { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
+.semana-nav .rango { font-size: var(--letra-subtitulo); font-weight: 600; letter-spacing: -0.02em; }
 .semana-nav button {
   width: 2.5rem; height: 2.5rem; border: 1px solid var(--linea);
   background: var(--tarjeta); color: var(--tinta-2); border-radius: 10px;
-  font-size: 1.0625rem; line-height: 1; cursor: pointer;
+  font-size: var(--letra-subtitulo); line-height: 1; cursor: pointer;
 }
 .semana-nav button:disabled { opacity: .35; }
 
@@ -326,8 +374,8 @@ body {
 .dia .letra, .dia .num, .dia .monto { position: relative; }
 .dia .letra { font-size: 0.5625rem; font-weight: 600; letter-spacing: 0.06em;
               color: var(--tinta-2); text-transform: uppercase; }
-.dia .num   { font-size: 0.9375rem; font-weight: 500; margin-top: 1px; }
-.dia .monto { font-size: 0.6875rem; font-weight: 600; color: var(--verde);
+.dia .num   { font-size: var(--letra-cuerpo); font-weight: 500; margin-top: 1px; }
+.dia .monto { font-size: var(--letra-leyenda); font-weight: 600; color: var(--verde);
               margin-top: auto; font-variant-numeric: tabular-nums; }
 /* Un día en que el tip-out se comió las propinas. Es raro, pero existe, y el
    verde diría lo contrario de lo que pasó. */
@@ -377,10 +425,10 @@ body {
    ========================================================================== */
 .total { padding: 22px 2px 6px; }
 .total .cantidad {
-  font-size: 2.625rem; font-weight: 600; line-height: 1;
+  font-size: var(--letra-cifra); font-weight: 600; line-height: 1;
   margin: 6px 0 4px; color: var(--tinta);
 }
-.total .contra { font-size: 0.8125rem; color: var(--tinta-2); }
+.total .contra { font-size: var(--letra-nota); color: var(--tinta-2); }
 .total .sube { color: var(--verde); font-weight: 600; }
 .total .baja { color: var(--rojo); font-weight: 600; }
 
@@ -394,10 +442,10 @@ body {
 }
 .metricas.extras { grid-template-columns: repeat(3, 1fr); margin-top: 10px; }
 .metrica { background: var(--tarjeta); padding: 12px 12px; }
-.metrica .valor { font-size: 1.375rem; font-weight: 600; margin-top: 3px;
+.metrica .valor { font-size: var(--letra-valor); font-weight: 600; margin-top: 3px;
                   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .metricas.extras .metrica { padding: 11px 10px; }
-.metricas.extras .valor { font-size: 1.0625rem; }
+.metricas.extras .valor { font-size: var(--letra-subtitulo); }
 
 /* La última tarjeta se estira hasta el final de su fila.
  
@@ -439,7 +487,7 @@ body {
 }
 /* La línea de "en 4 de 6 turnos". Solo sale cuando falta algún turno por
    anotar: si están todos, repetir "en 6 de 6" sería ruido. */
-.metrica .cuantos { font-size: 0.6875rem; color: var(--tinta-2); margin-top: 3px;
+.metrica .cuantos { font-size: var(--letra-pie); color: var(--tinta-2); margin-top: 3px;
                     letter-spacing: 0.02em; }
 
 /* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
@@ -456,7 +504,7 @@ body {
   flex: none; width: 1.25rem; height: 1.25rem; padding: 0;
   border: 1px solid var(--linea-alta); border-radius: 50%;
   background: none; color: var(--tinta-2);
-  font-size: 0.6875rem; font-weight: 600; font-style: italic; line-height: 1;
+  font-size: var(--letra-leyenda); font-weight: 600; font-style: italic; line-height: 1;
   cursor: pointer;
 }
 .info::after { content: ''; position: absolute; inset: -12px; }
@@ -466,7 +514,7 @@ body {
    tarjetas angostas saltaba de línea sola y la rejilla se veía desalineada.
    Una posición fija se lee mejor que una que a veces cambia. */
 .delta { display: block; margin-top: 3px;
-         font-size: 0.78125rem; font-weight: 600; letter-spacing: 0; }
+         font-size: var(--letra-nota); font-weight: 600; letter-spacing: 0; }
 .delta.sube   { color: var(--verde); }
 .delta.baja   { color: var(--rojo); }
 /* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
@@ -488,15 +536,15 @@ body {
   width: 235px; max-width: calc(100vw - 28px);
   padding: 10px 12px; border-radius: 10px;
   background: var(--tinta); color: var(--papel);
-  font-size: 0.78125rem; line-height: 1.35;
+  font-size: var(--letra-nota); line-height: 1.35;
 }
 
 .mas {
   width: 100%; margin-top: 10px; padding: 11px;
   background: none; border: 1px solid var(--linea); border-radius: 10px;
-  color: var(--tinta-2); font-size: 0.8125rem; cursor: pointer;
+  color: var(--tinta-2); font-size: var(--letra-nota); cursor: pointer;
 }
-.dato-suelto { font-size: 0.8125rem; color: var(--tinta-2); padding: 12px 2px 0; }
+.dato-suelto { font-size: var(--letra-nota); color: var(--tinta-2); padding: 12px 2px 0; }
 
 /* ----------------------------------------------------------------------------
    La hoja de ayuda de cada pantalla.
@@ -521,12 +569,12 @@ body {
 .hoja .asa { width: 36px; height: 4px; border-radius: 4px;
              background: var(--linea-alta); margin: 0 auto 8px; }
 .hoja-cabeza { display: flex; align-items: center; justify-content: space-between; }
-.hoja-cabeza span { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+.hoja-cabeza span { font-size: var(--letra-subtitulo); font-weight: 600; letter-spacing: -0.02em; }
 .hoja-cabeza button { border: none; background: none; color: var(--tinta-2);
-                      font-size: 0.9375rem; font-family: inherit; padding: 10px 4px; }
+                      font-size: var(--letra-cuerpo); font-family: inherit; padding: 10px 4px; }
 .hoja-todas { display: block; width: 100%; margin-top: 4px; padding: 13px;
               border: none; background: none; color: var(--verde);
-              font-size: 0.875rem; font-weight: 600; font-family: inherit; }
+              font-size: var(--letra-texto); font-weight: 600; font-family: inherit; }
 
 /* Sube desde abajo con la curva de los paneles de iOS, y el fondo se oscurece
    a la vez. La entrada va atada a `:not(.oculto)` y no a una clase que ponga
@@ -561,21 +609,21 @@ body {
 .rep-fila.titulos { padding: 8px 12px 6px; }
 .rep-dia   { font-weight: 500; }
 .rep-hora  { font-weight: 600; }
-.rep-n, .rep-turno { color: var(--tinta-2); font-size: 0.8125rem; }
+.rep-n, .rep-turno { color: var(--tinta-2); font-size: var(--letra-nota); }
 /* El mejor día en verde, y solo ese: es la respuesta a la pregunta de la
    pantalla. Si se pintaran también los "buenos", la respuesta se diluye. */
 .rep-fila.mejor .rep-dia, .rep-fila.mejor .rep-hora { color: var(--verde); }
 /* Pocos datos (o ninguno) se apaga, no se esconde: la fila sigue ahí para que
    la tabla tenga siempre sus siete días en el mismo sitio. */
 .rep-fila.poco > * { color: var(--tinta-2); font-weight: 400; }
-.rep-fila .nota { font-size: 0.6875rem; }
+.rep-fila .nota { font-size: var(--letra-leyenda); }
 .metrica.mejor .valor { color: var(--verde); }
-.metrica .valor.poco { font-size: 0.8125rem; font-weight: 400; color: var(--tinta-2); }
-.rep-aclara { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0;
+.metrica .valor.poco { font-size: var(--letra-nota); font-weight: 400; color: var(--tinta-2); }
+.rep-aclara { font-size: var(--letra-nota); color: var(--tinta-2); margin: 8px 2px 0;
               line-height: 1.4; }
 /* "Cambiar", dentro de la frase. Parece un enlace, pero la zona de toque
    crece por arriba y por abajo con relleno y margen negativo, sin mover el
-   renglón: a 12 px de letra, sin eso habría que atinarle. */
+   renglón: con la letra de una nota, sin eso habría que atinarle. */
 .rep-aclara .enlace {
   background: none; border: 0; font: inherit; font-weight: 600;
   color: var(--verde); padding: 12px 4px; margin: -12px 0; cursor: pointer;
@@ -594,18 +642,28 @@ body {
 .anio-fila:first-child { border-top: 0; }
 .anio-fila > :not(:first-child) { text-align: right; }
 .anio-fila.sin-turnos > * { color: var(--tinta-2); }
+/* Los mismos pesos que la tabla de los días (`.rep-dia`, `.rep-hora`): el
+   nombre en 500 y la cifra que responde la pregunta en 600. Hasta la v47 iba
+   todo en 400 y, en la misma pantalla, se leía más flojo que la de arriba. */
+.anio-fila:not(.titulos):not(.sin-turnos) > :first-child { font-weight: 500; }
+.anio-fila:not(.titulos):not(.sin-turnos) > :nth-child(2) { font-weight: 600; }
 
 /* ============================================================================
    SECCIÓN F — Formulario del turno
    ========================================================================== */
+/* El mismo relleno que `.cabecera` (sección C), y tiene que seguir siéndolo:
+   las dos dibujan el título de una pantalla y la barra de pestañas salta de
+   una a otra. Hasta la v47 esta iba a 16 px arriba y 0 al lado, y al pasar de
+   Reportes a Ajustes el título se movía 2 px hacia arriba y a la izquierda.
+   Una prueba compara las dos. */
 .barra-titulo {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 0 14px; margin-bottom: 4px;
+  padding: 18px 2px 12px; margin-bottom: 4px;
 }
-.barra-titulo .fecha { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+.barra-titulo .fecha { font-size: var(--letra-titulo); font-weight: 600; letter-spacing: -0.02em; }
 .barra-titulo button {
   border: none; background: none; color: var(--tinta-2);
-  font-size: 0.9375rem; cursor: pointer; padding: 6px;
+  font-size: var(--letra-cuerpo); cursor: pointer; padding: 6px;
 }
 
 .campo { margin-bottom: 13px; }
@@ -624,7 +682,7 @@ input[type=text], input[type=time] {
      lo que importa: por debajo de 16px, Safari en iPhone hace zoom al tocar el
      campo y descoloca la pantalla. Por eso este valor va en rem y no en una
      medida que pueda encoger. */
-  font-size: 1rem; font-family: inherit;
+  font-size: var(--letra-campo); font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
 input:focus { outline: none; border-color: var(--tinta); }
@@ -663,7 +721,7 @@ input[type=time] {
 .horas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .horas button {
   padding: 5px 8px; border: 1px solid var(--linea); border-radius: 7px;
-  background: none; color: var(--tinta-2); font-size: 0.75rem;
+  background: none; color: var(--tinta-2); font-size: var(--letra-pie);
   font-variant-numeric: tabular-nums; cursor: pointer;
 }
 .horas button.puesta { border-color: var(--verde); color: var(--verde); }
@@ -672,7 +730,7 @@ input[type=time] {
 .chip {
   padding: 8px 13px; border: 1px solid var(--linea); border-radius: 999px;
   background: var(--papel); color: var(--tinta-2);
-  font-size: 0.8125rem; cursor: pointer; user-select: none;
+  font-size: var(--letra-nota); cursor: pointer; user-select: none;
 }
 /* ESTA es la apariencia de toda selección de la app: los chips, el control
    segmentado (idioma, tema, tamaño), las casillas de Ajustes y la pestaña
@@ -698,33 +756,38 @@ input[type=time] {
 .tramo { margin-bottom: 13px; }
 .tramo:last-child { margin-bottom: 0; }
 .tramo-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-.tramo-cab .titulo { flex: 1; font-size: 0.625rem; font-weight: 600;
-                     letter-spacing: 0.08em; text-transform: uppercase;
-                     color: var(--tinta-2); }
+/* Una leyenda como todas (`.etiqueta`). Iba más chica (0.625rem) para que
+   "Acumulado al cambio 1" cupiera junto al campo; con el tamaño de leyenda
+   el "1" caía solo en otra línea. `balance` la parte en dos líneas parejas
+   (Safari 17.5 o más nuevo; en uno más viejo el "1" vuelve a quedar solo,
+   que se lee igual). */
+.tramo-cab .titulo { flex: 1; font-size: var(--letra-leyenda); font-weight: 600;
+                     letter-spacing: 0.09em; text-transform: uppercase;
+                     color: var(--tinta-2); text-wrap: balance; }
 .tramo-cab input { width: 104px; padding: 8px 10px; }
 /* El resto se calcula, no se escribe: es el único número de este bloque que
    la persona no teclea, y por eso se ve como un dato y no como un campo. */
-.tramo-cab .resto { font-size: 0.875rem; font-weight: 600; color: var(--tinta);
+.tramo-cab .resto { font-size: var(--letra-texto); font-weight: 600; color: var(--tinta);
                     font-variant-numeric: tabular-nums; }
 .tramo-cab .quitar { color: var(--rojo); padding: 6px 9px; line-height: 1; }
 /* Debajo de cada cambio: las ventas de su tramo, o por qué no se puede usar.
    En rojo solo cuando falla, junto con el borde del campo: es el único aviso
    que hay antes de guardar. */
-.tramo-nota { margin: -2px 0 8px; font-size: 0.75rem; color: var(--tinta-2);
+.tramo-nota { margin: -2px 0 8px; font-size: var(--letra-nota); color: var(--tinta-2);
               font-variant-numeric: tabular-nums; }
 .tramo-nota.mal { color: var(--rojo); }
 .tramo-cab input.mal { border-color: var(--rojo); }
 
 /* Desglose del cálculo: se lee como un recibo, con la línea de puntos que
    guía el ojo desde el concepto hasta la cifra. */
-.recibo { font-size: 0.875rem; }
+.recibo { font-size: var(--letra-texto); }
 .recibo div { display: flex; justify-content: space-between; padding: 5px 0;
               color: var(--tinta-2); }
 .recibo .final {
   border-top: 1px solid var(--linea); margin-top: 7px; padding-top: 11px;
-  color: var(--tinta); font-size: 0.9375rem;
+  color: var(--tinta); font-size: var(--letra-cuerpo);
 }
-.recibo .final span:last-child { font-size: 1.625rem; font-weight: 600;
+.recibo .final span:last-child { font-size: var(--letra-cifra-recibo); font-weight: 600;
                                  letter-spacing: -0.025em; }
 .recibo .resta { color: var(--rojo); }
 .recibo span:last-child { font-variant-numeric: tabular-nums; color: var(--tinta); }
@@ -738,7 +801,7 @@ input[type=time] {
    tinta normal al último span de cada fila, y un span aquí dentro sería el
    último de su etiqueta y saldría oscuro, justo lo contrario de lo que se
    busca. */
-.recibo small { display: block; font-size: 0.75rem; color: var(--tinta-2);
+.recibo small { display: block; font-size: var(--letra-pie); color: var(--tinta-2);
                 margin-top: 1px; letter-spacing: 0; }
 /* Con la etiqueta en dos líneas, la cifra se alinea con la PRIMERA, no con el
    centro del bloque: si no, el número queda flotando entre los dos renglones. */
@@ -750,10 +813,10 @@ input[type=time] {
 /* El desglose por tramo, debajo de su total. Va sin signo y en tinta apagada:
    la resta ya la hizo la línea de arriba, y un segundo "−" haría pensar que se
    descuenta dos veces. */
-.recibo .sub { padding: 2px 0; font-size: 0.8125rem; }
+.recibo .sub { padding: 2px 0; font-size: var(--letra-nota); }
 .recibo .sub span { color: var(--tinta-2) !important; }
 .recibo .sub span:first-child { padding-left: 13px; }
-.recibo .aparte { padding-top: 9px; font-size: 0.8125rem; }
+.recibo .aparte { padding-top: 9px; font-size: var(--letra-nota); }
 .recibo .aparte span { color: var(--tinta-2) !important; }
 /* La excepción al gris de las líneas de abajo: un efectivo neto en negativo es
    plata que sale de tu cartera esta noche. Ese sí tiene que verse. */
@@ -772,7 +835,7 @@ button { font-family: inherit; }
   width: 100%; padding: 15px; margin: 4px 0;
   background: var(--principal-cara); color: var(--papel);
   border: none; border-radius: 11px;
-  font-size: 1rem; font-weight: 600; cursor: pointer;
+  font-size: var(--letra-campo); font-weight: 600; cursor: pointer;
   box-shadow: 0 4px 0 var(--principal-canto), 0 8px 18px var(--principal-sombra);
   transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
 }
@@ -785,16 +848,16 @@ button { font-family: inherit; }
   width: 100%; padding: 12px; margin-top: 8px;
   background: none; color: var(--tinta-2);
   border: 1px solid var(--linea); border-radius: 11px;
-  font-size: 0.875rem; cursor: pointer;
+  font-size: var(--letra-texto); cursor: pointer;
 }
 .secundario.riesgo { color: var(--rojo); }
-.chico { padding: 7px 11px; font-size: 0.8125rem; border: 1px solid var(--linea);
+.chico { padding: 7px 11px; font-size: var(--letra-nota); border: 1px solid var(--linea);
          border-radius: 8px; background: var(--papel); color: var(--tinta);
          cursor: pointer; }
 
 /* Ajustes (v46). La nota de cada casilla, de una o dos frases: antes eran
    párrafos de 0.75rem en `.intro` y la pantalla se leía como un manual. */
-.nota-ajuste { font-size: 0.75rem; line-height: 1.45; color: var(--tinta-2);
+.nota-ajuste { font-size: var(--letra-nota); line-height: 1.45; color: var(--tinta-2);
                margin: 8px 6px 0; }
 /* Borrar todo, al pie de la tarjeta de "Tus datos" y debajo de una raya que
    cruza la tarjeta entera. Texto rojo, sin caja: no se parece a ningún otro
@@ -803,7 +866,7 @@ button { font-family: inherit; }
   display: block; width: calc(100% + 28px); margin: 14px -14px -14px;
   padding: 13px; border: 0; border-top: 1px solid var(--linea);
   border-radius: 0 0 12px 12px; background: none;
-  color: var(--rojo); font-size: 0.875rem; cursor: pointer;
+  color: var(--rojo); font-size: var(--letra-texto); cursor: pointer;
 }
 /* La ayuda y el contacto, como lista: una tarjeta con filas, como la Ayuda.
    Al apretar, la fila se oscurece (sin animar: solo se animan `transform` y
@@ -815,7 +878,7 @@ button { font-family: inherit; }
   display: flex; align-items: center; justify-content: flex-start; gap: 12px;
   width: 100%; min-height: 48px; padding: 12px 14px;
   border: 0; border-top: 1px solid var(--linea); background: none;
-  color: var(--tinta); font-size: 0.9375rem; text-align: left; cursor: pointer;
+  color: var(--tinta); font-size: var(--letra-cuerpo); text-align: left; cursor: pointer;
 }
 .lista-ajustes button:first-child { border-top: 0; }
 .lista-ajustes button:active { background: var(--hueco); }
@@ -884,7 +947,7 @@ button { font-family: inherit; }
   position: relative; min-width: 0;
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
   border: none; background: none; padding: 7px 0 6px;
-  font-size: 0.6875rem; font-weight: 600; white-space: nowrap;
+  font-size: var(--letra-leyenda); font-weight: 600; white-space: nowrap;
   --tono: var(--tinta-2);
   color: var(--tono); cursor: pointer;
   transition: transform 200ms var(--ease-out), color 200ms ease;
@@ -943,7 +1006,7 @@ button { font-family: inherit; }
    altos y con el nombre corrido (hasta la v45). Un nombre propio para cada
    cosa; una clase de estado no puede ser también una regla suelta. */
 .texto-vacio { text-align: center; color: var(--tinta-2); padding: 30px 20px;
-               font-size: 0.875rem; }
+               font-size: var(--letra-texto); }
 /* Control segmentado: dos o tres opciones donde solo una puede estar activa.
    Se usa en vez de un menú desplegable porque caben a la vista: elegir es un
    toque, no dos, y de paso ves qué opciones hay sin tener que abrir nada.
@@ -958,7 +1021,7 @@ button { font-family: inherit; }
 .segmentado button {
   padding: 11px 6px; border: 1px solid var(--linea); border-radius: 999px;
   background: transparent; color: var(--tinta-2);
-  font-size: 0.8125rem; cursor: pointer;
+  font-size: var(--letra-nota); cursor: pointer;
   transition: transform 200ms var(--ease-out), color 200ms ease, border-color 200ms ease;
 }
 .segmentado button.activo { border-color: transparent; color: var(--verde); font-weight: 600; }
@@ -982,11 +1045,11 @@ button { font-family: inherit; }
 .siete button {
   height: 2.75rem; padding: 0; border: 1px solid var(--linea); border-radius: 999px;
   background: var(--papel); color: var(--tinta-2); font-family: inherit;
-  font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+  font-size: var(--letra-nota); font-weight: 600; cursor: pointer;
 }
 .siete button.activo { border-color: var(--verde); background: var(--verde-suave);
                        color: var(--verde); }
-.confirma { font-size: 0.75rem; color: var(--tinta-2); margin: 8px 2px 0; }
+.confirma { font-size: var(--letra-nota); color: var(--tinta-2); margin: 8px 2px 0; }
 
 /* ----------------------------------------------------------------------------
    La Ayuda: preguntas que se despliegan.
@@ -1006,25 +1069,25 @@ button { font-family: inherit; }
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   gap: 10px; padding: 14px 2px;
   background: none; border: none; text-align: left;
-  color: var(--tinta); font-family: inherit; font-size: 0.875rem;
+  color: var(--tinta); font-family: inherit; font-size: var(--letra-texto);
   font-weight: 500; line-height: 1.35; cursor: pointer;
 }
 .ayuda-p .flecha {
-  flex: none; color: var(--tinta-3); font-size: 0.75rem;
+  flex: none; color: var(--tinta-3); font-size: var(--letra-pie);
   transition: transform .15s;
 }
 .ayuda-item.abierta .flecha { transform: rotate(90deg); }
 
 .ayuda-r {
   padding: 0 2px 15px; margin: -4px 0 0;
-  font-size: 0.8125rem; line-height: 1.55; color: var(--tinta-2);
+  font-size: var(--letra-nota); line-height: 1.55; color: var(--tinta-2);
 }
 
 /* Texto de introducción de la bienvenida. Es el único párrafo largo de la app:
    se lee una vez en la vida y explica por qué le estamos pidiendo datos antes
    de dejarle hacer nada. Pedir sin explicar es lo que hace que la gente
    abandone en la primera pantalla. */
-.intro { font-size: 0.875rem; line-height: 1.5; color: var(--tinta-2);
+.intro { font-size: var(--letra-texto); line-height: 1.5; color: var(--tinta-2);
          margin: 4px 2px 0; }
 
 /* La casilla y su texto van dentro de la misma etiqueta para que se pueda
@@ -1042,7 +1105,7 @@ button { font-family: inherit; }
 .check { display: flex; align-items: center; justify-content: space-between;
          gap: 10px; margin-top: 13px; padding: 10px 14px;
          border: 1px solid var(--linea); border-radius: 999px;
-         background: var(--papel); font-size: 0.8125rem; color: var(--tinta-2);
+         background: var(--papel); font-size: var(--letra-nota); color: var(--tinta-2);
          cursor: pointer;
          transition: transform 200ms var(--ease-out), background-color 200ms ease,
                      border-color 200ms ease, color 200ms ease; }
@@ -1095,8 +1158,8 @@ button { font-family: inherit; }
   padding: 14px;
   margin: 10px 0 14px;
 }
-.instalar p { margin: 6px 0 0; font-size: 0.875rem; color: var(--tinta-2); }
-.instalar ol { margin: 8px 0 0; padding-left: 1.2em; font-size: 0.875rem; }
+.instalar p { margin: 6px 0 0; font-size: var(--letra-texto); color: var(--tinta-2); }
+.instalar ol { margin: 8px 0 0; padding-left: 1.2em; font-size: var(--letra-texto); }
 .instalar li { margin-bottom: 5px; }
 .instalar b { color: var(--tinta); font-weight: 600; }
 /* El ícono de Compartir, metido en la frase. Que se vea el dibujo exacto que hay
@@ -1106,7 +1169,7 @@ button { font-family: inherit; }
 /* El aviso de por qué importa. Es la única parte que no se puede resumir: sin
    ella, "instálala" suena a capricho del que hizo la app. */
 .instalar .aviso {
-  margin-top: 10px; font-size: 0.8125rem; color: var(--tinta-2); line-height: 1.4;
+  margin-top: 10px; font-size: var(--letra-nota); color: var(--tinta-2); line-height: 1.4;
 }
 .instalar-botones {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
@@ -1115,15 +1178,15 @@ button { font-family: inherit; }
    oscuro el verde se aclara y un blanco encima quedaría ilegible. */
 .instalar-accion {
   background: var(--verde); color: var(--papel); border: 0; border-radius: 9px;
-  padding: 10px 16px; font-size: 0.875rem; font-weight: 600; font-family: inherit;
+  padding: 10px 16px; font-size: var(--letra-texto); font-weight: 600; font-family: inherit;
 }
 .instalar-secundario {
   background: transparent; color: var(--tinta); border: 1px solid var(--linea-alta);
-  border-radius: 9px; padding: 10px 14px; font-size: 0.875rem; font-family: inherit;
+  border-radius: 9px; padding: 10px 14px; font-size: var(--letra-texto); font-family: inherit;
 }
 .instalar-luego {
   background: transparent; border: 0; color: var(--tinta-2);
-  font-size: 0.8125rem; font-family: inherit; padding: 10px 4px; margin-left: auto;
+  font-size: var(--letra-nota); font-family: inherit; padding: 10px 4px; margin-left: auto;
 }
 
 /* ============================================================================
@@ -1149,31 +1212,34 @@ button { font-family: inherit; }
   width: 68px; height: 68px; border-radius: 15px; margin-bottom: 20px;
   border: 1px solid var(--linea);
 }
+/* Más grande que los demás títulos porque es la portada, debajo del ícono.
+   El peso sí es el de todos: sin escribirlo, el navegador le pone 700 a un
+   <h1> (hasta la v47). */
 .inst-pantalla h1 {
-  font-size: 1.5rem; margin: 0 0 8px; letter-spacing: -0.02em;
+  font-size: var(--letra-portada); font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em;
 }
 .inst-pantalla .entradilla {
-  margin: 0 0 22px; color: var(--tinta-2); font-size: 0.9375rem; line-height: 1.45;
+  margin: 0 0 22px; color: var(--tinta-2); font-size: var(--letra-cuerpo); line-height: 1.45;
 }
 .inst-pantalla .inst-sub {
-  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+  font-size: var(--letra-leyenda); font-weight: 600; letter-spacing: 0.09em;
   text-transform: uppercase; color: var(--tinta-2); margin: 0 0 10px;
 }
-.inst-pantalla ol { margin: 0; padding-left: 1.3em; font-size: 0.9375rem; }
+.inst-pantalla ol { margin: 0; padding-left: 1.3em; font-size: var(--letra-cuerpo); }
 .inst-pantalla li { margin-bottom: 11px; line-height: 1.45; }
 .inst-pantalla b { font-weight: 600; }
 .inst-pantalla svg { vertical-align: -3px; margin: 0 1px; }
 .inst-pantalla .aviso {
   margin-top: 22px; padding: 12px 14px;
   background: var(--verde-suave); border-radius: 10px;
-  font-size: 0.8125rem; line-height: 1.45; color: var(--tinta);
+  font-size: var(--letra-nota); line-height: 1.45; color: var(--tinta);
 }
 /* La salida. Va abajo del todo, en gris y sin aspecto de botón, porque no es lo
    que queremos que se haga: existe solo para que un fallo de detección en algún
    teléfono raro no deje a esa persona encerrada fuera de su propia app. */
 .inst-salida {
   background: transparent; border: 0; color: var(--tinta-2);
-  font-family: inherit; font-size: 0.8125rem; text-decoration: underline;
+  font-family: inherit; font-size: var(--letra-nota); text-decoration: underline;
   margin-top: 26px; padding: 10px 0; align-self: center;
 }
 
@@ -1209,13 +1275,13 @@ button { font-family: inherit; }
 /* `pre-line` respeta los saltos de línea del texto: varios mensajes llevan el
    detalle técnico en una segunda línea, y sin esto salía todo pegado. */
 .dialogo-texto {
-  margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--tinta);
+  margin: 0; font-size: var(--letra-cuerpo); line-height: 1.45; color: var(--tinta);
   white-space: pre-line;
 }
 .dialogo-botones { display: flex; gap: 8px; margin-top: 18px; }
 .dialogo-botones button {
   flex: 1; border-radius: 9px; padding: 12px 10px;
-  font-size: 0.9375rem; font-family: inherit; font-weight: 600;
+  font-size: var(--letra-cuerpo); font-family: inherit; font-weight: 600;
 }
 .dialogo-ok { background: var(--verde); color: var(--papel); border: 0; }
 .dialogo-cancelar {
@@ -1269,8 +1335,8 @@ button { font-family: inherit; }
 .aviso-breve .icono svg { width: 16px; height: 16px; fill: none; stroke: var(--verde);
                           stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .aviso-breve .texto { flex: 1; min-width: 0; }
-.aviso-breve .titulo { display: block; font-size: 0.875rem; font-weight: 600; }
-.aviso-breve .detalle { display: block; font-size: 0.75rem; opacity: .72;
+.aviso-breve .titulo { display: block; font-size: var(--letra-texto); font-weight: 600; }
+.aviso-breve .detalle { display: block; font-size: var(--letra-pie); opacity: .72;
                         font-variant-numeric: tabular-nums; }
 .aviso-breve .cerrar {
   position: relative; flex: none; width: 36px; height: 36px; padding: 0;
@@ -1290,7 +1356,7 @@ button { font-family: inherit; }
    encontrar, no que haya que leer. */
 .pie {
   margin: 30px 0 10px; text-align: center;
-  font-size: 0.75rem; line-height: 1.5; color: var(--tinta-2);
+  font-size: var(--letra-pie); line-height: 1.5; color: var(--tinta-2);
   white-space: pre-line;
 }
 
@@ -1329,7 +1395,7 @@ button { font-family: inherit; }
 /* En Ajustes va centrada, como el pie legal que tiene debajo. */
 .marca-kev.centrada { justify-content: center; margin: 30px 0 -20px; }
 
-h2.seccion { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.09em;
+h2.seccion { font-size: var(--letra-leyenda); font-weight: 600; letter-spacing: 0.09em;
              text-transform: uppercase; color: var(--tinta-2);
              margin: 24px 0 9px 2px; }
 
