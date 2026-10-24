@@ -75,6 +75,9 @@ class El {
     (this._lis[evento.type] || []).forEach(fn => fn(evento));
   }
   click() { if (this.onclick) this.onclick(); }
+  /* Aquí no hay pantalla que desplazar: se apunta que se pidió, para que una
+     prueba pueda comprobar que el aviso del cheque lleva a su sección. */
+  scrollIntoView(opciones) { this._desplazadoA = opciones || {}; }
 
   descendientes() { return this.children.flatMap(c => [c, ...c.descendientes()]); }
   querySelectorAll(sel) {

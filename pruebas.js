@@ -429,6 +429,12 @@ probar('el promedio por hora pesa las horas, no los turnos',
   r.totalPorHora, 32.35);                                   // 323.5 / 10
 
 probar('promedio por turno',       r.promedioPorTurno, 161.75);
+probar('y sin el sueldo',          r.propinasPorTurno, 111.75); // 223.5 / 2
+// "Por turno" respeta el ajuste del sueldo como las demás cifras (DECISIONES §7).
+probar('por turno sin contar el sueldo: el de las propinas',
+  L.cifrasPrincipales(r, false).porTurno, 111.75);
+probar('por turno contando el sueldo: el del total',
+  L.cifrasPrincipales(r, true).porTurno, 161.75);
 
 probar('una lista vacía devuelve ceros, no error',
   L.resumir([]).totalNeto, 0);
@@ -640,7 +646,7 @@ probar('lo que no se cuenta no se pierde: el sueldo sigue calculado',
   C.sueldoBase, 48);
 
 probar('sin argumentos no revienta',
-  L.cifrasPrincipales(null, false), { total: 0, porHora: 0 });
+  L.cifrasPrincipales(null, false), { total: 0, porHora: 0, porTurno: 0 });
 
 /* El mejor día tiene que ordenar con el mismo criterio que la pantalla, o dirá
    que el mejor fue un día que no es el de la cifra más alta.
@@ -1053,10 +1059,15 @@ probar('por hora no es suma', det('porHora').suma, false);
 
 probar('prop/vtas: total de la tarjeta y sus dos piezas',
   det('propVtas').total, { valor: rD.porcentajeVentas, propinas: rD.propinas, ventas: rD.ventas });
-probar('por turno: el promedio de la tarjeta, sobre el total y los turnos',
-  det('porTurno').total, { valor: rD.promedioPorTurno, total: rD.totalNeto, turnos: 3 });
+probar('por turno, sin el sueldo contado: el promedio de las propinas',
+  det('porTurno').total, { valor: rD.propinasPorTurno, total: rD.netoPropinas, turnos: 3 });
+probar('y cada día es lo que se llevó, sin piezas que explicar',
+  det('porTurno').filas[0], { fecha: '2026-08-10', valor: 21 });
+const porTurnoConSueldo = L.detalleSemana(semanaD, 'porTurno', { contarSueldo: true });
+probar('con el sueldo contado: el promedio con sueldo',
+  porTurnoConSueldo.total, { valor: rD.promedioPorTurno, total: rD.totalNeto, turnos: 3 });
 probar('y cada día dice cuánto fue propina y cuánto sueldo',
-  det('porTurno').filas.every(f => L.redondear(f.propinas + f.sueldo) === f.valor), true);
+  porTurnoConSueldo.filas.every(f => L.redondear(f.propinas + f.sueldo) === f.valor), true);
 
 probar('incentivo: sin anotar es null, un cero escrito es 0',
   det('incentivo').filas.map(f => f.valor), [null, 4, 0]);
@@ -1069,6 +1080,144 @@ probar('una semana sin turnos da filas vacías y total cero',
 let lanzo = false;
 try { L.detalleSemana(semanaD, 'propina'); } catch (e) { lanzo = true; }
 probar('una clave que no existe es un error en voz alta, no una hoja vacía', lanzo, true);
+
+
+/* --------------------------------------------------------------------------
+   Cheque estimado
+   --------------------------------------------------------------------------
+   Números inventados. Cada valor esperado está calculado a mano con las
+   tablas oficiales de 2026 (Pub 15-T del IRS; formulario NJ-W4; tasas del
+   Department of Labor del estado), con la cuenta en el comentario, para que una prueba no
+   se valide contra la misma fórmula que prueba. */
+grupo('Cheque estimado');
+
+const PERFIL = { periodos: 52, federal: { estado: 'soltero' },
+                 estatal: { tipo: 'nj', tasa: 'A', exenciones: 0 } };
+// Sueldo 200 + tarjeta 1,000 + 160 declarados = 1,360 de bruto.
+const BASE = { sueldo: 200, tarjeta: 1000, declarado: 160, acumulado: 10000, anio: 2026 };
+const cheque = (cambios, perfil) =>
+  L.estimarCheque(Object.assign({}, BASE, cambios, { perfil: perfil || PERFIL }));
+const linea = (r, clave) => (r.lineas.find(l => l.clave === clave) || {}).monto;
+const C1 = cheque();
+
+probar('el bruto suma sueldo, tarjeta y lo declarado', C1.bruto, 1360);
+// 1,360 × 52 = 70,720 − 8,600 = 62,120 → 5,800 + 22 % de 4,220 = 6,728.40 ÷ 52
+probar('federal, soltero: tabla anual del 22 %', linea(C1, 'federal'), 129.39);
+// 11,360 × 6.2 % = 704.32 − 10,000 × 6.2 % = 620
+probar('social security sobre el acumulado', linea(C1, 'socialSecurity'), 84.32);
+// 11,360 × 1.45 % = 164.72 − 145
+probar('medicare sobre el acumulado', linea(C1, 'medicare'), 19.72);
+// 70,720 → tabla A: 795 + 6.1 % de 30,720 = 2,668.92 ÷ 52 = 51.3254
+probar('NJ, tabla A, sin exenciones', linea(C1, 'njRenta'), 51.33);
+probar('NJ UI: 0.425 %', linea(C1, 'njUI'), 5.78);       // 5.78
+probar('NJ DI: 0.19 %', linea(C1, 'njDI'), 2.58);        // 2.584
+probar('NJ FLI: 0.23 %', linea(C1, 'njFLI'), 3.13);      // 3.128
+probar('las retenciones suman sus líneas', C1.retenciones, 296.25);
+// 1,360 − 296.25 − 160 (el efectivo ya está en el bolsillo)
+probar('el neto descuenta lo declarado, que no llega en el cheque', C1.neto, 903.75);
+probar('dice con qué tablas calculó', [C1.anioTablas, C1.tablasDelAnio], [2026, true]);
+
+// 300 × 0.425 % = 1.275: la mitad sube, aunque la máquina guarde 1.27499…
+probar('la UI que topa a mitad del cheque cobra solo lo que falta, redondeando hacia arriba',
+  linea(cheque({ acumulado: 44500 }), 'njUI'), 1.28);
+// 67.50 × 6.2 % = 4.185 y 250 × 0.23 % = 0.575: en la máquina quedan un pelo
+// por debajo de la mitad, y un redondeo ingenuo perdería el centavo.
+const CHICO = cheque({ sueldo: 67.5, tarjeta: 0, declarado: 0, acumulado: null });
+probar('la mitad de un centavo sube también en social security', linea(CHICO, 'socialSecurity'), 4.19);
+probar('y en FLI', linea(cheque({ sueldo: 250, tarjeta: 0, declarado: 0, acumulado: null }), 'njFLI'), 0.58);
+probar('pasado el tope, la UI ya no se cobra', linea(cheque({ acumulado: 45000 }), 'njUI'), 0);
+// 184,500 × 6.2 % = 11,439 − 184,000 × 6.2 % = 11,408
+probar('social security se para en el tope del año',
+  linea(cheque({ acumulado: 184000 }), 'socialSecurity'), 31);
+// 200,860 × 1.45 % = 2,912.47 − 2,892.75 = 19.72, más 0.9 % de 860 = 7.74
+probar('medicare suma 0.9 % pasados los 200,000 del año',
+  linea(cheque({ acumulado: 199500 }), 'medicare'), 27.46);
+probar('sin acumulado se calcula el periodo solo',
+  [linea(cheque({ acumulado: null }), 'socialSecurity'), linea(cheque({ acumulado: null }), 'njUI')],
+  [84.32, 5.78]);
+
+const conFederal = federal => Object.assign({}, PERFIL, { federal });
+// 70,720 − 12,900 = 57,820 → 2,480 + 12 % de 13,720 = 4,126.40 ÷ 52
+probar('federal, casados en conjunto',
+  linea(cheque({}, conFederal({ estado: 'casadoJunto' })), 'federal'), 79.35);
+// Sin la deducción de la línea 1g: 70,720 → 8,983 + 24 % de 9,820 = 11,339.80 ÷ 52
+probar('federal con la casilla del paso 2',
+  linea(cheque({}, conFederal({ estado: 'soltero', paso2: true })), 'federal'), 218.07);
+// 129.39 − 2,000 ÷ 52 + 10
+probar('federal con créditos (paso 3) y retención extra (paso 4c)',
+  linea(cheque({}, conFederal({ estado: 'soltero', paso3: 2000, paso4c: 10 })), 'federal'), 100.93);
+// 70,720 − 8,600 − 25,000 = 37,120 → 1,240 + 12 % de 17,220 = 3,306.40 ÷ 52
+probar('federal con deducciones en el paso 4b (p. ej. la de propinas)',
+  linea(cheque({}, conFederal({ estado: 'soltero', paso4b: 25000 })), 'federal'), 63.58);
+
+const conEstatal = estatal => Object.assign({}, PERFIL, { estatal });
+// 70,720 → tabla B: 1,440 + 3.9 % de 720 = 1,468.08 ÷ 52
+probar('NJ, tabla B', linea(cheque({}, conEstatal({ tipo: 'nj', tasa: 'B' })), 'njRenta'), 28.23);
+// 70,720 − 2,000 = 68,720 → 795 + 6.1 % de 28,720 = 2,546.92 ÷ 52
+probar('NJ con dos exenciones',
+  linea(cheque({}, conEstatal({ tipo: 'nj', tasa: 'A', exenciones: 2 })), 'njRenta'), 48.98);
+probar('un estado sin descuentos deja solo las tres federales',
+  cheque({}, conEstatal({ tipo: 'ninguno' })).lineas.map(l => l.clave),
+  ['federal', 'socialSecurity', 'medicare']);
+probar('un estado calibrado retiene su porcentaje del bruto',
+  linea(cheque({}, conEstatal({ tipo: 'porcentaje', porcentaje: 4.5 })), 'estatal'), 61.2);
+
+const C27 = cheque({ anio: 2027 });
+probar('un año sin tablas usa las últimas y lo dice', [C27.anioTablas, C27.tablasDelAnio], [2026, false]);
+
+// 1,234.56 × 16 % = 197.5296: se trunca, como en los cheques con que se probó
+probar('el efectivo declarado como porcentaje de la tarjeta se trunca',
+  L.efectivoDeclarado('porcentaje', { tarjeta: 1234.56, porcentaje: 16 }), 197.52);
+probar('declarar lo anotado usa el efectivo neto',
+  L.efectivoDeclarado('anotado', { efectivoNeto: 45.5 }), 45.5);
+probar('y una noche en negativo no declara menos que cero',
+  L.efectivoDeclarado('anotado', { efectivoNeto: -20 }), 0);
+probar('sin declarar, cero', L.efectivoDeclarado('nada', { tarjeta: 1000, porcentaje: 16 }), 0);
+
+// El domingo 18 de octubre de 2026; los jueves son el día 4 de getDay().
+probar('la semana que termina el domingo 18 se paga el jueves 22',
+  L.fechaDePago('2026-10-18', 4), '2026-10-22');
+probar('si se paga el mismo día en que termina, es el de la semana siguiente',
+  L.fechaDePago('2026-10-18', 0), '2026-10-25');
+probar('un día de pago raro cae en jueves', L.fechaDePago('2026-10-18', 9), '2026-10-22');
+
+// Dos turnos: sueldo 6 h + 5 h a 5.62; tarjeta 150.75 + 40; efectivo neto
+// (100 − 32.5) + (20 − 39) = 48.5
+const semanaCh = [
+  { fecha: '2026-08-10', entrada: '17:00', salida: '22:00', ventas: 600, efectivo: 20,
+    tarjeta: 40, tipOut: 39, tarifaHora: 5.62 },
+  { fecha: '2026-08-12', entrada: '17:00', salida: '23:00', ventas: 1000, efectivo: 100,
+    tarjeta: 150.75, tipOut: 32.5, tarifaHora: 5.62 }
+];
+probar('el cheque de una semana: sueldo, tarjeta y 16 % de la tarjeta, truncado',
+  L.chequeDeLaSemana(semanaCh, { declara: 'porcentaje', porcentaje: 16, tipOutEnEfectivo: true }),
+  { sueldo: 61.82, tarjeta: 190.75, declarado: 30.52 });   // 190.75 × 16 % = 30.52
+probar('declarando lo anotado, va el efectivo neto',
+  L.chequeDeLaSemana(semanaCh, { declara: 'anotado', tipOutEnEfectivo: true }).declarado, 48.5);
+probar('y si el tip-out no sale de los billetes, el efectivo entero',
+  L.chequeDeLaSemana(semanaCh, { declara: 'anotado', tipOutEnEfectivo: false }).declarado, 120);
+
+const semanasCh = [
+  { fechaPago: '2025-12-31', bruto: 900 },   // otro año: no cuenta
+  { fechaPago: '2026-01-08', bruto: 1000 },
+  { fechaPago: '2026-01-15', bruto: 1100.5 },
+  { fechaPago: '2026-01-22', bruto: 1200 },  // el cheque que se calcula
+  { fechaPago: '2026-01-29', bruto: 1300 }   // después: no cuenta
+];
+probar('sin ancla, el acumulado suma las semanas del año pagadas antes',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', null), { monto: 2100.5, fuente: 'app' });
+probar('con ancla, su monto más lo pagado después de ella',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-08' }),
+  { monto: 6100.5, fuente: 'ancla' });
+probar('un ancla de otro año no sirve',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2025-12-31' }).fuente, 'app');
+probar('ni una posterior al cheque que se calcula',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-29' }).fuente, 'app');
+probar('ni una sin monto',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: null, fecha: '2026-01-08' }).fuente, 'app');
+
+probar('calibrar el estado con un cheque: retenido ÷ bruto', L.calibrarEstatal(1360, 61.2), 4.5);
+probar('un bruto en cero no calibra nada', L.calibrarEstatal(0, 10), 0);
 
 
 /* --------------------------------------------------------------------------

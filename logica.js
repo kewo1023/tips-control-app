@@ -470,6 +470,10 @@ function resumir(turnos) {
   acc.totalPorHora     = acc.horas  > 0 ? redondear(acc.totalNeto / acc.horas)    : 0;
   acc.porcentajeVentas = acc.ventas > 0 ? redondear(acc.propinas / acc.ventas * 100) : 0;
   acc.promedioPorTurno = acc.turnos > 0 ? redondear(acc.totalNeto / acc.turnos)   : 0;
+  // El mismo promedio sin el sueldo. Los dos existen por la misma razón que
+  // `propinaPorHora` y `totalPorHora`: `cifrasPrincipales` elige uno según el
+  // ajuste, y ninguna pantalla debería escoger por su cuenta.
+  acc.propinasPorTurno = acc.turnos > 0 ? redondear(acc.netoPropinas / acc.turnos) : 0;
 
   return acc;
 }
@@ -605,13 +609,18 @@ function horasFrecuentes(turnos, campo, cuantas = 4) {
  * ni toca el historial: cambia lo que se pinta, no lo que se guardó.
  *
  * Sirve igual para un turno que para un resumen de la semana, porque ambos
- * devuelven las mismas cuatro claves.
+ * devuelven las mismas cuatro claves. `porTurno` solo tiene sentido en un
+ * resumen (un turno suelto no tiene promedio) y en un turno da 0.
+ *
+ * `porTurno` se añadió el 24 de octubre de 2026: hasta la v49 la tarjeta "Por
+ * turno" usaba siempre el promedio CON sueldo, aunque el ajuste dijera que no
+ * se contara, y era la única cifra que no lo respetaba (DECISIONES §7).
  */
 function cifrasPrincipales(calculo, contarSueldo) {
   const c = calculo || {};
   return contarSueldo
-    ? { total: c.totalNeto     || 0, porHora: c.totalPorHora   || 0 }
-    : { total: c.netoPropinas  || 0, porHora: c.propinaPorHora || 0 };
+    ? { total: c.totalNeto    || 0, porHora: c.totalPorHora   || 0, porTurno: c.promedioPorTurno || 0 }
+    : { total: c.netoPropinas || 0, porHora: c.propinaPorHora || 0, porTurno: c.propinasPorTurno || 0 };
 }
 
 /**
@@ -709,9 +718,11 @@ function detalleSemana(turnos, clave, opciones) {
       case 'propVtas': return { valor: c.porcentajeVentas, propinas: c.propinas, ventas };
       case 'sueldo':   return { valor: c.sueldoBase, horas: c.horas,
                                 tarifa: redondear(Number(turno.tarifaHora) || 0) };
-      // `promedioPorTurno` se saca del total CON sueldo (`resumir`), así que
-      // cada día también, y se dice de qué está hecho.
-      case 'porTurno': return { valor: c.totalNeto, propinas: c.netoPropinas, sueldo: c.sueldoBase };
+      // Cada día vale lo que se llevó, con el mismo criterio que el total. Con
+      // el sueldo contado, se dice cuánto fue propina y cuánto sueldo.
+      case 'porTurno': return conSueldo
+        ? { valor: cifras.total, propinas: c.netoPropinas, sueldo: c.sueldoBase }
+        : { valor: cifras.total };
       // Un campo en blanco no es un cero: es un turno sin anotar (ver `resumir`).
       case 'incentivo': {
         const anotado = turno.incentivo !== undefined && turno.incentivo !== null;
@@ -732,7 +743,7 @@ function detalleSemana(turnos, clave, opciones) {
     ventas:    { valor: r.ventas },
     propVtas:  { valor: r.porcentajeVentas, propinas: r.propinas, ventas: r.ventas },
     sueldo:    { valor: r.sueldoBase },
-    porTurno:  { valor: r.promedioPorTurno, total: r.totalNeto, turnos: r.turnos },
+    porTurno:  { valor: cifras.porTurno, total: cifras.total, turnos: r.turnos },
     incentivo: { valor: redondear(r.incentivo), anotados: r.turnosConIncentivo, turnos: r.turnos }
   };
 
@@ -1036,6 +1047,309 @@ function turnosACSV(turnos, encabezados) {
    30 días es lo que se tarda en juntar un mes que dolería perder; y "Ahora
    no" lo esconde 7 días: lo bastante para no ser una molestia diaria, lo
    bastante poco para que no se olvide. */
+/* --- Cheque estimado ----------------------------------------------------- */
+
+/*
+ * Cuánto va a llegar en el cheque de la semana, antes de que llegue.
+ *
+ * El cheque paga el sueldo y la propina de tarjeta, y retiene sobre eso más el
+ * efectivo que se declara (que se suma al bruto solo para retener y después se
+ * resta, porque ya está en el bolsillo):
+ *
+ *     bruto = sueldo + tarjeta + efectivo declarado
+ *     neto  = bruto − retenciones − efectivo declarado
+ *
+ * Las retenciones salen de las tablas oficiales del año, no de un porcentaje:
+ * la federal es progresiva y salta del 12 % al 22 % dentro de semanas normales
+ * de un mesero, así que un porcentaje fijo se equivoca justo en las semanas
+ * buenas (DECISIONES §26). Se probó contra tres cheques reales de semanas
+ * distintas y cuadró al centavo en las retenciones; esos cheques no están en
+ * el repositorio, y las pruebas usan números inventados.
+ *
+ * Las tablas cambian cada enero. Si el año del cheque no está aquí, se usan
+ * las del último año que sí está y el resultado lo dice (`tablasDelAnio`),
+ * para que la pantalla avise en vez de equivocarse en silencio.
+ */
+const TABLAS_CHEQUE = {
+  2026: {
+    // IRS Publication 15-T (2026), Worksheet 1A y "Annual Percentage Method
+    // Tables" para un W-4 de 2020 o después. Cada fila: [desde, base, tasa].
+    federal: {
+      deduccionSinPaso2: { casadoJunto: 12900, otro: 8600 },   // línea 1g
+      tablas: {
+        normal: {
+          casadoJunto: [[0, 0, 0], [19300, 0, .10], [44100, 2480, .12], [120100, 11600, .22],
+                        [230700, 35932, .24], [422850, 82048, .32], [531750, 116896, .35],
+                        [788000, 206583.50, .37]],
+          soltero:     [[0, 0, 0], [7500, 0, .10], [19900, 1240, .12], [57900, 5800, .22],
+                        [113200, 17966, .24], [209275, 41024, .32], [263725, 58448, .35],
+                        [648100, 192979.25, .37]],
+          jefeHogar:   [[0, 0, 0], [15550, 0, .10], [33250, 1770, .12], [83000, 7740, .22],
+                        [121250, 16155, .24], [217300, 39207, .32], [271750, 56631, .35],
+                        [656150, 191171, .37]]
+        },
+        // La casilla del paso 2 (dos trabajos): tramos a la mitad.
+        paso2: {
+          casadoJunto: [[0, 0, 0], [16100, 0, .10], [28500, 1240, .12], [66500, 5800, .22],
+                        [121800, 17966, .24], [217875, 41024, .32], [272325, 58448, .35],
+                        [400450, 103291.75, .37]],
+          soltero:     [[0, 0, 0], [8050, 0, .10], [14250, 620, .12], [33250, 2900, .22],
+                        [60900, 8983, .24], [108938, 20512, .32], [136163, 29224, .35],
+                        [328350, 96489.63, .37]],
+          jefeHogar:   [[0, 0, 0], [12075, 0, .10], [20925, 885, .12], [45800, 3870, .22],
+                        [64925, 8077.50, .24], [112950, 19603.50, .32], [140175, 28315.50, .35],
+                        [332375, 95585.50, .37]]
+        }
+      }
+    },
+    // SSA: tope de 2026 para Social Security. Medicare no tiene tope, pero
+    // desde $200,000 en el año el empleador retiene 0.9 % más.
+    socialSecurity: { tasa: .062, tope: 184500 },
+    medicare: { tasa: .0145, adicional: .009, desde: 200000 },
+    // NJ: tablas del formulario NJ-W4 (método anual, $1,000 por exención) y
+    // tasas del Department of Labor para 2026. UI es la suma de UI (0.3825 %)
+    // y del fondo de capacitación (0.0425 %).
+    nj: {
+      exencion: 1000,
+      tablas: {
+        A: [[0, 0, .015], [20000, 300, .02], [35000, 600, .039], [40000, 795, .061],
+            [75000, 2930, .07], [500000, 32680, .099], [1000000, 82180, .118]],
+        B: [[0, 0, .015], [20000, 300, .02], [50000, 900, .027], [70000, 1440, .039],
+            [80000, 1830, .061], [150000, 6100, .07], [500000, 30600, .099],
+            [1000000, 80100, .118]],
+        C: [[0, 0, .015], [20000, 300, .023], [40000, 760, .028], [50000, 1040, .035],
+            [60000, 1390, .056], [150000, 6430, .066], [500000, 29530, .099],
+            [1000000, 79030, .118]],
+        D: [[0, 0, .015], [20000, 300, .027], [40000, 840, .034], [50000, 1180, .043],
+            [60000, 1610, .056], [150000, 6650, .065], [500000, 29400, .099],
+            [1000000, 78900, .118]],
+        E: [[0, 0, .015], [20000, 300, .02], [35000, 600, .058], [100000, 4370, .065],
+            [500000, 30370, .099], [1000000, 79870, .118]]
+      },
+      ui:  { tasa: .00425, tope: 44800 },
+      di:  { tasa: .0019,  tope: 171100 },
+      fli: { tasa: .0023,  tope: 171100 }
+    }
+  }
+};
+
+/* Centavos con la regla de la nómina: la mitad sube. `redondear` hace lo
+   mismo, pero 1.005 se guarda en la máquina como 1.00499999… y bajaría; aquí
+   se corrige ese residuo antes de redondear, porque en una retención un
+   centavo de menos es un cheque que no cuadra. */
+function centavos(n) {
+  if (!isFinite(n)) return 0;
+  return Math.round(Number((n * 100).toFixed(6))) / 100;
+}
+
+/* El impuesto de una tabla de tramos [desde, base, tasa] para un monto. */
+function porTramos(tabla, monto) {
+  let resultado = 0;
+  tabla.forEach(([desde, base, tasa]) => {
+    if (monto > desde) resultado = base + tasa * (monto - desde);
+  });
+  return resultado;
+}
+
+/**
+ * El efectivo que se declara en el cheque, según cómo lo haga el restaurante:
+ *
+ *   - 'porcentaje': un porcentaje fijo de la propina de tarjeta, que pone el
+ *     restaurante. Se TRUNCA al centavo: así salió en los cheques con que se
+ *     probó (1,067.99 × 16 % = 170.878 → 170.87).
+ *   - 'anotado': lo que se anotó en la app como efectivo neto (lo que de
+ *     verdad se queda), sin bajar de cero.
+ *   - 'nada': no se declara efectivo.
+ */
+function efectivoDeclarado(metodo, datos) {
+  const d = datos || {};
+  if (metodo === 'porcentaje') {
+    const monto = (Number(d.tarjeta) || 0) * (Number(d.porcentaje) || 0) / 100;
+    return Math.floor(Number((monto * 100).toFixed(6))) / 100;
+  }
+  if (metodo === 'anotado') return Math.max(0, centavos(Number(d.efectivoNeto) || 0));
+  return 0;
+}
+
+/**
+ * El cheque estimado de un periodo de pago.
+ *
+ * @param {Object} entrada
+ *   sueldo, tarjeta, declarado — lo del periodo (ver `efectivoDeclarado`).
+ *   acumulado — el bruto del año ANTES de este cheque. Hace falta para los
+ *     topes (la UI de NJ se acaba en $44,800) y para redondear Social Security
+ *     y Medicare sobre el acumulado, como lo hace la nómina. Sin él (null) se
+ *     calcula el periodo solo: puede fallar por un centavo y no ve los topes.
+ *   anio — el año del día de pago.
+ *   perfil — { periodos: 52,
+ *     federal: { estado: 'soltero'|'casadoJunto'|'jefeHogar', paso2: false,
+ *                paso3: 0, paso4a: 0, paso4b: 0, paso4c: 0 },   // como el W-4
+ *     estatal: { tipo: 'nj'|'ninguno'|'porcentaje',
+ *                tasa: 'A'..'E', exenciones: 0,                 // si es 'nj'
+ *                porcentaje: 0 } }                              // si es 'porcentaje'
+ * @returns {{ bruto, lineas: Array<{clave, monto}>, retenciones, neto,
+ *             anioTablas, tablasDelAnio }}
+ */
+function estimarCheque(entrada) {
+  const e = entrada || {};
+  const anios = Object.keys(TABLAS_CHEQUE).map(Number).sort((a, b) => a - b);
+  const anioPedido = Number(e.anio) || anios[anios.length - 1];
+  const anioTablas = TABLAS_CHEQUE[anioPedido] ? anioPedido
+                   : anios.filter(a => a <= anioPedido).pop() || anios[0];
+  const T = TABLAS_CHEQUE[anioTablas];
+
+  const perfil = e.perfil || {};
+  const periodos = Number(perfil.periodos) || 52;
+  const fed = perfil.federal || {};
+  const est = perfil.estatal || {};
+
+  const sueldo = centavos(Number(e.sueldo) || 0);
+  const tarjeta = centavos(Number(e.tarjeta) || 0);
+  const declarado = centavos(Number(e.declarado) || 0);
+  const bruto = centavos(sueldo + tarjeta + declarado);
+  const hayAcumulado = e.acumulado !== null && e.acumulado !== undefined
+                    && isFinite(Number(e.acumulado));
+  const antes = hayAcumulado ? Math.max(0, Number(e.acumulado)) : 0;
+
+  /* Un porcentaje con tope sobre el año. Con el acumulado se calcula como la
+     nómina: lo retenido en el año hasta hoy menos lo retenido hasta el cheque
+     anterior, cada uno redondeado. Así no se arrastran medios centavos. */
+  const sobreElAnio = (tasa, tope) => {
+    if (!hayAcumulado) return centavos(Math.min(bruto, tope) * tasa);
+    const hasta = monto => centavos(Math.min(monto, tope) * tasa);
+    return centavos(hasta(antes + bruto) - hasta(antes));
+  };
+  // Igual, pero redondeando cada periodo (así salen DI y FLI en la nómina).
+  const delPeriodo = (tasa, tope) =>
+    centavos(Math.max(0, Math.min(bruto, tope - antes)) * tasa);
+
+  // Federal: Worksheet 1A de la Pub 15-T, paso por paso.
+  const estado = ['casadoJunto', 'jefeHogar'].includes(fed.estado) ? fed.estado : 'soltero';
+  const anual = bruto * periodos + (Number(fed.paso4a) || 0);
+  const deduccion = (Number(fed.paso4b) || 0) + (fed.paso2 ? 0
+    : T.federal.deduccionSinPaso2[estado === 'casadoJunto' ? 'casadoJunto' : 'otro']);
+  const ajustado = Math.max(0, anual - deduccion);
+  const tabla = T.federal.tablas[fed.paso2 ? 'paso2' : 'normal'][estado];
+  const tentativo = centavos(porTramos(tabla, ajustado) / periodos);
+  const federal = centavos(Math.max(0, tentativo - (Number(fed.paso3) || 0) / periodos)
+                         + (Number(fed.paso4c) || 0));
+
+  const ss = sobreElAnio(T.socialSecurity.tasa, T.socialSecurity.tope);
+  const medicare = centavos(sobreElAnio(T.medicare.tasa, Infinity)
+    + Math.max(0, antes + bruto - Math.max(antes, T.medicare.desde)) * T.medicare.adicional);
+
+  const lineas = [
+    { clave: 'federal', monto: federal },
+    { clave: 'socialSecurity', monto: ss },
+    { clave: 'medicare', monto: medicare }
+  ];
+
+  if (est.tipo === 'nj') {
+    const tablaNJ = T.nj;
+    const tasa = tablaNJ.tablas[est.tasa] ? est.tasa : 'A';
+    const gravable = Math.max(0, bruto * periodos - (Number(est.exenciones) || 0) * tablaNJ.exencion);
+    lineas.push(
+      { clave: 'njRenta', monto: centavos(porTramos(tablaNJ.tablas[tasa], gravable) / periodos) },
+      { clave: 'njUI',  monto: delPeriodo(tablaNJ.ui.tasa, tablaNJ.ui.tope) },
+      { clave: 'njDI',  monto: delPeriodo(tablaNJ.di.tasa, tablaNJ.di.tope) },
+      { clave: 'njFLI', monto: delPeriodo(tablaNJ.fli.tasa, tablaNJ.fli.tope) });
+  } else if (est.tipo === 'porcentaje') {
+    lineas.push({ clave: 'estatal', monto: centavos(bruto * (Number(est.porcentaje) || 0) / 100) });
+  }
+
+  const retenciones = centavos(lineas.reduce((s, l) => s + l.monto, 0));
+  return {
+    bruto,
+    lineas,
+    retenciones,
+    neto: centavos(bruto - retenciones - declarado),
+    anioTablas,
+    tablasDelAnio: anioTablas === anioPedido
+  };
+}
+
+/**
+ * El porcentaje estatal de una persona, sacado de un cheque suyo: lo que el
+ * cheque retuvo para el estado (todas las líneas del estado sumadas) entre
+ * su bruto. Es la salida para los estados que la app no tiene en tablas: no
+ * es exacto (el impuesto estatal casi siempre es progresivo), pero es el de
+ * ESA persona y se puede rehacer con un cheque nuevo.
+ */
+function calibrarEstatal(bruto, retenidoEstatal) {
+  const b = Number(bruto) || 0;
+  if (b <= 0) return 0;
+  return Math.round((Number(retenidoEstatal) || 0) / b * 100 * 10000) / 10000;
+}
+
+/**
+ * El día en que llega el cheque de una semana: el primer `diaPago` DESPUÉS
+ * del último día de la semana (con la numeración de `getDay()`, 0 domingo).
+ * La semana que termina el domingo 18 y se paga los jueves llega el 22.
+ */
+function fechaDePago(finDeSemana, diaPago) {
+  const objetivo = Number.isInteger(diaPago) && diaPago >= 0 && diaPago <= 6 ? diaPago : 4;
+  for (let i = 1; i <= 7; i++) {
+    const fecha = sumarDias(finDeSemana, i);
+    const [a, m, d] = fecha.split('-').map(Number);
+    if (new Date(a, m - 1, d).getDay() === objetivo) return fecha;
+  }
+  return sumarDias(finDeSemana, 7);   // no se llega aquí: algún día de 7 coincide
+}
+
+/**
+ * Lo que entra al cheque por una semana de turnos: el sueldo, la propina de
+ * tarjeta y el efectivo declarado. Es lo que pide `estimarCheque`.
+ *
+ * El efectivo "anotado" es el que de verdad queda en el bolsillo: con el
+ * tip-out pagado en billetes, el efectivo neto (`efectivoMostrado`).
+ *
+ * @param {Object} opciones { declara, porcentaje, tipOutEnEfectivo }
+ */
+function chequeDeLaSemana(turnos, opciones) {
+  const o = opciones || {};
+  const r = resumir(turnos);
+  return {
+    sueldo: r.sueldoBase,
+    tarjeta: r.tarjeta,
+    declarado: efectivoDeclarado(o.declara, {
+      tarjeta: r.tarjeta, porcentaje: o.porcentaje,
+      efectivoNeto: efectivoMostrado(r, !!o.tipOutEnEfectivo)
+    })
+  };
+}
+
+/**
+ * El bruto del año ANTES de un cheque, que necesita `estimarCheque` para los
+ * topes. Dos fuentes:
+ *
+ *   - **El ancla**: el "year to date" que la persona copió de un cheque suyo,
+ *     con la fecha de pago de ese cheque. Lo que se pagó después se suma con
+ *     lo anotado en la app. Es lo más fiable, porque la app no sabe lo que
+ *     se ganó antes de empezar a usarla.
+ *   - **La app**: sin ancla (o con una de otro año, o posterior a este
+ *     cheque), la suma de los brutos de las semanas anotadas que se pagan
+ *     este año antes de este cheque.
+ *
+ * @param {Array}  semanas   [{ fechaPago, bruto }] de todas las semanas anotadas
+ * @param {string} fechaPago la de este cheque
+ * @param {Object} ancla     { monto, fecha } o null
+ * @returns {{ monto: number, fuente: 'ancla'|'app' }}
+ */
+function acumuladoDelAnio(semanas, fechaPago, ancla) {
+  const anio = String(fechaPago).slice(0, 4);
+  const lista = Array.isArray(semanas) ? semanas : [];
+  const suma = desde => centavos(lista
+    .filter(s => String(s.fechaPago).slice(0, 4) === anio
+              && s.fechaPago > desde && s.fechaPago < fechaPago)
+    .reduce((t, s) => t + (Number(s.bruto) || 0), 0));
+
+  const a = ancla || {};
+  const anclaSirve = isFinite(Number(a.monto)) && a.monto !== null && a.monto !== ''
+    && typeof a.fecha === 'string' && a.fecha.slice(0, 4) === anio && a.fecha < fechaPago;
+  if (anclaSirve) return { monto: centavos(Number(a.monto) + suma(a.fecha)), fuente: 'ancla' };
+  return { monto: suma(''), fuente: 'app' };
+}
+
 const MINIMO_TURNOS_AVISO_RESPALDO = 5;
 const DIAS_AVISO_RESPALDO = 30;
 const DIAS_POSPONER_RESPALDO = 7;
@@ -1076,6 +1390,8 @@ if (typeof module !== 'undefined' && module.exports) {
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
     detalleSemana, DETALLES,
+    estimarCheque, efectivoDeclarado, calibrarEstatal, TABLAS_CHEQUE,
+    fechaDePago, chequeDeLaSemana, acumuladoDelAnio,
     turnoValido, fusionarTurnos,
     franjaDelTurno, minutosDeCorte, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
     avisoRespaldo, resumenAnual, aniosConTurnos, celdaCSV, turnosACSV,

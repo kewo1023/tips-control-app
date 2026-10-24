@@ -381,11 +381,14 @@ ingresos. El efectivo va directo al bolsillo.
   posibles, inflar es el peor: un número que favorece a quien lo lee no lo
   cuestiona nadie.
 - **No etiquetar nada como "impuestos" ni "descuento".** "Sueldo del turno" y
-  punto.
+  punto. *(Sigue vigente para el resto de la app. El cheque estimado, §27, usa a
+  propósito los nombres del cheque —Federal Income, Social Security…—: se
+  compara contra el papel, y el mantenedor lo eligió así el 24 de octubre de
+  2026.)*
 - Efectivo y tarjeta siempre separados.
 - `prefs.contarSueldo` decide la cifra vía `cifrasPrincipales()`, **sin
   recalcular**, y se aplica igual en recibo, total, barras, comparación, por
-  hora y **mejor día** (si el "mejor día" no coincide con la barra más alta, se
+  hora, por turno (desde el 24 de octubre de 2026, ver §25) y **mejor día** (si el "mejor día" no coincide con la barra más alta, se
   desconfía de toda la app).
 - Con el sueldo apagado, en el recibo va debajo de la raya y sin `+`.
 
@@ -1289,13 +1292,104 @@ aprobó entera.
 - **Al apretarla, la tarjeta se oscurece en vez de encogerse** como los demás
   botones: la rejilla dibuja sus rayas con el fondo que asoma por el hueco de
   1 px, y encogida dejaría ver un marco gris alrededor.
-- **Hallazgo, sin cambiar todavía:** "Por turno" (`promedioPorTurno`) se
-  calcula con el sueldo incluido aunque el sueldo no se cuente en el total,
-  y §7 pide que esa preferencia se aplique igual en todas las cifras. La hoja
-  no lo esconde: cada día dice cuánto fue propina y cuánto sueldo. Arreglarlo
-  cambia una cifra que ya se ve, así que se decide aparte.
+- **Hallazgo, arreglado en la v50 con el OK del mantenedor:** la tarjeta
+  "Por turno" usaba `promedioPorTurno`, que lleva el sueldo, aunque el ajuste
+  dijera que no se contara; Reportes sí lo respetaba. Ahora sale de
+  `cifrasPrincipales` (`porTurno`), como el total y el por hora, y la cifra
+  baja para quien no cuenta el sueldo. Con el sueldo contado, la hoja dice
+  de cada día cuánto fue propina y cuánto sueldo.
 - **Descartado:** dejar la (i) con su globo y que el resto de la tarjeta
   abriera el día a día (dos zonas de toque juntas); una pantalla aparte en vez
   de la hoja (sacaría a la persona de la semana para una consulta de un
   vistazo); renglones vacíos para los días libres (alargan la hoja sin dar un
   dato).
+
+
+## 26. Cheque estimado: la lógica (24 de octubre de 2026)
+
+Vigente. La pantalla todavía no existe: se decide sobre una vista previa
+antes de construirla. Aquí va lo que ya está en `logica.js`
+(`estimarCheque`, `efectivoDeclarado`, `calibrarEstatal`, `TABLAS_CHEQUE`).
+
+- **Tablas oficiales, no un porcentaje.** Calibrar con "el cheque es el X %
+  del bruto" se descartó con datos: dos cheques reales retuvieron el 19.9 % y
+  el 24.8 % del bruto, porque la retención federal salta del 12 % al 22 % a
+  mitad de las semanas normales de un mesero. Un porcentaje fijo se equivoca
+  justo en las semanas buenas. Con las tablas, tres cheques reales de semanas
+  distintas cuadraron al centavo en cada línea, salvo un centavo de FLI en
+  uno. Esos cheques no están en el repositorio; las pruebas usan números
+  inventados con la cuenta a mano en el comentario, contra las tablas
+  oficiales y no contra la fórmula que se prueba.
+- **Fuentes, verificadas el 24 de octubre de 2026:** IRS Publication 15-T
+  (2026), Worksheet 1A y las tablas anuales para W-4 de 2020 o después; SSA
+  (tope de Social Security de 2026: $184,500); formulario NJ-W4 (tablas A a E,
+  método anual, $1,000 por exención) y las tasas de 2026 del Department of
+  Labor del estado (UI 0.3825 % + 0.0425 % hasta $44,800; DI 0.19 % y FLI
+  0.23 % hasta $171,100).
+- **Cómo redondea la nómina, copiado de los cheques:** Social Security y
+  Medicare sobre el acumulado del año (lo retenido hasta hoy menos lo
+  retenido hasta el cheque anterior); DI, FLI y UI en cada periodo; la mitad
+  de un centavo sube (`centavos()` corrige el residuo de la máquina, y una
+  prueba lo vigila con 67.50 × 6.2 % = 4.185). El efectivo declarado como
+  porcentaje de la tarjeta se trunca. El centavo de FLI que no cuadró no
+  sigue ninguna de las dos reglas; se acepta como margen.
+- **El efectivo declarado se suma al bruto y se resta del neto**: solo sirve
+  para retener, porque el efectivo ya está en el bolsillo. Tres formas, porque
+  cada restaurante lo hace distinto: un porcentaje de la tarjeta, lo anotado
+  como efectivo neto, o nada.
+- **El W-4 completo en la lógica** (estado civil, casilla del paso 2, pasos 3,
+  4a, 4b y 4c). Sale casi gratis y el paso 4b importa: la Pub 15-T de 2026
+  dice que quien quiera ver la deducción de propinas en cada cheque lo pide
+  con un W-4 nuevo. Qué de eso se pregunta en pantalla se decide con la
+  vista previa.
+- **Estados:** NJ con sus tablas; "mi estado no descuenta nada", que lo dice
+  la persona y no la app (que un estado no cobre impuesto sobre el sueldo no
+  garantiza que no descuente otras cosas); y para cualquier otro, un
+  porcentaje sacado de un cheque suyo (`calibrarEstatal`), marcado como
+  aproximado. Cada estado nuevo con tablas entra con su fuente oficial y al
+  menos un cheque real para validarlo.
+- **Las tablas tienen año.** Cada enero hay que añadir las nuevas (la Pub
+  15-T sale en diciembre). Si falta el año del cheque, `estimarCheque` usa
+  las últimas y lo dice (`tablasDelAnio: false`), para que la pantalla avise
+  en vez de equivocarse en silencio.
+- **Lo que quedaba pendiente se decidió sobre la vista previa: §27.** DECISIONES
+  §7 ("no etiquetar nada como impuestos") se reemplaza para esta pantalla:
+  el mantenedor eligió que el desglose use los nombres del cheque.
+
+
+## 27. Cheque estimado: la pantalla (24 de octubre de 2026)
+
+Vigente. Se eligió sobre una vista previa mirada en el teléfono.
+
+- **Debajo del neto de la semana**, en su propia tarjeta (opción A). Es lo
+  primero que se mira al abrir la app; al final (opción B) quedaba para quien
+  lo busca solo el día de pago. Tocarla abre el desglose en la misma hoja del
+  día a día (§25): lo que paga, lo que retiene y el neto, con los nombres del
+  cheque y en su orden, para compararlo línea por línea con el papel.
+- **Sin configurar nada para verlo.** Pedir día de pago, estado, estado civil
+  y efectivo declarado antes de mostrar una cifra es la fricción que hace que
+  nadie la use. Viene encendido y con los valores del restaurante donde nació
+  la app (donde están hoy todos los que la usan): NJ, tabla A, 16 % de la
+  tarjeta declarado, pago los jueves y "soltero" sin nada más en el W-4, que
+  es como el IRS manda retener a quien no entregó W-4 (Pub 15-T).
+- **El aviso va en la misma tarjeta**, no en una pantalla aparte: "Calculado
+  con valores de ejemplo. Revisa tu estado civil y dos datos más en Ajustes",
+  y lleva directo a la sección. Se va al tocar cualquier ajuste del cheque o
+  "Mis datos están bien" (`chequeRevisado`). El estado civil va primero en el
+  aviso porque es el que más mueve la cifra entre dos meseros del mismo
+  restaurante.
+- **Ajustes → Tu cheque, después de Sueldo** (§23: lo que mueve dinero va
+  primero). A la vista, lo que cambia de una persona a otra; plegado ("Más del
+  W-4"), lo que casi nadie toca. Una casilla para apagarlo.
+- **El acumulado del año sale solo**: la suma de las semanas anotadas que se
+  pagan este año antes del cheque. Como la app no sabe lo que se ganó antes de
+  usarla, hay un campo opcional para copiar el "year to date" del último
+  cheque; se ancla al último día de pago y la app suma lo de después. Solo se
+  re-ancla cuando ese número cambia: si se re-anclara al guardar otro campo,
+  lo de las semanas siguientes se contaría dos veces.
+- **Una semana sin turnos no tiene tarjeta**, y otro estado dice
+  "aproximado" debajo de la cifra.
+- **Descartado:** un asistente de configuración la primera vez (fricción,
+  justo lo que se quería evitar); preguntar al instalar la app (quien todavía
+  no sabe para qué sirve no va a buscar su W-4); pedir la fecha de pago del
+  cheque de donde sale el acumulado (se deduce: es el último día de pago).

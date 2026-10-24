@@ -602,6 +602,53 @@ button.metrica:focus-visible { outline: 2px solid var(--verde); outline-offset: 
 .detalle-libres, .detalle-vacio { margin: 8px 0 4px; font-size: var(--letra-pie);
                                   color: var(--tinta-2); }
 
+/* ----------------------------------------------------------------------------
+   El cheque estimado (DECISIONES §27).
+
+   En la Semana, una tarjeta propia debajo del neto, con el mismo borde y la
+   misma letra que las métricas, pero suelta: es otro tipo de cifra (lo que
+   llega el día de pago, no lo que se hizo). Son dos botones apilados dentro
+   de una caja: el de arriba abre el desglose y el de abajo, mientras los
+   ajustes no se hayan revisado, lleva a Ajustes. Al apretar se oscurecen,
+   como las métricas (§25).
+   -------------------------------------------------------------------------- */
+.cheque { margin: 0 0 10px; background: var(--tarjeta); border: 1px solid var(--linea);
+          border-radius: 12px; overflow: hidden; }
+.cheque-abrir, .cheque-aviso {
+  display: block; width: 100%; margin: 0; border: 0; border-radius: 0; background: none;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cheque-abrir { padding: 12px; }
+.cheque-abrir:active, .cheque-aviso:active { background: var(--papel); }
+.cheque-abrir:focus-visible, .cheque-aviso:focus-visible { outline: 2px solid var(--verde);
+                                                          outline-offset: -3px; }
+.cheque .cabeza { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.cheque .valor { font-size: var(--letra-valor); font-weight: 600; margin-top: 3px;
+                 font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.cheque .cuando { font-size: var(--letra-nota); color: var(--tinta-2); margin-top: 3px; }
+.cheque .ir { flex: none; color: var(--tinta-2); font-size: var(--letra-subtitulo); line-height: 1; }
+.cheque-aviso { padding: 10px 12px; border-top: 1px solid var(--linea);
+                font-size: var(--letra-nota); font-weight: 600; color: var(--verde); }
+
+/* El desglose, dentro de la hoja: grupos con su leyenda, el bruto y las
+   retenciones cerrando cada grupo, y el neto con una raya de tinta, como el
+   total de un recibo. */
+.desglose-grupo { margin: 14px 0 2px; }
+.desglose-grupo + .detalle-fila { border-top: 0; }
+.detalle-resta .detalle-valor { color: var(--tinta-2); }
+.detalle-final { border-top: 2px solid var(--tinta); padding-top: 12px; margin-top: 4px; }
+.detalle-final .detalle-dia, .detalle-final .detalle-valor { font-size: var(--letra-subtitulo);
+                                                             font-weight: 600; }
+
+/* Ajustes → Tu cheque: lo raro del W-4 plegado, dos campos por fila. */
+.mas-w4 { margin-top: 14px; border-top: 1px solid var(--linea); padding-top: 4px; }
+.mas-w4 summary { cursor: pointer; padding: 10px 0; list-style: none;
+                  font-size: var(--letra-texto); font-weight: 600; color: var(--verde); }
+.mas-w4 summary::-webkit-details-marker { display: none; }
+.dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.resultado { margin: 8px 0 0; font-size: var(--letra-nota); color: var(--tinta-2); }
+
 /* ============================================================================
    SECCIÓN E2 — Reportes: qué turno conviene
    ----------------------------------------------------------------------------

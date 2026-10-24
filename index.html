@@ -129,6 +129,10 @@
     <div class="contra" id="contra-semana"></div>
   </div>
 
+  <!-- El cheque estimado de la semana (DECISIONES §27). Debajo del neto: es
+       lo primero que se mira al abrir la app. Lo pinta `pintarChequeSemana`. -->
+  <div id="cheque-semana"></div>
+
   <div class="metricas" id="metricas"></div>
   <div class="extras-caja"><div class="metricas extras oculto" id="metricas-extras"></div></div>
   <div class="dato-suelto oculto" id="mejor-dia"></div>
@@ -341,6 +345,97 @@
 
   <!-- Lo que cambia qué enseña la pantalla de la Semana. "Comparar" vivía en
        Apariencia, pero no cambia cómo se ve la app: cambia qué números salen. -->
+  <!-- El cheque estimado (DECISIONES §27). Va junto al sueldo porque mueve
+       dinero (§23). Viene encendido y con valores de fábrica: lo que se ve de
+       entrada es lo que más cambia entre personas (día de pago, estado,
+       estado civil, efectivo declarado); lo raro del W-4 va plegado. -->
+  <h2 class="seccion" data-t="ajTuCheque" id="aj-cheque">Tu cheque</h2>
+  <div class="tarjeta">
+    <label class="check" style="margin:0">
+      <span class="marca"><input type="checkbox" id="a-cheque-activo" onchange="cambiarChequeActivo()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+      <span data-t="chequeActivar">Calcular el cheque de cada semana</span>
+    </label>
+    <p class="nota-ajuste" data-t="chequeActivarNota"></p>
+    <div id="a-cheque-config">
+      <button class="chico" id="a-cheque-revisado" data-t="chequeRevisado"
+              onclick="marcarChequeRevisado()" style="margin-top:12px">Mis datos están bien</button>
+      <span class="etiqueta" data-t="chequeDiaPago"
+            style="display:block; margin:16px 0 7px">Día de pago</span>
+      <div class="siete" id="a-dia-pago"></div>
+      <p class="confirma" id="a-dia-pago-confirma"></p>
+
+      <p class="etiqueta" style="margin:16px 0 8px" data-t="chequeEstado">Tu estado</p>
+      <div class="segmentado" id="a-cheque-estado"></div>
+      <div id="a-cheque-otro" class="oculto">
+        <p class="nota-ajuste" data-t="chequeCalNota"></p>
+        <div class="dos" style="margin-top:8px">
+          <div class="campo">
+        <label class="etiqueta" data-t="chequeCalBruto" for="a-cal-bruto"></label>
+        <input type="text" inputmode="decimal" id="a-cal-bruto" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+          <div class="campo">
+        <label class="etiqueta" data-t="chequeCalRetenido" for="a-cal-retenido"></label>
+        <input type="text" inputmode="decimal" id="a-cal-retenido" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+        </div>
+        <p class="resultado" id="a-cal-resultado"></p>
+      </div>
+
+      <p class="etiqueta" style="margin:16px 0 8px" data-t="chequeCivil">Estado civil en tu W-4</p>
+      <div class="segmentado" id="a-cheque-civil"></div>
+
+      <p class="etiqueta" style="margin:16px 0 8px" data-t="chequeDeclara">El efectivo que declaras</p>
+      <div class="segmentado" id="a-cheque-declara"></div>
+      <div class="campo" id="a-cheque-pct-campo" style="margin-top:12px">
+        <label class="etiqueta" data-t="chequePct" for="a-cheque-pct"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-pct" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+      <p class="nota-ajuste" id="a-cheque-declara-nota"></p>
+
+      <div class="campo" style="margin-top:14px">
+        <label class="etiqueta" data-t="chequeAcumulado" for="a-cheque-acumulado"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-acumulado" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+      <p class="nota-ajuste" data-t="chequeAcumuladoNota"></p>
+
+      <details class="mas-w4">
+        <summary data-t="chequeMasW4">Más del W-4</summary>
+        <label class="check" style="margin-top:4px">
+          <span class="marca"><input type="checkbox" id="a-cheque-paso2" onchange="cambiarChequePaso2()"><svg
+            viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg></span>
+          <span data-t="chequePaso2">Marqué la casilla del paso 2</span>
+        </label>
+        <div class="dos" style="margin-top:12px">
+          <div class="campo">
+        <label class="etiqueta" data-t="chequePaso3" for="a-cheque-paso3"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-paso3" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+          <div class="campo">
+        <label class="etiqueta" data-t="chequePaso4c" for="a-cheque-paso4c"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-paso4c" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+          <div class="campo">
+        <label class="etiqueta" data-t="chequePaso4a" for="a-cheque-paso4a"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-paso4a" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+          <div class="campo">
+        <label class="etiqueta" data-t="chequePaso4b" for="a-cheque-paso4b"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-paso4b" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+        </div>
+        <div id="a-cheque-nj">
+          <p class="etiqueta" style="margin:14px 0 8px" data-t="chequeTablaNJ">Tabla del NJ-W4</p>
+          <div class="segmentado" id="a-cheque-tabla-nj"></div>
+          <div class="campo" style="margin-top:12px">
+        <label class="etiqueta" data-t="chequeExenciones" for="a-cheque-exenciones"></label>
+        <input type="text" inputmode="decimal" id="a-cheque-exenciones" onchange="guardarCheque()" placeholder="0.00">
+      </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
   <h2 class="seccion" data-t="ajLaSemana">La semana</h2>
   <div class="tarjeta">
     <label class="check" style="margin:0">
@@ -678,7 +773,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v49';
+const VERSION_APP = 'v50';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -774,7 +869,41 @@ const TRABAJO_POR_DEFECTO = {
      las del restaurante donde nació la app; en otro sitio la mañana puede
      terminar a las 4. Va en el trabajo por lo mismo que `inicioSemana`: es
      un hecho del restaurante, no un gusto. */
-  corteTarde: '15:00'
+  corteTarde: '15:00',
+
+  /* El cheque estimado (DECISIONES §26 y §27). Encendido y ya configurado de
+     fábrica: configurar un cheque desde cero es justo la fricción que hace que
+     nadie lo use. Los valores son los del restaurante donde nació la app
+     (estado NJ, 16 % de la tarjeta declarado como efectivo, pago los jueves),
+     y "soltero" sin nada más en el W-4, que es también como el IRS manda
+     retener a quien no entregó W-4 (Pub 15-T). Mientras `chequeRevisado` sea
+     false, la tarjeta del cheque avisa que se calculó con valores de ejemplo
+     y lleva a Ajustes; tocar cualquier ajuste del cheque, o "Mis datos están
+     bien", la da por revisada.
+
+     Todos SUELTOS, como los de arriba. El día de pago va en `getDay()`, como
+     `inicioSemana`. `chequeAcumulado` es el "year to date" que la persona
+     copió de su último cheque (null si no lo puso) y `chequeAcumuladoFecha`,
+     el día de pago de ese cheque. Del estado "otro" se guardan los dos números
+     del cheque, no el porcentaje: el porcentaje se calcula. */
+  chequeActivo: true,
+  chequeRevisado: false,
+  chequeDiaPago: 4,
+  chequeEstado: 'nj',
+  chequeCalBruto: 0,
+  chequeCalRetenido: 0,
+  chequeCivil: 'soltero',
+  chequeDeclara: 'porcentaje',
+  chequeDeclaraPct: 16,
+  chequeAcumulado: null,
+  chequeAcumuladoFecha: null,
+  chequePaso2: false,
+  chequePaso3: 0,
+  chequePaso4a: 0,
+  chequePaso4b: 0,
+  chequePaso4c: 0,
+  chequeTablaNJ: 'A',
+  chequeExencionesNJ: 0
 };
 
 /** Cómo se llama el contador del incentivo en esta app. */
@@ -826,7 +955,7 @@ const TEMAS = [
    no por tema hace que casi nadie tenga que bajar hasta el final. */
 const AYUDA = ['registrar', 'corregir', 'ventas', 'tipout', 'sueldo',
                'porHora', 'privacidad', 'futuro', 'equipo', 'semanaPago',
-               'reportes', 'excel', 'cambioPct', 'datos'];
+               'reportes', 'excel', 'cambioPct', 'datos', 'cheque'];
 
 /* Las preguntas que salen en la hoja de ayuda de cada pantalla: las que
    alguien se hace MIRANDO esa pantalla. Salen de la lista de arriba, así que
@@ -834,7 +963,7 @@ const AYUDA = ['registrar', 'corregir', 'ventas', 'tipout', 'sueldo',
    Ajustes va primero "¿Quién ve mis datos?": es lo que pregunta alguien a
    quien le llegó la app de un desconocido. */
 const AYUDA_POR_PANTALLA = {
-  semana:   ['registrar', 'corregir', 'porHora', 'futuro'],
+  semana:   ['registrar', 'corregir', 'porHora', 'cheque', 'futuro'],
   turno:    ['ventas', 'tipout', 'equipo', 'corregir'],
   reportes: ['reportes', 'porHora', 'excel'],
   ajustes:  ['privacidad', 'semanaPago', 'sueldo', 'cambioPct', 'datos']
@@ -2889,6 +3018,7 @@ function pintarSemana() {
 
   const cifras = cifrasPrincipales(r, conSueldo);
   document.getElementById('total-semana').textContent = $(cifras.total);
+  pintarChequeSemana();
 
   // Comparación con la semana anterior: un número solo no dice si fue buena
   // semana; comparado con el anterior, sí.
@@ -3001,7 +3131,7 @@ function pintarSemana() {
     + metrica('mVentas',   $0(r.ventas),        r.ventas,          rAnterior.ventas,          $0,  'mas',   'nVentas')
     + metrica('mPropVtas', r.porcentajeVentas + '%', r.porcentajeVentas, rAnterior.porcentajeVentas, pct, 'mas', 'nPropVtas')
     + metrica('mSueldo',   $0(r.sueldoBase),    r.sueldoBase,      rAnterior.sueldoBase,      $0,  'plano', 'nSueldo')
-    + metrica('mPorTurno', $0(r.promedioPorTurno), r.promedioPorTurno, rAnterior.promedioPorTurno, $0, 'mas', 'nPorTurno')
+    + metrica('mPorTurno', $0(cifras.porTurno), cifras.porTurno, cifrasAnterior.porTurno, $0, 'mas', 'nPorTurno')
     + incentivoMetrica(r, rAnterior, metrica);
   document.getElementById('metricas-extras').classList.toggle('oculto', !abierto);
 
@@ -3920,6 +4050,7 @@ function pintarAjustes() {
   })));
 
   pintarListaRoles('roles', 'a-total');
+  pintarAjustesCheque();
 }
 
 /** Los idiomas, para el segmentado de Ajustes y el de la Bienvenida. */
@@ -4210,6 +4341,7 @@ function textoDetalle(clave, f, esTotal) {
 
 function pintarHojaDetalle() {
   const fondo = document.getElementById('hoja-detalle');
+  if (detalleAbierto === 'cheque' && pantalla === 'semana') { pintarDesgloseCheque(fondo); return; }
   const par = detalleAbierto && DETALLE_DE_NOTA[detalleAbierto];
   // Igual que la de ayuda: al cerrarse baja con lo que tenía dentro.
   if (!par || pantalla !== 'semana') { ocultarCapa(fondo, 220); return; }
@@ -4270,6 +4402,338 @@ function pintarHojaDetalle() {
   lineaLibres.classList.toggle('oculto', libres.length === 0 || detalle.filas.length === 0);
   lineaLibres.textContent = rellenar(t('detalleLibres'), libres.map(diaCorto).join(', '));
 }
+
+/* --- El cheque estimado (DECISIONES §26 y §27) ---
+
+   Una tarjeta en la Semana, debajo del neto, con lo que debería llegar el día
+   de pago por esa semana; al tocarla, el desglose en la misma hoja del día a
+   día, con los nombres del papel. La cuenta es `estimarCheque` (logica.js);
+   aquí solo se le pasan los turnos y los ajustes de "Tu cheque". */
+
+/** El perfil de retención que pide `estimarCheque`, sacado de los ajustes. */
+function perfilDelCheque() {
+  const w = datos.trabajo;
+  const estatal = w.chequeEstado === 'ninguno' ? { tipo: 'ninguno' }
+    : w.chequeEstado === 'otro'
+      ? { tipo: 'porcentaje', porcentaje: calibrarEstatal(w.chequeCalBruto, w.chequeCalRetenido) }
+      : { tipo: 'nj', tasa: w.chequeTablaNJ, exenciones: w.chequeExencionesNJ };
+  return {
+    periodos: 52, estatal,
+    federal: { estado: w.chequeCivil, paso2: !!w.chequePaso2, paso3: w.chequePaso3,
+               paso4a: w.chequePaso4a, paso4b: w.chequePaso4b, paso4c: w.chequePaso4c }
+  };
+}
+
+function opcionesDelDeclarado() {
+  return { declara: datos.trabajo.chequeDeclara, porcentaje: datos.trabajo.chequeDeclaraPct,
+           tipOutEnEfectivo: !!datos.trabajo.tipOutEnEfectivo };
+}
+
+/**
+ * El cheque de la semana que empieza en `inicio`, o null si no tiene turnos.
+ * El acumulado del año se arma con todas las semanas anotadas (y el "year to
+ * date" del último cheque, si la persona lo copió): sin él no se ven los
+ * topes, y en NJ la UI se seguiría cobrando a quien ya la pagó completa.
+ */
+function chequeDeSemana(inicio) {
+  const fechas = diasDeLaSemana(inicio);
+  const turnos = datos.turnos.filter(x => fechas.includes(x.fecha));
+  if (turnos.length === 0) return null;
+
+  const diaPago = datos.trabajo.chequeDiaPago;
+  const pago = fechaDePago(fechas[6], diaPago);
+  const porSemana = {};
+  datos.turnos.forEach(x => {
+    const ini = inicioDeSemana(x.fecha, datos.trabajo.inicioSemana);
+    (porSemana[ini] = porSemana[ini] || []).push(x);
+  });
+  const semanas = Object.keys(porSemana).map(ini => {
+    const e = chequeDeLaSemana(porSemana[ini], opcionesDelDeclarado());
+    return { fechaPago: fechaDePago(sumarDias(ini, 6), diaPago),
+             bruto: redondear(e.sueldo + e.tarjeta + e.declarado) };
+  });
+  const acumulado = acumuladoDelAnio(semanas, pago,
+    { monto: datos.trabajo.chequeAcumulado, fecha: datos.trabajo.chequeAcumuladoFecha });
+
+  const entrada = chequeDeLaSemana(turnos, opcionesDelDeclarado());
+  const r = estimarCheque(Object.assign({}, entrada, {
+    acumulado: acumulado.monto, anio: Number(pago.slice(0, 4)), perfil: perfilDelCheque()
+  }));
+  return { r, entrada, pago };
+}
+
+/** "jueves, 22 de oct" / "Thursday, Oct 22". */
+function diaDePagoTexto(fecha) {
+  return partes(fecha).toLocaleDateString(locale(),
+    { weekday: 'long', day: 'numeric', month: 'short' });
+}
+
+/** La última fecha de pago que ya llegó (hoy, si hoy es día de pago). */
+function ultimoDiaDePago() {
+  for (let i = 0; i < 7; i++) {
+    const fecha = sumarDias(hoy(), -i);
+    if (partes(fecha).getDay() === datos.trabajo.chequeDiaPago) return fecha;
+  }
+  return hoy();
+}
+
+function pintarChequeSemana() {
+  const caja = document.getElementById('cheque-semana');
+  caja.innerHTML = '';
+  if (!datos.trabajo.chequeActivo) return;
+  const ch = chequeDeSemana(semanaVista);
+  if (!ch) return;   // una semana sin turnos no tiene cheque que estimar
+
+  const tarjeta = document.createElement('div');
+  tarjeta.className = 'cheque';
+
+  const boton = document.createElement('button');
+  boton.className = 'cheque-abrir';
+  boton.setAttribute('aria-haspopup', 'dialog');
+  boton.onclick = () => abrirDetalle('cheque');
+
+  const cabeza = document.createElement('div');
+  cabeza.className = 'cabeza';
+  const etiqueta = document.createElement('span');
+  etiqueta.className = 'etiqueta';
+  etiqueta.textContent = t('chequeTitulo');
+  const ir = document.createElement('span');
+  ir.className = 'ir';
+  ir.setAttribute('aria-hidden', 'true');
+  ir.textContent = '›';
+  cabeza.append(etiqueta, ir);
+
+  const valor = document.createElement('div');
+  valor.className = 'valor';
+  valor.textContent = $(ch.r.neto);
+
+  /* Debajo, cuándo llega y lo que lo vuelve menos exacto: el porcentaje
+     sacado de un cheque (otro estado) y unas tablas de otro año. */
+  const partesCuando = [rellenar(t('chequeLlega'), diaDePagoTexto(ch.pago))];
+  if (datos.trabajo.chequeEstado === 'otro') partesCuando.push(t('chequeAproximado'));
+  if (!ch.r.tablasDelAnio) {
+    partesCuando.push(rellenar(t('chequeTablasViejas'), ch.r.anioTablas, ch.pago.slice(0, 4)));
+  }
+  const cuando = document.createElement('div');
+  cuando.className = 'cuando';
+  cuando.textContent = partesCuando.join(' · ');
+
+  boton.append(cabeza, valor, cuando);
+  tarjeta.appendChild(boton);
+
+  /* Mientras nadie haya revisado los ajustes, la cifra sale de los valores
+     de fábrica: se dice en la misma tarjeta, con el camino a Ajustes. Es un
+     botón aparte y no parte del de arriba: un botón dentro de otro no se
+     puede tocar por separado. */
+  if (!datos.trabajo.chequeRevisado) {
+    const aviso = document.createElement('button');
+    aviso.className = 'cheque-aviso';
+    aviso.textContent = t('chequeAviso');
+    aviso.onclick = irAAjustesDelCheque;
+    tarjeta.appendChild(aviso);
+  }
+  caja.appendChild(tarjeta);
+}
+
+function irAAjustesDelCheque() {
+  irA('ajustes');
+  document.getElementById('aj-cheque').scrollIntoView({ block: 'start' });
+}
+
+/* El desglose, en la hoja del día a día. Mismo orden que el papel: lo que
+   paga, lo que retiene y el neto, con los nombres del cheque. */
+function pintarDesgloseCheque(fondo) {
+  const ch = datos.trabajo.chequeActivo ? chequeDeSemana(semanaVista) : null;
+  if (!ch) { ocultarCapa(fondo, 220); return; }
+  mostrarCapa(fondo);
+
+  document.getElementById('detalle-titulo').textContent = t('chequeTitulo');
+  document.getElementById('detalle-nota').textContent =
+    rellenar(t('chequeNota'), diaDePagoTexto(ch.pago), ch.r.anioTablas);
+
+  const lista = document.getElementById('detalle-lista');
+  lista.innerHTML = '';
+  const grupo = clave => {
+    const titulo = document.createElement('p');
+    titulo.className = 'etiqueta desglose-grupo';
+    titulo.textContent = t(clave);
+    lista.appendChild(titulo);
+  };
+  const fila = (etiqueta, sub, valor, clase) => {
+    const f = document.createElement('div');
+    f.className = 'detalle-fila' + (clase ? ' ' + clase : '');
+    const izquierda = document.createElement('span');
+    izquierda.className = 'detalle-dia';
+    izquierda.textContent = etiqueta;
+    if (sub) {
+      const debajo = document.createElement('span');
+      debajo.className = 'detalle-sub';
+      debajo.textContent = sub;
+      izquierda.appendChild(debajo);
+    }
+    const derecha = document.createElement('span');
+    derecha.className = 'detalle-valor';
+    derecha.textContent = valor;
+    f.append(izquierda, derecha);
+    lista.appendChild(f);
+  };
+  const menos = n => '−' + $(n);
+
+  const e = ch.entrada;
+  const r = ch.r;
+  grupo('chequePaga');
+  const horas = resumir(datos.turnos.filter(x => diasDeLaSemana(semanaVista).includes(x.fecha))).horas;
+  fila(t('chequeSueldo'), horas + ' h', $(e.sueldo));
+  fila(t('chequeTarjeta'), t('papelTarjeta'), $(e.tarjeta));
+  if (e.declarado) {
+    const sub = datos.trabajo.chequeDeclara === 'porcentaje'
+      ? rellenar(t('chequeDeclaradoPct'), datos.trabajo.chequeDeclaraPct) + ' · ' + t('papelDeclarado')
+      : t('papelDeclarado');
+    fila(t('chequeDeclarado'), sub, $(e.declarado));
+  }
+  fila(t('chequeBruto'), t('papelBruto'), $(r.bruto), 'detalle-total');
+
+  grupo('chequeRetiene');
+  const nombres = {
+    federal: 'lineaFederal',
+    socialSecurity: 'lineaSocialSecurity',
+    medicare: 'lineaMedicare',
+    njRenta: 'lineaNjRenta',
+    njUI: 'lineaNjUI',
+    njDI: 'lineaNjDI',
+    njFLI: 'lineaNjFLI',
+    estatal: 'lineaEstatal'
+  };
+  r.lineas.forEach(l => fila(t(nombres[l.clave]),
+    l.clave === 'njUI' && l.monto === 0 ? t('chequeTope') : '', menos(l.monto)));
+  fila(t('chequeRetenciones'), '', menos(r.retenciones), 'detalle-total');
+
+  if (e.declarado) fila(t('chequeMenosDeclarado'), t('chequeYaLoTienes'), menos(e.declarado), 'detalle-resta');
+  fila(t('chequeNeto'), t('papelNeto'), $(r.neto), 'detalle-final');
+
+  const pie = document.getElementById('detalle-libres');
+  pie.classList.remove('oculto');
+  pie.textContent = t('chequeNoEsDocumento');
+}
+
+/* --- Ajustes → Tu cheque --- */
+
+function cambiarChequeActivo() {
+  datos.trabajo.chequeActivo = document.getElementById('a-cheque-activo').checked;
+  guardar();
+  pintar();
+}
+
+function marcarChequeRevisado() {
+  datos.trabajo.chequeRevisado = true;
+  guardar();
+  pintar();
+}
+
+/* Tocar cualquier ajuste del cheque cuenta como revisarlo: quien cambió su
+   estado civil ya no necesita que la tarjeta le diga que lo cambie. */
+function cambiarCheque(campo, valor) {
+  datos.trabajo[campo] = valor;
+  datos.trabajo.chequeRevisado = true;
+  guardar();
+  pintar();
+}
+
+function cambiarChequePaso2() {
+  cambiarCheque('chequePaso2', document.getElementById('a-cheque-paso2').checked);
+}
+
+// Campo de texto → [campo de `trabajo`, clave del nombre que sale en el aviso].
+const CAMPOS_CHEQUE = {
+  'a-cheque-pct': ['chequeDeclaraPct', 'chequePct'],
+  'a-cal-bruto': ['chequeCalBruto', 'chequeCalBruto'],
+  'a-cal-retenido': ['chequeCalRetenido', 'chequeCalRetenido'],
+  'a-cheque-acumulado': ['chequeAcumulado', 'chequeAcumulado'],
+  'a-cheque-paso3': ['chequePaso3', 'chequePaso3'],
+  'a-cheque-paso4a': ['chequePaso4a', 'chequePaso4a'],
+  'a-cheque-paso4b': ['chequePaso4b', 'chequePaso4b'],
+  'a-cheque-paso4c': ['chequePaso4c', 'chequePaso4c'],
+  'a-cheque-exenciones': ['chequeExencionesNJ', 'chequeExenciones']
+};
+
+/* Los números de "Tu cheque". Uno mal escrito no se guarda y se avisa; los
+   demás sí, porque no tienen la culpa. El acumulado se ancla al último día
+   de pago, que es el del cheque de donde se copió, y solo cuando cambia: si
+   se re-anclara al tocar otro campo, la app sumaría dos veces lo de después. */
+function guardarCheque() {
+  const w = datos.trabajo;
+  const ilegibles = [];
+  Object.keys(CAMPOS_CHEQUE).forEach(id => {
+    const [campo, nombre] = CAMPOS_CHEQUE[id];
+    const leida = leerNumero(val(id));
+    if (!leida.ok) { ilegibles.push(t(nombre)); return; }
+    if (campo === 'chequeAcumulado') {
+      const nuevo = leida.vacio ? null : leida.valor;
+      if (nuevo !== w.chequeAcumulado) {
+        w.chequeAcumulado = nuevo;
+        w.chequeAcumuladoFecha = nuevo === null ? null : ultimoDiaDePago();
+      }
+    } else {
+      w[campo] = leida.valor;
+    }
+  });
+  w.chequeRevisado = true;
+  guardar();
+  if (ilegibles.length) avisarIlegible(ilegibles[0]);
+  pintar();
+}
+
+function pintarAjustesCheque() {
+  const w = datos.trabajo;
+  document.getElementById('a-cheque-activo').checked = !!w.chequeActivo;
+  document.getElementById('a-cheque-config').classList.toggle('oculto', !w.chequeActivo);
+  document.getElementById('a-cheque-revisado').classList.toggle('oculto', !!w.chequeRevisado);
+
+  const siete = document.getElementById('a-dia-pago');
+  siete.innerHTML = '';
+  DIAS_EN_ORDEN.forEach((dia, i) => {
+    const boton = document.createElement('button');
+    boton.textContent = t('letrasDias')[i];
+    boton.setAttribute('aria-label', t('nombresDias')[i]);
+    boton.className = dia === w.chequeDiaPago ? 'activo' : '';
+    boton.onclick = () => cambiarCheque('chequeDiaPago', dia);
+    siete.appendChild(boton);
+  });
+  const posicion = DIAS_EN_ORDEN.indexOf(w.chequeDiaPago);
+  document.getElementById('a-dia-pago-confirma').textContent = posicion < 0 ? ''
+    : rellenar(t('chequeDiaPagoConfirma'), t('diasEnFrase')[posicion]);
+
+  const opciones = (campo, lista) => lista.map(([valor, clave]) => ({
+    texto: clave ? t(clave) : valor, activo: w[campo] === valor,
+    alTocar: () => cambiarCheque(campo, valor)
+  }));
+  pintarSegmentado('a-cheque-estado', opciones('chequeEstado',
+    [['nj', 'estadoNJ'], ['ninguno', 'estadoNinguno'], ['otro', 'estadoOtro']]));
+  pintarSegmentado('a-cheque-civil', opciones('chequeCivil',
+    [['soltero', 'civilSoltero'], ['casadoJunto', 'civilCasados'], ['jefeHogar', 'civilJefe']]));
+  pintarSegmentado('a-cheque-declara', opciones('chequeDeclara',
+    [['porcentaje', 'declaraPct'], ['anotado', 'declaraAnotado'], ['nada', 'declaraNada']]));
+  pintarSegmentado('a-cheque-tabla-nj', opciones('chequeTablaNJ',
+    ['A', 'B', 'C', 'D', 'E'].map(x => [x, ''])));
+
+  document.getElementById('a-cheque-otro').classList.toggle('oculto', w.chequeEstado !== 'otro');
+  document.getElementById('a-cheque-nj').classList.toggle('oculto', w.chequeEstado !== 'nj');
+  document.getElementById('a-cal-resultado').textContent = Number(w.chequeCalBruto) > 0
+    ? rellenar(t('chequeCalResultado'), calibrarEstatal(w.chequeCalBruto, w.chequeCalRetenido)) : '';
+  document.getElementById('a-cheque-pct-campo').classList
+    .toggle('oculto', w.chequeDeclara !== 'porcentaje');
+  document.getElementById('a-cheque-declara-nota').textContent = t({
+    porcentaje: 'declaraNotaPct', anotado: 'declaraNotaAnotado', nada: 'declaraNotaNada'
+  }[w.chequeDeclara] || 'declaraNotaNada');
+
+  // Un cero en un campo opcional se enseña vacío: "0.00" parece algo escrito.
+  Object.keys(CAMPOS_CHEQUE).forEach(id => {
+    const v = w[CAMPOS_CHEQUE[id][0]];
+    document.getElementById(id).value = v === null || v === undefined || v === 0 ? '' : v;
+  });
+  document.getElementById('a-cheque-paso2').checked = !!w.chequePaso2;
+}
+
 
 
 /* --- Bienvenida --- */
@@ -4333,7 +4797,8 @@ const FUNCIONES_NECESARIAS = [
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
   'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo',
   'minutosDeCorte', 'resumenAnual', 'aniosConTurnos', 'turnosACSV',
-  'avisoRespaldo', 'detalleSemana'
+  'avisoRespaldo', 'detalleSemana', 'estimarCheque', 'efectivoDeclarado',
+  'calibrarEstatal', 'fechaDePago', 'chequeDeLaSemana', 'acumuladoDelAnio'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la

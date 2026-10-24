@@ -833,6 +833,19 @@ ok('con el sueldo contado cambia igual en la hoja y en la tarjeta',
    && texto('metricas').includes(run(`$(cifrasPrincipales(${deLaVista}, true).porHora)`)));
 run('datos.prefs.contarSueldo = false; pintar()');
 
+run("cerrarDetalle()");
+const porTurnoEsperado = conSueldo =>
+  run(`$0(cifrasPrincipales(${deLaVista}, ${conSueldo}).porTurno)`);
+const tarjetaPorTurno = () => (texto('metricas-extras').match(/Por turno\D*(\$[\d,]+)/) || [])[1];
+ok('"Por turno" sin el sueldo contado es el promedio de las propinas',
+   run('datos.prefs.contarSueldo') === false
+   && tarjetaPorTurno() === porTurnoEsperado(false)
+   && porTurnoEsperado(false) !== porTurnoEsperado(true));
+run('datos.prefs.contarSueldo = true; pintar()');
+ok('y contándolo, el del total, como las demás cifras',
+   tarjetaPorTurno() === porTurnoEsperado(true));
+run('datos.prefs.contarSueldo = false; pintar()');
+
 // La semana de hoy: los días que ya pasaron sin turno son libres; hoy y lo
 // que falta, no.
 run("cerrarDetalle(); semanaVista = inicioDeEstaSemana('2026-08-06'); abrirDetalle('nHoras')");
@@ -861,6 +874,122 @@ ok('una semana sin turnos lo dice en vez de enseñar una hoja vacía',
    texto('detalle-lista') === 'Esta semana no hay turnos.' && hojaD()._classes.has('oculto') === false);
 ok('y no habla de días libres', d.getElementById('detalle-libres')._classes.has('oculto'));
 run('cerrarDetalle()');
+
+grupo('El cheque estimado');
+/* La semana del 10 de agosto tiene dos turnos (lun 10 y mié 12). Hoy, en las
+   pruebas, es el jueves 6 de agosto: el cheque de esa semana llega el jueves
+   20. Se compara la tarjeta con la cuenta de `estimarCheque` hecha aparte,
+   con los mismos datos: lo que se prueba aquí es que la pantalla le pase lo
+   que debe (turnos de la semana, ajustes, acumulado), no la cuenta, que ya
+   prueba pruebas.js con números a mano. */
+run("irA('semana'); semanaVista = inicioDeEstaSemana('2026-08-10'); pintar();");
+const chequeTxt = () => texto('cheque-semana');
+const esperadoCheque = () => run(`(() => {
+  const ts = datos.turnos.filter(x => diasDeLaSemana(semanaVista).includes(x.fecha));
+  const e = chequeDeLaSemana(ts, { declara: 'porcentaje', porcentaje: 16, tipOutEnEfectivo: true });
+  return estimarCheque(Object.assign({}, e, { anio: 2026, acumulado: null,
+    perfil: { periodos: 52, federal: { estado: 'soltero' }, estatal: { tipo: 'nj', tasa: 'A' } } }));
+})()`);
+ok('viene encendido y con los valores de fábrica',
+   D().trabajo.chequeActivo === true && D().trabajo.chequeEstado === 'nj'
+   && D().trabajo.chequeCivil === 'soltero' && D().trabajo.chequeDeclaraPct === 16
+   && D().trabajo.chequeDiaPago === 4 && D().trabajo.chequeRevisado === false);
+ok('sale en la Semana, con su nombre y el día que llega',
+   chequeTxt().startsWith('Cheque estimado') && /Llega el jueves, 20/.test(chequeTxt()));
+ok('y avisa que salió de valores de ejemplo, con el camino a Ajustes',
+   chequeTxt().includes('valores de ejemplo') && chequeTxt().includes('Ajustes ›'));
+const netoDeLaTarjeta = () => (chequeTxt().match(/\$[\d,]+\.\d\d/) || [])[0];
+// Sin semanas anteriores pagadas este año, el acumulado de la app es 0 para
+// este cheque solo si no hay otras: se comprueba con el cálculo de la app.
+ok('la cifra es la de estimarCheque con los turnos de la semana y los ajustes',
+   netoDeLaTarjeta() === run(`$(chequeDeSemana(semanaVista).r.neto)`)
+   && run(`chequeDeSemana(semanaVista).r.bruto`) === esperadoCheque().bruto);
+
+const tarjetaCheque = () => d.getElementById('cheque-semana').children[0];
+tarjetaCheque().children[0].click();
+ok('tocarla abre el desglose', !hojaD()._classes.has('oculto') && texto('detalle-titulo') === 'Cheque estimado');
+ok('con los nombres del papel, en su orden',
+   /Federal Income.*Social Security.*Medicare.*NJ State Income.*NJ State UI.*NJ State DI.*NJ FLI/
+     .test(texto('detalle-lista')));
+ok('lo que paga, lo que retiene y el neto, que es la cifra de la tarjeta',
+   /^Lo que paga.*Lo que retiene.*Neto del cheque\s*Net Pay\s*\$[\d,.]+$/.test(texto('detalle-lista'))
+   && texto('detalle-lista').endsWith(netoDeLaTarjeta()));
+ok('el efectivo declarado se suma al bruto y se resta al final',
+   texto('detalle-lista').includes('16 % de la tarjeta')
+   && texto('detalle-lista').includes('Menos el efectivo declarado'));
+ok('y dice que es un estimado', texto('detalle-libres').includes('no es un documento de impuestos'));
+run('cerrarDetalle()');
+
+tarjetaCheque().children[1].click();
+ok('el aviso lleva a Ajustes, a la sección del cheque',
+   !d.getElementById('p-ajustes')._classes.has('oculto')
+   && d.getElementById('aj-cheque')._desplazadoA !== undefined);
+const clasesCh = id => d.getElementById(id)._classes;
+ok('donde está el botón para darlos por buenos', !clasesCh('a-cheque-revisado').has('oculto'));
+
+// Cambiar el estado civil cambia la cifra y da los ajustes por revisados.
+const netoSoltero = run('chequeDeSemana(semanaVista).r.neto');
+botones('a-cheque-civil')[1].click();
+ok('cambiar el estado civil lo guarda', D().trabajo.chequeCivil === 'casadoJunto');
+ok('y cuenta como revisado: el botón se va', D().trabajo.chequeRevisado === true
+   && clasesCh('a-cheque-revisado').has('oculto'));
+ok('casados retienen menos: el cheque sube', run('chequeDeSemana(semanaVista).r.neto') > netoSoltero);
+run("irA('semana')");
+ok('y la tarjeta ya no avisa', !chequeTxt().includes('valores de ejemplo'));
+
+// "Mis datos están bien" sin cambiar nada.
+run('datos.trabajo.chequeRevisado = false; marcarChequeRevisado()');
+ok('"Mis datos están bien" también lo da por revisado', D().trabajo.chequeRevisado === true);
+
+// Los números: uno ilegible no se guarda y se avisa; los demás sí.
+run("irA('ajustes')");
+set('a-cheque-pct', '12,5'); set('a-cheque-paso4c', 'diez');
+const avisosAntes = avisos.length;
+run('guardarCheque()');
+ok('un porcentaje con coma se entiende', D().trabajo.chequeDeclaraPct === 12.5);
+ok('uno ilegible no se guarda', D().trabajo.chequePaso4c === 0);
+ok('y se avisa cuál', avisos.length === avisosAntes + 1 && avisos[avisos.length - 1].includes('Paso 4(c)'));
+
+// El acumulado se ancla al último día de pago (el jueves 6, hoy) y solo
+// cuando cambia.
+set('a-cheque-paso4c', ''); set('a-cheque-acumulado', '50000');
+run('guardarCheque()');
+ok('el bruto del año se guarda con el día de pago de ese cheque',
+   D().trabajo.chequeAcumulado === 50000 && D().trabajo.chequeAcumuladoFecha === '2026-08-06');
+run("datos.trabajo.chequeAcumuladoFecha = '2026-07-30'");
+set('a-cheque-pct', '16'); run('guardarCheque()');
+ok('tocar otro campo no lo vuelve a anclar', D().trabajo.chequeAcumuladoFecha === '2026-07-30');
+run("datos.trabajo.chequeAcumuladoFecha = '2026-08-06'; irA('semana')");
+ok('pasado el tope de la UI, ya no se cobra', run("chequeDeSemana(semanaVista).r.lineas.find(l => l.clave === 'njUI').monto") === 0);
+
+// Otro estado: el porcentaje sale de un cheque y la tarjeta dice "aproximado".
+run("irA('ajustes')");
+botones('a-cheque-estado')[2].click();
+set('a-cal-bruto', '1000'); set('a-cal-retenido', '45'); run('guardarCheque()');
+ok('otro estado calcula su porcentaje', texto('a-cal-resultado').includes('4.5 %'));
+run("irA('semana')");
+ok('y la tarjeta lo marca como aproximado', chequeTxt().includes('aproximado'));
+ok('con una línea de estado en vez de las de NJ',
+   run("chequeDeSemana(semanaVista).r.lineas.map(l => l.clave).join()") === 'federal,socialSecurity,medicare,estatal');
+
+// Apagado no sale; una semana sin turnos tampoco tiene cheque.
+run("datos.trabajo.chequeActivo = false; pintar()");
+ok('apagado no sale', chequeTxt() === '');
+run("datos.trabajo.chequeActivo = true; semanaVista = inicioDeEstaSemana('2026-07-06'); pintar()");
+ok('una semana sin turnos no tiene cheque', chequeTxt() === '');
+
+run("cambiarIdioma('en'); semanaVista = inicioDeEstaSemana('2026-08-10'); pintar()");
+ok('en inglés', chequeTxt().startsWith('Estimated paycheck') && chequeTxt().includes('Arrives'));
+run("cambiarIdioma('es')");
+
+// Quien ya usaba la app recibe los campos nuevos con los valores de fábrica.
+const viejo = JSON.parse(almacen.tipsControl);
+Object.keys(viejo.trabajo).filter(k => k.startsWith('cheque')).forEach(k => delete viejo.trabajo[k]);
+almacen.tipsControl = JSON.stringify(viejo);
+run('cargar()');
+ok('los datos de antes llegan con el cheque encendido y sin revisar',
+   D().trabajo.chequeActivo === true && D().trabajo.chequeRevisado === false
+   && D().trabajo.chequeDeclara === 'porcentaje');
 
 almacen.tipsControl = antesDelDetalle;
 run("cargar(); semanaVista = inicioDeEstaSemana('2026-08-10'); pintar();");
@@ -2591,7 +2720,7 @@ const htmlAjustes = html.slice(html.indexOf('<section id="p-ajustes"'),
 const gruposAjustes = (htmlAjustes.match(/<h2 class="seccion" data-t="(\w+)"/g) || [])
   .map(h => h.match(/data-t="(\w+)"/)[1]);
 ok('Ajustes va en el orden de la opción A',
-   gruposAjustes.join() === 'ajTuRestaurante,ayudantesTipout,ajSueldo,ajLaSemana,ajPantalla,ajTusDatos,ajAyuda');
+   gruposAjustes.join() === 'ajTuRestaurante,ayudantesTipout,ajSueldo,ajTuCheque,ajLaSemana,ajPantalla,ajTusDatos,ajAyuda');
 const tarjetaDe = grupo => {
   const desde = htmlAjustes.indexOf(`data-t="${grupo}"`);
   const hasta = htmlAjustes.indexOf('<h2 class="seccion"', desde + 1);
@@ -2929,7 +3058,7 @@ delete ctx.navigator.clipboard;
 // --- Lo que se puede vigilar del CSS ---
 ok('todas las casillas llevan su chulo',
    (html.match(/<label class="check"/g) || []).length === (html.match(/<span class="marca">[^]*?<svg/g) || []).length
-   && (html.match(/<label class="check"/g) || []).length === 5);
+   && (html.match(/<label class="check"/g) || []).length === 7);
 const fotogramas = css.match(/@keyframes[^{]+\{([^{}]*\{[^}]*\})+\s*\}/g) || [];
 ok('las animaciones solo mueven transform y opacity',
    fotogramas.length > 0 && fotogramas.every(k =>
