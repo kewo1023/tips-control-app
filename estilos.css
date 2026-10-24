@@ -490,24 +490,11 @@ strong, b { font-weight: 600; }
 .metrica .cuantos { font-size: var(--letra-pie); color: var(--tinta-2); margin-top: 3px;
                     letter-spacing: 0.02em; }
 
-/* Cabecera de la tarjeta: la etiqueta y, a la derecha, el botón de ayuda. */
+/* Cabecera de la tarjeta: la etiqueta y, a la derecha, la flecha que dice
+   que la tarjeta se abre. */
 .metrica .cabeza { display: flex; align-items: center;
                    justify-content: space-between; gap: 6px; }
 
-/* El botón (i). Medía 16 px y había que atinarle; Apple pide 44 puntos de
-   zona de toque. El dibujo sube a 20 px y la zona crece por fuera con
-   `::after` (12 px por lado), sin mover nada de la tarjeta. La tinta pasa a
-   tinta-2: con tinta-3 casi no se veía, y es lo que alguien nuevo tiene que
-   encontrar para entender un número. */
-.info {
-  position: relative;
-  flex: none; width: 1.25rem; height: 1.25rem; padding: 0;
-  border: 1px solid var(--linea-alta); border-radius: 50%;
-  background: none; color: var(--tinta-2);
-  font-size: var(--letra-leyenda); font-weight: 600; font-style: italic; line-height: 1;
-  cursor: pointer;
-}
-.info::after { content: ''; position: absolute; inset: -12px; }
 
 /* La diferencia contra la semana pasada va SIEMPRE en su propio renglón,
    debajo de la cifra. Antes iba al lado y quedaba a merced del ancho: en las
@@ -520,24 +507,6 @@ strong, b { font-weight: 600; }
 /* Neutro para lo que no tiene "mejor": más horas no es bueno ni malo. */
 .delta.plano  { color: var(--tinta-2); }
 
-/* ----------------------------------------------------------------------------
-   El globo de ayuda.
-
-   Va con `position: fixed` y se coloca con JavaScript debajo del botón que lo
-   abrió. La alternativa —meterlo dentro de la tarjeta— lo habría dejado
-   cortado por el `overflow: hidden` que redondea las esquinas de la rejilla, y
-   además empujaría el resto de la pantalla hacia abajo al abrirse.
-
-   Colores invertidos (tinta de fondo, papel de letra) para que se lea como
-   algo que está *encima* de la app y no como una parte más de ella.
-   -------------------------------------------------------------------------- */
-.globo {
-  position: fixed; z-index: 50;
-  width: 235px; max-width: calc(100vw - 28px);
-  padding: 10px 12px; border-radius: 10px;
-  background: var(--tinta); color: var(--papel);
-  font-size: var(--letra-nota); line-height: 1.35;
-}
 
 .mas {
   width: 100%; margin-top: 10px; padding: 11px;
@@ -588,6 +557,50 @@ strong, b { font-weight: 600; }
 .hoja-fondo.saliendo .hoja      { animation: hoja-baja 220ms var(--ease-out) forwards; }
 @keyframes hoja-sube { from { transform: translateY(100%); } }
 @keyframes hoja-baja { to   { transform: translateY(100%); } }
+
+/* La tarjeta de cada métrica es un botón desde la v49: abre su día a día
+   (DECISIONES §25). Se le quita todo lo de botón para que se vea igual que
+   cuando era un div.
+
+   Al apretarla se oscurece en vez de encogerse como los demás botones: la
+   rejilla dibuja sus rayas con el fondo que asoma por el hueco de 1 px, así
+   que una tarjeta encogida dejaría ver un marco gris alrededor, como una
+   celda rota. El cambio de color es instantáneo: no anima nada.
+
+   El contorno del foco va por dentro (`outline-offset` negativo) porque la
+   rejilla recorta lo que se sale (`overflow: hidden`). */
+button.metrica {
+  display: block; width: 100%; margin: 0; border: 0; border-radius: 0;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.metrica:active { background: var(--papel); }
+button.metrica:focus-visible { outline: 2px solid var(--verde); outline-offset: -3px; }
+.metrica .ir { flex: none; color: var(--tinta-2); font-size: var(--letra-subtitulo); line-height: 1; }
+
+/* ----------------------------------------------------------------------------
+   El día a día de una métrica, dentro de la hoja (la misma de la ayuda).
+
+   Arriba la explicación que antes estaba en el globo (i); debajo, un renglón
+   por turno con la cifra a la derecha y, en gris, de qué está hecha. El total
+   cierra con una raya más marcada y en negrita: es la cifra de la tarjeta.
+   Cifras con `tabular-nums` para que los centavos queden en columna.
+   -------------------------------------------------------------------------- */
+.detalle-nota { margin: 2px 0 10px; color: var(--tinta-2); font-size: var(--letra-nota);
+                line-height: 1.4; }
+.detalle-fila { display: flex; justify-content: space-between; align-items: baseline;
+                gap: 12px; padding: 10px 0; border-top: 1px solid var(--linea); }
+.detalle-fila:first-child { border-top: 0; }
+.detalle-dia { min-width: 0; font-size: var(--letra-texto); font-weight: 600; }
+.detalle-sub { display: block; margin-top: 2px; font-size: var(--letra-pie); font-weight: 400;
+               color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.detalle-valor { flex: none; font-size: var(--letra-texto); white-space: nowrap;
+                 font-variant-numeric: tabular-nums; }
+.detalle-total { border-top-color: var(--linea-alta); padding-top: 12px; }
+.detalle-total .detalle-dia, .detalle-total .detalle-valor { font-size: var(--letra-cuerpo);
+                                                             font-weight: 600; }
+.detalle-libres, .detalle-vacio { margin: 8px 0 4px; font-size: var(--letra-pie);
+                                  color: var(--tinta-2); }
 
 /* ============================================================================
    SECCIÓN E2 — Reportes: qué turno conviene
@@ -1441,13 +1454,13 @@ h2.seccion { font-size: var(--letra-leyenda); font-weight: 600; letter-spacing: 
 :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
        .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
        .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
-       .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario) {
+       .hoja-todas, .chico, .instalar-accion, .instalar-secundario) {
   transition: transform 200ms var(--ease-out);
 }
 :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
        .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
        .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
-       .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario):active:not(:disabled) {
+       .hoja-todas, .chico, .instalar-accion, .instalar-secundario):active:not(:disabled) {
   transform: scale(0.95);
   transition-duration: 80ms;
 }
@@ -1477,7 +1490,7 @@ h2.seccion { font-size: var(--letra-leyenda); font-weight: 600; letter-spacing: 
   :where(.dia, .chip, .segmentado button, .siete button, .horas button, .secundario,
          .pildora, .semana-nav button, .mas, .check, .pestanas-fila button,
          .dialogo-botones button, .barra-titulo button, .hoja-cabeza button,
-         .hoja-todas, .chico, .info, .instalar-accion, .instalar-secundario):active:not(:disabled),
+         .hoja-todas, .chico, .instalar-accion, .instalar-secundario):active:not(:disabled),
   .principal:active { transform: none; }
   .hoja-fondo:not(.oculto) .hoja, .dialogo-fondo:not(.oculto) .dialogo { animation-name: velo-entra; }
   .hoja-fondo.saliendo .hoja, .dialogo-fondo.saliendo .dialogo { animation-name: velo-sale; }

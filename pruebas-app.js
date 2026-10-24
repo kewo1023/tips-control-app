@@ -775,45 +775,95 @@ ok('la delta sale fuera del div del valor, en su propio renglón',
    /<div class="valor">[^<]*<\/div><span class="delta/.test(htmlMetricas()));
 
 
-grupo('Explicación de cada dato, a petición');
-ok('cada métrica esencial trae su botón de información',
-   (htmlMetricas().match(/class="info"/g) || []).length === 4);
-ok('las extras también',
-   (d.getElementById('metricas-extras').innerHTML.match(/class="info"/g) || []).length === 6);
-ok('ya no hay descripciones siempre visibles',
-   !htmlMetricas().includes('class="nota"'));
-ok('el botón sabe qué nota abrir',
-   htmlMetricas().includes("mostrarNota('nPorHora'"));
+grupo('Tocar una estadística abre su día a día');
+/* Hasta la v48 cada tarjeta traía una (i) que abría un globo con la
+   explicación. Desde la v49 toda la tarjeta es el botón y abre una hoja con
+   esa explicación y el día a día (DECISIONES §25). */
+const enBotones = id => (d.getElementById(id).innerHTML.match(/<button class="metrica"/g) || []).length;
+ok('las cuatro esenciales son botones', enBotones('metricas') === 4);
+ok('y las seis extras también', enBotones('metricas-extras') === 6);
+ok('ya no queda ninguna (i) ni globo',
+   !htmlMetricas().includes('class="info"') && !html.includes('id="globo"'));
+ok('ya no hay descripciones siempre visibles', !htmlMetricas().includes('class="nota"'));
+ok('la tarjeta sabe qué abrir', htmlMetricas().includes("abrirDetalle('nPorHora')"));
+ok('y lleva la flecha que avisa que se abre', htmlMetricas().includes('class="ir"'));
 
-const globo = () => d.getElementById('globo');
-ok('el globo empieza cerrado', globo()._classes.has('oculto'));
-run("mostrarNota('nPorHora', null)");
-ok('el botón lo abre', !globo()._classes.has('oculto'));
-ok('con la explicación correcta', globo().textContent.includes('÷ horas trabajadas'));
-run("cerrarNota()");
-ok('tocar fuera lo cierra', globo()._classes.has('oculto'));
-run("mostrarNota('nTarjeta', null)");
-ok('otro botón muestra otra explicación',
-   globo().textContent.includes('cheque'));
-run("cambiarIdioma('en'); mostrarNota('nTarjeta', null);");
-ok('la explicación también está traducida',
-   globo().textContent.includes('paycheck'));
-run("cambiarIdioma('es'); cerrarNota();");
+// Se guarda lo de ahora para devolverlo al final: estas pruebas añaden un turno.
+const antesDelDetalle = almacen.tipsControl;
+run("abrirDia('2026-08-12')");
+set('f-entrada', '17:00'); set('f-salida', '23:00');
+set('f-ventas', '1000'); set('f-efectivo', '100'); set('f-tarjeta', '150.75');
+run('guardarTurno()');
 
-// El globo se coloca a mano con las medidas del botón. Comprobamos que no se
-// salga por el borde derecho, que es lo que pasaría con las tarjetas de esa
-// columna si no se le pusiera tope.
-const botonFalso = izq => ({
-  getBoundingClientRect: () => ({ left: izq, width: 16, bottom: 300 })
-});
-run("irA('semana')");
-vm.runInContext('mostrarNota', ctx)('nHoras', botonFalso(370));
-ok('no se sale por la derecha',
-   parseFloat(globo().style.left) + 235 <= 390);
-vm.runInContext('mostrarNota', ctx)('nHoras', botonFalso(2));
-ok('ni por la izquierda', parseFloat(globo().style.left) >= 14);
-ok('y se coloca debajo del botón', parseFloat(globo().style.top) > 300);
-run('cerrarNota()');
+const hojaD = () => d.getElementById('hoja-detalle');
+const filasD = () => d.querySelectorAll('#detalle-lista .detalle-fila');
+ok('la hoja empieza cerrada', hojaD()._classes.has('oculto'));
+run("abrirDetalle('nTarjeta')");
+ok('tocar la tarjeta la abre', !hojaD()._classes.has('oculto'));
+ok('con el nombre de la estadística', texto('detalle-titulo') === 'Tarjeta');
+ok('y la explicación que antes estaba en el globo', texto('detalle-nota').includes('cheque'));
+ok('un renglón por turno y uno del total', filasD().length === 3);
+ok('los días en orden y con centavos: lun 10 $40.00, mié 12 $150.75',
+   /10\s*\$40\.00.*12\s*\$150\.75/.test(texto('detalle-lista')));
+ok('el total es la cifra de la tarjeta, con centavos', texto('detalle-lista').endsWith('Total $190.75'));
+ok('y es la misma que se ve en la tarjeta redondeada', texto('metricas').includes('$191'));
+// En las pruebas hoy es el jueves 6 de agosto: esta semana todavía no pasó.
+ok('los días que faltan no cuentan como libres',
+   d.getElementById('detalle-libres')._classes.has('oculto'));
+
+run("cerrarDetalle(); abrirDetalle('nEfectivoNeto')");
+ok('el efectivo neto dice de dónde sale cada día',
+   texto('detalle-lista').includes('de tip-out') && texto('detalle-titulo') === 'Efectivo neto');
+const efNetoTotal = run(`$(efectivoMostrado(resumir(datos.turnos.filter(x => diasDeLaSemana(semanaVista).includes(x.fecha))), true))`);
+ok('y su total es el de la tarjeta', texto('detalle-lista').endsWith('Total ' + efNetoTotal));
+
+run("cerrarDetalle(); abrirDetalle('nPorHora')");
+ok('por hora no se suma: cierra con "Semana" y cómo sale',
+   /Semana\s*\$[\d,.]+ ÷ 11 h \$[\d,.]+$/.test(texto('detalle-lista')));
+
+const deLaVista = 'resumir(datos.turnos.filter(x => diasDeLaSemana(semanaVista).includes(x.fecha)))';
+ok('hay sueldo en la semana, para que contarlo o no se note',
+   run(`${deLaVista}.sueldoBase`) > 0);
+ok('y su total es el de la tarjeta, con las mismas preferencias',
+   texto('detalle-lista').endsWith(run(`$(cifrasPrincipales(${deLaVista}, !!datos.prefs.contarSueldo).porHora)`))
+   && texto('metricas').includes(run(`$(cifrasPrincipales(${deLaVista}, !!datos.prefs.contarSueldo).porHora)`)));
+run('datos.prefs.contarSueldo = true; pintar()');
+ok('con el sueldo contado cambia igual en la hoja y en la tarjeta',
+   texto('detalle-lista').endsWith(run(`$(cifrasPrincipales(${deLaVista}, true).porHora)`))
+   && texto('metricas').includes(run(`$(cifrasPrincipales(${deLaVista}, true).porHora)`)));
+run('datos.prefs.contarSueldo = false; pintar()');
+
+// La semana de hoy: los días que ya pasaron sin turno son libres; hoy y lo
+// que falta, no.
+run("cerrarDetalle(); semanaVista = inicioDeEstaSemana('2026-08-06'); abrirDetalle('nHoras')");
+const libresEsperados = run(`diasDeLaSemana(semanaVista)
+  .filter(f => f < hoy() && !datos.turnos.some(x => x.fecha === f))
+  .map(f => partes(f).getDate())`);
+const lineaLibres = texto('detalle-libres');
+ok('los días que ya pasaron sin turno salen como libres, y nada más',
+   libresEsperados.length > 0 && lineaLibres.startsWith('Libres:')
+   && libresEsperados.every(n => new RegExp('\\b' + n + '\\b').test(lineaLibres))
+   && !/\b[6-9]\b/.test(lineaLibres));
+run("semanaVista = inicioDeEstaSemana('2026-08-10')");
+
+run('cerrarDetalle()');
+ok('"Cerrar" la cierra', hojaD()._classes.has('oculto') && run('detalleAbierto') === null);
+run("abrirDetalle('nHoras'); irA('reportes')");
+ok('cambiar de pantalla también', hojaD()._classes.has('oculto'));
+
+run("irA('semana'); cambiarIdioma('en'); abrirDetalle('nTarjeta')");
+ok('en inglés, la explicación', texto('detalle-nota').includes('paycheck'));
+ok('y los días libres', texto('detalle-libres').startsWith('Days off:'));
+run("cambiarIdioma('es'); cerrarDetalle()");
+
+run("semanaVista = inicioDeEstaSemana('2026-07-06'); abrirDetalle('nHoras')");
+ok('una semana sin turnos lo dice en vez de enseñar una hoja vacía',
+   texto('detalle-lista') === 'Esta semana no hay turnos.' && hojaD()._classes.has('oculto') === false);
+ok('y no habla de días libres', d.getElementById('detalle-libres')._classes.has('oculto'));
+run('cerrarDetalle()');
+
+almacen.tipsControl = antesDelDetalle;
+run("cargar(); semanaVista = inicioDeEstaSemana('2026-08-10'); pintar();");
 
 
 grupo('Idioma');
@@ -2622,9 +2672,7 @@ const fondoPestana = bloque => {
 ok('la letra verde de la pestaña activa llega a 4.5:1 sobre su píldora, en claro',
    contraste(colorDe(bloqueClaro, '--verde'), fondoPestana(bloqueClaro)) >= 4.5);
 ok('y en oscuro', contraste(colorDe(bloqueOscuro, '--verde'), fondoPestana(bloqueOscuro)) >= 4.5);
-ok('y el (i) ya no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.info')));
-ok('el (i) tiene zona de toque de 44 puntos: 20 px de dibujo y 12 más por lado',
-   /width: 1\.25rem/.test(regla('.info')) && /inset: -12px/.test(regla('.info::after')));
+ok('la flecha de la tarjeta no es uno de ellos', /color: var\(--tinta-2\)/.test(regla('.metrica .ir')));
 
 
 /* ==========================================================================
@@ -2691,7 +2739,7 @@ ok('el título de la hoja se espacia como el rango de la semana',
    espaciado('.hoja-cabeza span') !== undefined
    && espaciado('.hoja-cabeza span') === espaciado('.semana-nav .rango'));
 ok('las notas grises van todas en el tamaño de nota',
-   ['.nota-ajuste', '.confirma', '.rep-aclara', '.tramo-nota', '.delta', '.globo', '.total .contra']
+   ['.nota-ajuste', '.confirma', '.rep-aclara', '.tramo-nota', '.delta', '.detalle-nota', '.total .contra']
      .every(sel => /var\(--letra-nota\)/.test(regla(sel))));
 ok('la tabla del año pesa como la de los días',
    /font-weight: 500/.test(regla('.anio-fila:not(.titulos):not(.sin-turnos) > :first-child'))

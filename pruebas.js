@@ -1004,6 +1004,74 @@ probar('ni uno con fecha en el futuro',
 
 
 /* --------------------------------------------------------------------------
+   El día a día de una estadística (tocar una tarjeta de la semana)
+   -------------------------------------------------------------------------- */
+grupo('El día a día de una estadística');
+
+// Desordenados a propósito, y uno sin incentivo y otro con un cero escrito.
+const semanaD = [
+  { fecha: '2026-08-12', entrada: '17:00', salida: '23:00', ventas: 1000, efectivo: 100,
+    tarjeta: 150.75, tipOut: 32.5, tarifaHora: 5.62, incentivo: 4 },
+  { fecha: '2026-08-10', entrada: '17:00', salida: '22:00', ventas: 600, efectivo: 20,
+    tarjeta: 40, tipOut: 39, tarifaHora: 5.62 },
+  { fecha: '2026-08-14', entrada: '11:00', salida: '15:30', ventas: 450.40, efectivo: 35,
+    tarjeta: 61.10, tipOut: 14.64, tarifaHora: 5.62, incentivo: 0 }
+];
+const rD = L.resumir(semanaD);
+const det = (clave, o) => L.detalleSemana(semanaD, clave, o || { tipOutEnEfectivo: true });
+const sumaFilas = d => L.redondear(d.filas.reduce((s, f) => s + f.valor, 0));
+
+probar('los días salen en orden de fecha, no de guardado',
+  det('tarjeta').filas.map(f => f.fecha), ['2026-08-10', '2026-08-12', '2026-08-14']);
+
+// El total es la cifra de la tarjeta (sale de `resumir`), no otra cuenta.
+const deLaTarjeta = {
+  horas: rD.horas, efectivo: rD.efectivoNeto, tarjeta: rD.tarjeta, propinas: rD.propinas,
+  tipOut: rD.tipOut, ventas: rD.ventas, sueldo: rD.sueldoBase
+};
+Object.keys(deLaTarjeta).forEach(clave => {
+  probar(`${clave}: el total es la cifra de la tarjeta`, det(clave).total.valor, deLaTarjeta[clave]);
+  probar(`${clave}: y los días suman ese total`, sumaFilas(det(clave)), det(clave).total.valor);
+  probar(`${clave}: se marca como suma`, det(clave).suma, true);
+});
+
+probar('efectivo con el tip-out en billetes: el día resta su tip-out',
+  det('efectivo').filas[0], { fecha: '2026-08-10', valor: -19, efectivo: 20, tipOut: 39 });
+probar('con el tip-out descontado del cheque: el efectivo va entero y sin resta',
+  L.detalleSemana(semanaD, 'efectivo', { tipOutEnEfectivo: false }).filas[0],
+  { fecha: '2026-08-10', valor: 20, efectivo: 20, tipOut: 0 });
+probar('y entonces el total es el efectivo bruto',
+  L.detalleSemana(semanaD, 'efectivo', { tipOutEnEfectivo: false }).total.valor, rD.efectivo);
+
+probar('por hora: el total es el de la tarjeta, no el promedio de los días',
+  det('porHora').total, { valor: rD.propinaPorHora, total: rD.netoPropinas, horas: rD.horas });
+probar('y cada día trae con qué se calcula: $21 en 5 h',
+  det('porHora').filas[0], { fecha: '2026-08-10', valor: 4.2, total: 21, horas: 5 });
+probar('con el sueldo contado, por hora lo cuenta también',
+  L.detalleSemana(semanaD, 'porHora', { contarSueldo: true }).total.valor, rD.totalPorHora);
+probar('por hora no es suma', det('porHora').suma, false);
+
+probar('prop/vtas: total de la tarjeta y sus dos piezas',
+  det('propVtas').total, { valor: rD.porcentajeVentas, propinas: rD.propinas, ventas: rD.ventas });
+probar('por turno: el promedio de la tarjeta, sobre el total y los turnos',
+  det('porTurno').total, { valor: rD.promedioPorTurno, total: rD.totalNeto, turnos: 3 });
+probar('y cada día dice cuánto fue propina y cuánto sueldo',
+  det('porTurno').filas.every(f => L.redondear(f.propinas + f.sueldo) === f.valor), true);
+
+probar('incentivo: sin anotar es null, un cero escrito es 0',
+  det('incentivo').filas.map(f => f.valor), [null, 4, 0]);
+probar('y el total dice en cuántos turnos se anotó',
+  det('incentivo').total, { valor: 4, anotados: 2, turnos: 3 });
+
+probar('una semana sin turnos da filas vacías y total cero',
+  L.detalleSemana([], 'tarjeta', {}), { filas: [], total: { valor: 0 }, suma: true });
+
+let lanzo = false;
+try { L.detalleSemana(semanaD, 'propina'); } catch (e) { lanzo = true; }
+probar('una clave que no existe es un error en voz alta, no una hoja vacía', lanzo, true);
+
+
+/* --------------------------------------------------------------------------
    Resultado
    -------------------------------------------------------------------------- */
 console.log(`\n${'─'.repeat(50)}`);

@@ -485,8 +485,8 @@
      sola una app de dos pantallas y una acción.
 
      Texto plano que se relee cuando haga falta, no se rompe al mover un botón y
-     no estorba a quien no lo busca. Los globos (i) de cada métrica siguen
-     siendo la ayuda puntual; esto es el nivel de arriba.
+     no estorba a quien no lo busca. La ayuda puntual de cada métrica está en
+     su hoja de detalle (tocar la tarjeta); esto es el nivel de arriba.
      ====================================================================== -->
 <section id="p-ayuda" class="oculto">
   <div class="barra-titulo">
@@ -523,14 +523,9 @@
 <!-- ==========================================================================
      SECCIÓN L — Pestañas
      ====================================================================== -->
-<!-- El globo de ayuda. Es uno solo para toda la app: se le cambia el texto y se
-     lo coloca donde haga falta. Tener uno por tarjeta serían diez elementos
-     escondidos que mantener sincronizados. -->
-<div class="globo oculto" id="globo" role="tooltip"></div>
-
 <!-- La hoja de ayuda de cada pantalla. Una sola para toda la app, igual que el
-     globo y el diálogo: se le cambian las preguntas según la pantalla que la
-     abrió. Tocar el fondo la cierra. -->
+     diálogo: se le cambian las preguntas según la pantalla que la abrió.
+     Tocar el fondo la cierra. -->
 <div class="hoja-fondo oculto" id="hoja-ayuda" onclick="if (event.target === this) cerrarHojaAyuda()">
   <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
     <div class="asa" aria-hidden="true"></div>
@@ -541,6 +536,23 @@
     <div id="hoja-lista"></div>
     <button class="hoja-todas" data-t="verTodas"
             onclick="verTodaLaAyuda()">Ver todas las preguntas</button>
+  </div>
+</div>
+
+<!-- El día a día de una estadística de la semana: sale al tocar su tarjeta.
+     Es la misma hoja que la de ayuda, con otro contenido: quien ya cerró una
+     sabe cerrar la otra. Arriba va la explicación que antes vivía en el globo
+     (i); debajo, un renglón por turno y el total de la tarjeta. -->
+<div class="hoja-fondo oculto" id="hoja-detalle" onclick="if (event.target === this) cerrarDetalle()">
+  <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo">
+    <div class="asa" aria-hidden="true"></div>
+    <div class="hoja-cabeza">
+      <span id="detalle-titulo"></span>
+      <button data-t="cerrar" onclick="cerrarDetalle()">Cerrar</button>
+    </div>
+    <p class="detalle-nota" id="detalle-nota"></p>
+    <div class="detalle-lista" id="detalle-lista"></div>
+    <p class="detalle-libres oculto" id="detalle-libres"></p>
   </div>
 </div>
 
@@ -666,7 +678,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v48';
+const VERSION_APP = 'v49';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1070,6 +1082,7 @@ function irA(nombre) {
   const venia = pantalla;
   pantalla = nombre;
   hojaAyuda = null;   // cambiar de pantalla cierra la hoja de la anterior
+  detalleAbierto = null;
   pintar();
   window.scrollTo(0, 0);
   abrirBarra();       // cada pantalla empieza con la barra abierta, arriba del todo
@@ -1344,39 +1357,6 @@ function cambiarInicioSemana(dia) {
   semanaVista = inicioDeEstaSemana(ancla);
   guardar();
   pintar();
-}
-
-/* ----------------------------------------------------------------------------
-   El globo de ayuda de cada dato.
-
-   Se abre con el botón (i) y se cierra tocando en cualquier otro sitio. Antes
-   la explicación estaba siempre visible debajo de cada cifra: informaba bien,
-   pero convertía la pantalla en un muro de texto gris. Una ayuda que hay que
-   pedir se lee cuando hace falta y no estorba el resto del tiempo.
-   -------------------------------------------------------------------------- */
-
-function mostrarNota(clave, boton) {
-  const globo = document.getElementById('globo');
-  globo.textContent = t(clave);
-  globo.classList.remove('oculto');
-
-  // Lo colocamos justo debajo del botón, pero sin dejar que se salga por los
-  // lados de la pantalla: en las tarjetas de la derecha se saldría siempre.
-  if (boton && boton.getBoundingClientRect) {
-    const caja = boton.getBoundingClientRect();
-    const ancho = 235;
-    const margen = 14;
-    const maximo = window.innerWidth - ancho - margen;
-    let izquierda = caja.left + caja.width / 2 - ancho / 2;
-    if (izquierda < margen) izquierda = margen;
-    if (izquierda > maximo) izquierda = Math.max(margen, maximo);
-    globo.style.left = izquierda + 'px';
-    globo.style.top = (caja.bottom + 8) + 'px';
-  }
-}
-
-function cerrarNota() {
-  document.getElementById('globo').classList.add('oculto');
 }
 
 function alternarEstadisticas() {
@@ -2801,6 +2781,7 @@ function pintar() {
   if (pantalla === 'ayuda')      pintarAyuda();
   if (pantalla === 'instalacion') pintarInstalacion();
   pintarHojaAyuda();
+  pintarHojaDetalle();
 }
 
 /* --- La semana --- */
@@ -2968,12 +2949,17 @@ function pintarSemana() {
       }
     }
     const nombre = escaparHTML(etiqueta !== undefined ? etiqueta : t(claveEtiqueta));
-    return `<div class="metrica">`
+    /* Toda la tarjeta es el botón: abre su día a día (`abrirDetalle`). Hasta
+       la v48 solo respondía una (i) de 20 px que abría un globo con la
+       explicación; con dos zonas de toque una dentro de otra, en un teléfono
+       estrecho se toca la que no era. La flecha ocupa el sitio de la (i) y
+       avisa que se abre algo. */
+    return `<button class="metrica" onclick="abrirDetalle('${claveNota}')"`
+         + ` aria-haspopup="dialog">`
          + `<div class="cabeza"><span class="etiqueta">${nombre}</span>`
-         + `<button class="info" onclick="mostrarNota('${claveNota}', this)"`
-         + ` aria-label="${nombre}">i</button></div>`
+         + `<span class="ir" aria-hidden="true">›</span></div>`
          + `<div class="valor">${valor}</div>${delta}`
-         + (pie ? `<div class="cuantos">${pie}</div>` : '') + `</div>`;
+         + (pie ? `<div class="cuantos">${pie}</div>` : '') + `</button>`;
   };
 
   const horas = n => n + ' h';
@@ -4116,7 +4102,6 @@ let hojaAyuda = null;   // la pantalla cuya hoja está abierta, o null
 function abrirHojaAyuda(deQuePantalla) {
   hojaAyuda = deQuePantalla;
   ayudaAbierta = '';    // se abre con todas las preguntas cerradas
-  cerrarNota();
   pintar();
 }
 
@@ -4147,6 +4132,145 @@ function pintarHojaAyuda() {
     rellenar(t('ayudaDe'), t(nombres[hojaAyuda]));
   pintarPreguntas('hoja-lista', claves);
 }
+
+/* --- El día a día de una estadística ---
+
+   Tocar una tarjeta de la semana abre una hoja con la explicación de la cifra
+   y de dónde sale, turno por turno. Responde "¿de dónde salen estos $249?" y
+   sirve para cuadrar la tarjeta contra el cheque: por eso aquí las cifras van
+   con centavos, aunque la tarjeta las redondee.
+
+   Vive en memoria y no se guarda, como la hoja de ayuda. Lo que se recuerda
+   es la clave de la NOTA de la tarjeta ('nPorHora'), que es lo único que la
+   tarjeta ya sabía; de ahí salen el título y el cálculo. */
+let detalleAbierto = null;   // la nota de la tarjeta abierta, o null
+
+/* Nota de la tarjeta → [clave de `detalleSemana`, etiqueta]. La del efectivo
+   cambia con cómo se paga el tip-out, igual que en la tarjeta. El incentivo no
+   tiene etiqueta en TEXTOS: su nombre lo escribe cada quien. */
+const DETALLE_DE_NOTA = {
+  nHoras:    ['horas',    'mHoras'],    nPorHora:      ['porHora',  'mPorHora'],
+  nEfectivo: ['efectivo', 'mEfectivo'], nEfectivoNeto: ['efectivo', 'mEfectivoNeto'],
+  nTarjeta:  ['tarjeta',  'mTarjeta'],  nPropinas:     ['propinas', 'mPropinas'],
+  nTipOut:   ['tipOut',   'mTipOut'],   nVentas:       ['ventas',   'mVentas'],
+  nPropVtas: ['propVtas', 'mPropVtas'], nSueldo:       ['sueldo',   'mSueldo'],
+  nPorTurno: ['porTurno', 'mPorTurno'], nIncentivo:    ['incentivo', null]
+};
+
+function abrirDetalle(claveNota) {
+  detalleAbierto = claveNota;
+  pintar();
+}
+
+function cerrarDetalle() {
+  detalleAbierto = null;
+  pintar();
+}
+
+/** "Mié 21" / "Wed 21": el día corto y su número. */
+function diaCorto(fecha) {
+  const dia = partes(fecha).toLocaleDateString(locale(), { weekday: 'short' })
+    .replace('.', '');
+  return dia.charAt(0).toUpperCase() + dia.slice(1) + ' ' + partes(fecha).getDate();
+}
+
+/* La cifra de un renglón y, debajo, de qué está hecha. El total lleva otra
+   línea: en las que no son sumas dice cómo sale ("$1,316.61 ÷ 38 h"). Una
+   línea vacía no se pinta: "$168.37" no necesita explicarse. */
+function textoDetalle(clave, f, esTotal) {
+  const valor = {
+    horas: n => n + ' h', propVtas: n => n + '%',
+    incentivo: n => (n === null ? '—' : String(n))
+  }[clave] || $;
+  let sub = '';
+  if (esTotal) {
+    if (clave === 'porHora')  sub = rellenar(t('detalleEntre'), $(f.total), f.horas + ' h');
+    if (clave === 'propVtas') sub = rellenar(t('detalleEntre'), $(f.propinas), $(f.ventas));
+    if (clave === 'porTurno') sub = rellenar(t('detalleEntre'), $(f.total),
+                                    `${f.turnos} ${plural(f.turnos, 'turno', 'turnos')}`);
+    if (clave === 'incentivo' && f.anotados < f.turnos) {
+      sub = rellenar(t('incentivoEnTurnos'), f.anotados, f.turnos);
+    }
+  } else {
+    if (clave === 'porHora')  sub = rellenar(t('detalleEnHoras'), $(f.total), f.horas);
+    if (clave === 'efectivo' && f.tipOut) {
+      sub = rellenar(t('detalleMenosTipOut'), $(f.efectivo), $(f.tipOut));
+    }
+    if (clave === 'propinas') sub = rellenar(t('detalleEfectivoTarjeta'), $(f.efectivo), $(f.tarjeta));
+    if (clave === 'tipOut' && f.ventas) sub = rellenar(t('detalleSobreVentas'), $(f.ventas));
+    if (clave === 'propVtas') sub = rellenar(t('detalleDe'), $(f.propinas), $(f.ventas));
+    if (clave === 'sueldo')   sub = rellenar(t('detalleHorasPorTarifa'), f.horas, $(f.tarifa));
+    if (clave === 'porTurno' && f.sueldo) {
+      sub = rellenar(t('detallePropinasSueldo'), $(f.propinas), $(f.sueldo));
+    }
+    if (clave === 'incentivo' && f.valor === null) sub = t('detalleSinAnotar');
+  }
+  return { valor: valor(f.valor), sub };
+}
+
+function pintarHojaDetalle() {
+  const fondo = document.getElementById('hoja-detalle');
+  const par = detalleAbierto && DETALLE_DE_NOTA[detalleAbierto];
+  // Igual que la de ayuda: al cerrarse baja con lo que tenía dentro.
+  if (!par || pantalla !== 'semana') { ocultarCapa(fondo, 220); return; }
+  mostrarCapa(fondo);
+
+  const [clave, claveEtiqueta] = par;
+  const fechas = diasDeLaSemana(semanaVista);
+  const deLaSemana = datos.turnos.filter(x => fechas.includes(x.fecha));
+  // Las mismas preferencias con las que se pintó la tarjeta: si no, el total
+  // de la hoja no sería la cifra que se tocó.
+  const detalle = detalleSemana(deLaSemana, clave, {
+    contarSueldo: !!datos.prefs.contarSueldo,
+    tipOutEnEfectivo: !!datos.trabajo.tipOutEnEfectivo
+  });
+
+  document.getElementById('detalle-titulo').textContent =
+    claveEtiqueta ? t(claveEtiqueta) : nombreIncentivo();
+  document.getElementById('detalle-nota').textContent = t(detalleAbierto);
+
+  const renglon = (etiqueta, f, esTotal) => {
+    const { valor, sub } = textoDetalle(clave, f, esTotal);
+    const fila = document.createElement('div');
+    fila.className = 'detalle-fila' + (esTotal ? ' detalle-total' : '');
+    const izquierda = document.createElement('span');
+    izquierda.className = 'detalle-dia';
+    izquierda.textContent = etiqueta;
+    if (sub) {
+      const debajo = document.createElement('span');
+      debajo.className = 'detalle-sub';
+      debajo.textContent = sub;
+      izquierda.appendChild(debajo);
+    }
+    const derecha = document.createElement('span');
+    derecha.className = 'detalle-valor';
+    derecha.textContent = valor;
+    fila.append(izquierda, derecha);
+    return fila;
+  };
+
+  const lista = document.getElementById('detalle-lista');
+  lista.innerHTML = '';
+  if (detalle.filas.length === 0) {
+    const vacio = document.createElement('p');
+    vacio.className = 'detalle-vacio';
+    vacio.textContent = t('detalleSinTurnos');
+    lista.appendChild(vacio);
+  } else {
+    detalle.filas.forEach(f => lista.appendChild(renglon(diaCorto(f.fecha), f, false)));
+    const nombreTotal = detalle.suma ? 'detalleTotal'
+                      : clave === 'porTurno' ? 'detallePromedio' : 'detalleSemana';
+    lista.appendChild(renglon(t(nombreTotal), detalle.total, true));
+  }
+
+  // Los días que ya pasaron sin turno. Los que faltan de esta semana no son
+  // libres todavía: esta noche puede haber turno.
+  const libres = fechas.filter(f => f < hoy() && !deLaSemana.some(x => x.fecha === f));
+  const lineaLibres = document.getElementById('detalle-libres');
+  lineaLibres.classList.toggle('oculto', libres.length === 0 || detalle.filas.length === 0);
+  lineaLibres.textContent = rellenar(t('detalleLibres'), libres.map(diaCorto).join(', '));
+}
+
 
 /* --- Bienvenida --- */
 function pintarBienvenida() {
@@ -4184,23 +4308,6 @@ document.getElementById('f-ventas')
     pintarRecibo();
   }));
 
-// Cerrar el globo al tocar en cualquier otro sitio.
-//
-// `true` al final activa la fase de captura: este manejador corre ANTES que el
-// onclick del botón (i). Así, un toque en otro botón de información cierra el
-// globo viejo y enseguida el botón abre el nuevo, en ese orden. Sin la
-// captura, el orden se invierte y el globo se cerraría justo después de
-// abrirse — que es como se ve un botón que "no funciona".
-document.addEventListener('click', evento => {
-  const destino = evento.target;
-  const esBotonInfo = destino && destino.classList
-                   && destino.classList.contains('info');
-  if (!esBotonInfo) cerrarNota();
-}, true);
-
-// Al desplazar la pantalla el globo se quedaría flotando en el aire, porque su
-// posición está fijada a la ventana y no al botón.
-window.addEventListener('scroll', cerrarNota, { passive: true });
 
 /* ----------------------------------------------------------------------------
    Revisión de arranque: ¿llegaron los dos archivos, y de la misma versión?
@@ -4226,7 +4333,7 @@ const FUNCIONES_NECESARIAS = [
   'turnoValido', 'fusionarTurnos', 'cifrasPrincipales', 'efectivoMostrado',
   'diasEntre', 'turnosDelPeriodo', 'reportePorDia', 'reportePorFranja', 'mejorGrupo',
   'minutosDeCorte', 'resumenAnual', 'aniosConTurnos', 'turnosACSV',
-  'avisoRespaldo'
+  'avisoRespaldo', 'detalleSemana'
 ];
 
 /* Al añadir una función a logica.js que use index.html, añadirla también a la

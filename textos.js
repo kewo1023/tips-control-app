@@ -137,6 +137,20 @@ const TEXTOS = {
     mSueldo: 'Sueldo',      nSueldo: 'Horas × tu tarifa por hora.',
     mPorTurno: 'Por turno', nPorTurno: 'Promedio de lo que te llevas cada turno.',
 
+    // La hoja con el día a día de una estadística (tocar la tarjeta)
+    detalleTotal: 'Total', detalleSemana: 'Semana', detallePromedio: 'Promedio',
+    detalleLibres: 'Libres: %1.',
+    detalleSinTurnos: 'Esta semana no hay turnos.',
+    detalleMenosTipOut: '%1 − %2 de tip-out',
+    detalleEfectivoTarjeta: '%1 efectivo + %2 tarjeta',
+    detalleEnHoras: '%1 en %2 h',
+    detalleEntre: '%1 ÷ %2',
+    detalleDe: '%1 de %2',
+    detalleSobreVentas: 'sobre %1 en ventas',
+    detalleHorasPorTarifa: '%1 h × %2',
+    detallePropinasSueldo: '%1 propinas + %2 sueldo',
+    detalleSinAnotar: 'sin anotar',
+
     // Formulario
     cerrar: 'Cerrar', entrada: 'Entrada', salida: 'Salida',
     ventasTurno: 'Ventas del turno',
@@ -394,6 +408,19 @@ const TEXTOS = {
     mPropVtas: 'Tip %',    nPropVtas: 'Tips ÷ sales. How well your guests treated you.',
     mSueldo: 'Wages',      nSueldo: 'Hours × your hourly rate.',
     mPorTurno: 'Per shift', nPorTurno: 'Average take-home per shift.',
+
+    detalleTotal: 'Total', detalleSemana: 'Week', detallePromedio: 'Average',
+    detalleLibres: 'Days off: %1.',
+    detalleSinTurnos: 'No shifts this week.',
+    detalleMenosTipOut: '%1 − %2 tip-out',
+    detalleEfectivoTarjeta: '%1 cash + %2 card',
+    detalleEnHoras: '%1 in %2 h',
+    detalleEntre: '%1 ÷ %2',
+    detalleDe: '%1 of %2',
+    detalleSobreVentas: 'on %1 in sales',
+    detalleHorasPorTarifa: '%1 h × %2',
+    detallePropinasSueldo: '%1 tips + %2 wage',
+    detalleSinAnotar: 'not entered',
 
     cerrar: 'Close', entrada: 'Clock in', salida: 'Clock out',
     ventasTurno: 'Shift sales',

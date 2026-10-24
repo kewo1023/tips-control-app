@@ -656,6 +656,93 @@ function mejorTurno(turnos, contarSueldo) {
   return lista.reduce((mejor, t) => valor(t) > valor(mejor) ? t : mejor);
 }
 
+/**
+ * El día a día detrás de una estadística de la semana: una fila por turno, en
+ * orden de fecha, y el total, que es la MISMA cifra de la tarjeta.
+ *
+ * Existe para responder "¿de dónde salen estos $249?". Por eso el total no se
+ * vuelve a calcular sumando las filas: sale de `resumir`, igual que la
+ * tarjeta. Si los dos caminos dieran distinto, la hoja contradiría a la
+ * pantalla que la abrió, que es justo la desconfianza que venía a quitar. Una
+ * prueba comprueba que, en las que son sumas, las filas suman el total.
+ *
+ * Cuatro no son sumas (por hora, prop/vtas, por turno y, con huecos, el
+ * incentivo). Para esas `suma` es false y cada fila y el total traen las
+ * piezas con las que se arman, para poder escribir "$1,316.61 ÷ 38 h".
+ *
+ * Los números van sin formato: el texto lo pone quien pinta, en su idioma.
+ *
+ * @param {Array}  turnos   Los turnos de la semana.
+ * @param {string} clave    Una de DETALLES.
+ * @param {Object} opciones { contarSueldo, tipOutEnEfectivo }, las mismas
+ *                          preferencias con las que se pintó la tarjeta.
+ */
+const DETALLES = ['horas', 'porHora', 'efectivo', 'tarjeta', 'propinas', 'tipOut',
+                  'ventas', 'propVtas', 'sueldo', 'porTurno', 'incentivo'];
+
+function detalleSemana(turnos, clave, opciones) {
+  // Una clave desconocida es un error de quien llama, no de los datos. Se
+  // dice en voz alta: devolver una lista vacía pintaría una hoja en blanco
+  // que parece una semana sin turnos.
+  if (!DETALLES.includes(clave)) throw new Error('detalleSemana: clave desconocida ' + clave);
+
+  const lista = (Array.isArray(turnos) ? turnos : []).slice()
+    .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+  const o = opciones || {};
+  const conSueldo = !!o.contarSueldo;
+  const enEfectivo = !!o.tipOutEnEfectivo;
+
+  const fila = turno => {
+    const c = calcularTurno(turno);
+    const cifras = cifrasPrincipales(c, conSueldo);
+    const ventas = redondear(Number(turno.ventas) || 0);
+    switch (clave) {
+      case 'horas':    return { valor: c.horas };
+      case 'porHora':  return { valor: cifras.porHora, total: cifras.total, horas: c.horas };
+      // El tip-out solo se enseña restando cuando de verdad sale de los billetes.
+      case 'efectivo': return { valor: efectivoMostrado(c, enEfectivo), efectivo: c.efectivo,
+                                tipOut: enEfectivo ? c.tipOut : 0 };
+      case 'tarjeta':  return { valor: c.tarjeta };
+      case 'propinas': return { valor: c.propinas, efectivo: c.efectivo, tarjeta: c.tarjeta };
+      case 'tipOut':   return { valor: c.tipOut, ventas };
+      case 'ventas':   return { valor: ventas };
+      case 'propVtas': return { valor: c.porcentajeVentas, propinas: c.propinas, ventas };
+      case 'sueldo':   return { valor: c.sueldoBase, horas: c.horas,
+                                tarifa: redondear(Number(turno.tarifaHora) || 0) };
+      // `promedioPorTurno` se saca del total CON sueldo (`resumir`), así que
+      // cada día también, y se dice de qué está hecho.
+      case 'porTurno': return { valor: c.totalNeto, propinas: c.netoPropinas, sueldo: c.sueldoBase };
+      // Un campo en blanco no es un cero: es un turno sin anotar (ver `resumir`).
+      case 'incentivo': {
+        const anotado = turno.incentivo !== undefined && turno.incentivo !== null;
+        return { valor: anotado ? redondear(Number(turno.incentivo) || 0) : null };
+      }
+    }
+  };
+
+  const r = resumir(lista);
+  const cifras = cifrasPrincipales(r, conSueldo);
+  const totales = {
+    horas:     { valor: r.horas },
+    porHora:   { valor: cifras.porHora, total: cifras.total, horas: r.horas },
+    efectivo:  { valor: efectivoMostrado(r, enEfectivo) },
+    tarjeta:   { valor: r.tarjeta },
+    propinas:  { valor: r.propinas },
+    tipOut:    { valor: r.tipOut },
+    ventas:    { valor: r.ventas },
+    propVtas:  { valor: r.porcentajeVentas, propinas: r.propinas, ventas: r.ventas },
+    sueldo:    { valor: r.sueldoBase },
+    porTurno:  { valor: r.promedioPorTurno, total: r.totalNeto, turnos: r.turnos },
+    incentivo: { valor: redondear(r.incentivo), anotados: r.turnosConIncentivo, turnos: r.turnos }
+  };
+
+  return {
+    filas: lista.map(turno => Object.assign({ fecha: turno.fecha }, fila(turno))),
+    total: totales[clave],
+    suma: !['porHora', 'propVtas', 'porTurno'].includes(clave)
+  };
+}
+
 /** Los turnos de una fecha concreta. */
 function turnosDelDia(turnos, fecha) {
   return (Array.isArray(turnos) ? turnos : []).filter(t => t.fecha === fecha);
@@ -988,6 +1075,7 @@ if (typeof module !== 'undefined' && module.exports) {
     calcularTurno, resumir, lunesDeLaSemana, inicioDeSemana, numeroDelDia,
     sumarDias, diasEntre, diasDeLaSemana, turnosDelDia,
     horasFrecuentes, mejorTurno, cifrasPrincipales, efectivoMostrado,
+    detalleSemana, DETALLES,
     turnoValido, fusionarTurnos,
     franjaDelTurno, minutosDeCorte, turnosDelPeriodo, reportePorDia, reportePorFranja, mejorGrupo,
     avisoRespaldo, resumenAnual, aniosConTurnos, celdaCSV, turnosACSV,

@@ -891,7 +891,9 @@ hoja desde abajo con las preguntas de esa pantalla (`AYUDA_POR_PANTALLA`) y
   escribe una vez. Sigue sin ser un tour: no señala ni se ancla a nada.
 - Zona de toque de 44 puntos (lo que pide Apple) con `::after`, sin agrandar
   el dibujo. El botón (i) de las métricas, igual: 20 px de dibujo y 44 de
-  toque, y pasa a tinta-2 porque con tinta-3 casi no se veía.
+  toque, y pasa a tinta-2 porque con tinta-3 casi no se veía. *(El botón (i)
+  ya no existe: reemplazado el 24 de octubre de 2026 por la tarjeta entera,
+  §25.)*
 - La regla "nombrar, no ubicar" ahora se prueba en TODAS las respuestas, en los
   dos idiomas. La de registrar un turno la rompía ("la fila de arriba").
 - Preguntas nuevas: ventas (netas, sin impuestos ni propinas), el equipo
@@ -1248,3 +1250,52 @@ todo (con el título de la instalación en la opción "solo el peso").
   de las demás pantallas (debajo del ícono de 68 px se ve débil: es una
   portada), y tocar "Cerrar" junto a la píldora "Ayuda" en el turno, que es
   una decisión de botones y no de letra.
+
+
+## 25. Tocar una estadística abre su día a día (24 de octubre de 2026)
+
+La petición: tocar "Efectivo neto $249" y ver de dónde salen esos $249, día
+por día. Se evaluó en los cuatro ejes, se le mostró al mantenedor una maqueta
+con el antes y el después en los dos temas, la miró en el teléfono y la
+aprobó entera.
+
+- **Toda la tarjeta es el botón, y la (i) se va.** Con la (i) dentro de una
+  tarjeta que también se toca habría dos zonas de toque una dentro de otra, y
+  en un teléfono de 320 px con tres columnas se toca la que no era. La
+  explicación que vivía en el globo pasa arriba de la hoja; el globo
+  desaparece con su código. Una flecha › ocupa el sitio de la (i) para avisar
+  que la tarjeta se abre.
+- **Es la misma hoja que la de ayuda** (`.hoja-fondo`, `mostrarCapa` /
+  `ocultarCapa`): sube desde abajo, se cierra con "Cerrar" o tocando el
+  fondo, y cambiar de pantalla la cierra. El estado vive en memoria
+  (`detalleAbierto`), como `hojaAyuda`.
+- **El total es la cifra de la tarjeta, no la suma de los renglones.**
+  `detalleSemana` (logica.js) lo saca de `resumir`, igual que la tarjeta, con
+  las mismas preferencias (sueldo contado o no, tip-out en billetes o no). Si
+  la hoja diera otro número que la tarjeta que la abrió, traería justo la
+  desconfianza que venía a quitar. Las pruebas comprueban las dos cosas: que
+  en las que son sumas los días suman el total, y que el total es la cifra de
+  la tarjeta.
+- **Con centavos en la hoja**, aunque la tarjeta redondee: así la tarjeta de
+  la semana se puede cuadrar contra la línea de propinas de tarjeta del
+  cheque.
+- **Debajo de cada cifra, de qué está hecha** ("$95 − $38.35 de tip-out",
+  "6 h × $5.62"). Las que no son sumas (por hora, prop/vtas, por turno)
+  cierran con cómo sale el total ("$1,316.61 ÷ 38 h"), no con un "Total" que
+  no lo es.
+- **Días libres en una línea al final, no como renglones vacíos.** Solo los
+  que ya pasaron sin turno: los que faltan de la semana en curso todavía
+  pueden tenerlo.
+- **Al apretarla, la tarjeta se oscurece en vez de encogerse** como los demás
+  botones: la rejilla dibuja sus rayas con el fondo que asoma por el hueco de
+  1 px, y encogida dejaría ver un marco gris alrededor.
+- **Hallazgo, sin cambiar todavía:** "Por turno" (`promedioPorTurno`) se
+  calcula con el sueldo incluido aunque el sueldo no se cuente en el total,
+  y §7 pide que esa preferencia se aplique igual en todas las cifras. La hoja
+  no lo esconde: cada día dice cuánto fue propina y cuánto sueldo. Arreglarlo
+  cambia una cifra que ya se ve, así que se decide aparte.
+- **Descartado:** dejar la (i) con su globo y que el resto de la tarjeta
+  abriera el día a día (dos zonas de toque juntas); una pantalla aparte en vez
+  de la hoja (sacaría a la persona de la semana para una consulta de un
+  vistazo); renglones vacíos para los días libres (alargan la hoja sin dar un
+  dato).
