@@ -1020,7 +1020,13 @@ Lo que entró, y por qué cada cifra:
   la tinta, como el lado de una tecla.
 - **Aviso breve abajo ("Turno guardado"): 4 s con una raya que se vacía, y
   una X.** Solo confirma lo que salió bien (guardar y borrar un turno, y solo
-  si `guardar()` lo consiguió). **Un error nunca va ahí:** un aviso que se va
+  si `guardar()` lo consiguió). **Desde la v51, también los campos de texto de
+  Ajustes** (nombre, sueldo, ayudantes, incentivo y los de "Tu cheque"), con
+  `confirmarAjuste()`: se guardan al salir del campo, sin botón, y nada decía
+  que se hubieran guardado ni cómo se entendió lo escrito ("Sueldo por hora:
+  $7.25"). Solo si el valor cambió; con un número ilegible, solo el diálogo.
+  Los selectores y las casillas no lo llevan: la píldora o el chulo lo dicen
+  en el mismo sitio, y un aviso por toque sería ruido. **Un error nunca va ahí:** un aviso que se va
   solo se puede perder, y un error que nadie leyó es un error mudo. Los
   errores siguen en el diálogo. Vive dentro de la barra de pestañas para
   seguirla con el arreglo de iOS 26 (§17); pegado al borde de la ventana se
@@ -1387,6 +1393,27 @@ Vigente. Se eligió sobre una vista previa mirada en el teléfono.
   cheque; se ancla al último día de pago y la app suma lo de después. Solo se
   re-ancla cuando ese número cambia: si se re-anclara al guardar otro campo,
   lo de las semanas siguientes se contaría dos veces.
+- **El ancla también sirve hacia atrás (v51, 29 de octubre de 2026).** El
+  primer cheque real comparado con la app falló por una línea entera (la UI
+  de NJ, ya topada) y no por redondeo. Al copiar el "year to date" para
+  arreglarlo, la semana siguió igual: el día de pago se copia el cheque que se
+  tiene en la mano y se mira la semana que ese cheque paga, pero el ancla
+  quedaba con la fecha de ese mismo cheque y solo se usaba para los
+  posteriores. Ahora, para ese cheque o uno anterior, al ancla se le resta lo
+  anotado de las semanas pagadas entre medias (con lo anotado: un centavo
+  distinto en la tarjeta no mueve ningún tope). Y el aviso breve dice de qué
+  cheque tomó el número, para que un ancla mal fechada se vea al escribirla y
+  no el día de pago.
+- **El bruto del año se pide solo a quien le falta (v51).** "Mis datos están
+  bien" quitaba el aviso aunque el acumulado estuviera vacío, y sin él la app
+  sigue cobrando la UI a quien ya la pagó. Pedirlo a todos molestaba a quien
+  no lo necesita: si hay semanas anotadas pagadas hasta el 7 de enero (el
+  primer día de pago del año cae siempre en esa semana), la app ya tiene el
+  año entero (`acumuladoDelAnio` → `completo`). Al resto, la tarjeta se lo
+  pide hasta que lo copie, con el camino directo al campo, y el desglose lo
+  marca en la línea de la UI, que es la única que hoy cambia con él. Quien
+  cambió de trabajo a mitad de año lo verá aunque la app tenga todo lo de su
+  trabajo nuevo; copiarlo de su primer cheque lo resuelve.
 - **Una semana sin turnos no tiene tarjeta**, y otro estado dice
   "aproximado" debajo de la cifra.
 - **Descartado:** un asistente de configuración la primera vez (fricción,

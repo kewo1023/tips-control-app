@@ -111,7 +111,8 @@ versión en movimiento reducido (`estilos.css`, sección A6). El diálogo y la
 hoja de ayuda se enseñan y se esconden con `mostrarCapa()` / `ocultarCapa()`,
 nunca tocando `oculto` a mano. Los segmentados se dibujan con
 `pintarSegmentado()`, que no rehace los botones: si se rehacen, la píldora no
-se desliza. Un error nunca va en el aviso breve, que se va solo. Lo que
+se desliza. Un error nunca va en el aviso breve, que se va solo. Un campo de texto que se
+guarda al salir de él confirma con `confirmarAjuste()`. Lo que
 reacciona al scroll (la barra que se recoge) solo puede cambiar `transform`,
 `opacity` o colores: nunca el alto de la página.
 

@@ -82,6 +82,8 @@ const TEXTOS = {
     // El aviso breve de abajo: solo confirma lo que salió bien. Los errores
     // van en el diálogo de arriba, que no se va solo.
     avisoGuardado: 'Turno guardado', avisoBorrado: 'Turno borrado', avisoCerrar: 'Cerrar aviso',
+    avisoAjusteGuardado: 'Cambio guardado', avisoSinPoner: 'sin poner', avisoPct: '%1 %',
+    avisoDelCheque: 'del cheque del %1',
 
     // Aviso y pantalla de instalación
     instTitulo: 'Instala la app',
@@ -156,6 +158,7 @@ const TEXTOS = {
     chequeLlega: 'Llega el %1',
     chequeAproximado: 'aproximado',
     chequeAviso: 'Calculado con valores de ejemplo. Revisa tu estado civil y dos datos más en Ajustes ›',
+    chequeAvisoAcumulado: 'Falta tu bruto del año: sin él puede restarte descuentos que ya no te cobran. Cópialo de tu último cheque en Ajustes ›',
     chequeTablasViejas: 'Con las tablas de %1: faltan las de %2.',
     chequeNota: 'Lo que debería llegar el %1 por esta semana, con las tablas oficiales de %2.',
     chequePaga: 'Lo que paga', chequeRetiene: 'Lo que retiene',
@@ -166,6 +169,7 @@ const TEXTOS = {
     chequeYaLoTienes: 'Ya lo tienes en el bolsillo',
     chequeNeto: 'Neto del cheque',
     chequeTope: 'Ya llegaste al tope del año',
+    chequeTopeQuizas: 'Puede que ya no te la cobren: falta tu bruto del año',
     chequeNoEsDocumento: 'Es un estimado: no es un documento de impuestos.',
     // Los nombres del papel: van igual en los dos idiomas, porque así salen
     // en el cheque y es contra el cheque que se comparan.
@@ -478,6 +482,7 @@ const TEXTOS = {
     chequeLlega: 'Arrives %1',
     chequeAproximado: 'approximate',
     chequeAviso: 'Based on example settings. Check your filing status and two more things in Settings ›',
+    chequeAvisoAcumulado: 'Your year-to-date gross is missing: without it, this may subtract deductions you no longer pay. Copy it from your last paycheck in Settings ›',
     chequeTablasViejas: 'Using the %1 tables: the %2 ones are missing.',
     chequeNota: 'What should arrive on %1 for this week, using the official %2 tables.',
     chequePaga: 'What it pays', chequeRetiene: 'What it withholds',
@@ -488,6 +493,7 @@ const TEXTOS = {
     chequeYaLoTienes: 'Already in your pocket',
     chequeNeto: 'Net paycheck',
     chequeTope: 'You reached this year’s cap',
+    chequeTopeQuizas: 'You may no longer pay this: your year-to-date gross is missing',
     chequeNoEsDocumento: 'This is an estimate, not a tax document.',
     lineaFederal: 'Federal Income', lineaSocialSecurity: 'Social Security',
     lineaMedicare: 'Medicare', lineaNjRenta: 'NJ State Income', lineaNjUI: 'NJ State UI',
@@ -540,6 +546,8 @@ const TEXTOS = {
     // Dialog buttons
     dlgAceptar: 'OK', dlgCancelar: 'Cancel', dlgEntendido: 'Got it',
     avisoGuardado: 'Shift saved', avisoBorrado: 'Shift deleted', avisoCerrar: 'Close notice',
+    avisoAjusteGuardado: 'Change saved', avisoSinPoner: 'left blank', avisoPct: '%1%',
+    avisoDelCheque: 'from the %1 paycheck',
 
     // Install prompt and screen
     instTitulo: 'Install the app',

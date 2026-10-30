@@ -1205,16 +1205,37 @@ const semanasCh = [
   { fechaPago: '2026-01-29', bruto: 1300 }   // después: no cuenta
 ];
 probar('sin ancla, el acumulado suma las semanas del año pagadas antes',
-  L.acumuladoDelAnio(semanasCh, '2026-01-22', null), { monto: 2100.5, fuente: 'app' });
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', null),
+  { monto: 2100.5, fuente: 'app', completo: true });
 probar('con ancla, su monto más lo pagado después de ella',
   L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-08' }),
-  { monto: 6100.5, fuente: 'ancla' });
+  { monto: 6100.5, fuente: 'ancla', completo: true });
+// El día de pago: se copia el cheque que llegó y se mira la semana que paga.
+// Su "year to date" ya trae ese cheque: 5000 − 1200 = 3800.
+probar('un ancla del mismo cheque se le resta a ese cheque',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-22' }),
+  { monto: 3800, fuente: 'ancla', completo: true });
+// Un ancla posterior: 5000 − 1200 (este) − 1300 (el del 29) = 2500.
+probar('un ancla posterior resta también los cheques de en medio',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-29' }).monto, 2500);
+probar('restando, nunca baja de cero',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 1000, fecha: '2026-01-29' }).monto, 0);
 probar('un ancla de otro año no sirve',
   L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2025-12-31' }).fuente, 'app');
-probar('ni una posterior al cheque que se calcula',
-  L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: 5000, fecha: '2026-01-29' }).fuente, 'app');
 probar('ni una sin monto',
   L.acumuladoDelAnio(semanasCh, '2026-01-22', { monto: null, fecha: '2026-01-08' }).fuente, 'app');
+// ¿La app tiene el año entero? Solo si ya se anotaba en la primera semana
+// de enero (el primer día de pago del año cae siempre entre el 1 y el 7).
+probar('quien ya anotaba en diciembre tiene el año completo',
+  L.acumuladoDelAnio(semanasCh, '2026-01-22', null).completo, true);
+probar('y quien anotaba desde la primera semana de enero, también',
+  L.acumuladoDelAnio([{ fechaPago: '2026-01-07', bruto: 900 }, ...semanasCh.slice(1)],
+    '2026-01-22', null).completo, true);
+// Sin el cheque del jueves 1 de enero ni nada de antes: falta un trozo del año.
+probar('quien empezó a anotar después, no',
+  L.acumuladoDelAnio(semanasCh.slice(1), '2026-01-22', null).completo, false);
+probar('el primer cheque del año no necesita acumulado',
+  L.acumuladoDelAnio([], '2026-01-02', null).completo, true);
 
 probar('calibrar el estado con un cheque: retenido ÷ bruto', L.calibrarEstatal(1360, 61.2), 4.5);
 probar('un bruto en cero no calibra nada', L.calibrarEstatal(0, 10), 0);

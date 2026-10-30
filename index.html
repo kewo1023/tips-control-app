@@ -393,7 +393,7 @@
       </div>
       <p class="nota-ajuste" id="a-cheque-declara-nota"></p>
 
-      <div class="campo" style="margin-top:14px">
+      <div class="campo" id="a-cheque-acumulado-campo" style="margin-top:14px">
         <label class="etiqueta" data-t="chequeAcumulado" for="a-cheque-acumulado"></label>
         <input type="text" inputmode="decimal" id="a-cheque-acumulado" onchange="guardarCheque()" placeholder="0.00">
       </div>
@@ -773,7 +773,7 @@ const CLAVE = 'tipsControl';
    de `sw.js`; no hay forma de que este archivo lea la del otro, así que se
    escribe dos veces. Lo que evita que se separen sin que nadie lo note es una
    prueba de `pruebas-app.js` que abre los dos archivos y los compara. */
-const VERSION_APP = 'v50';
+const VERSION_APP = 'v51';
 
 /* La marca de Kev: el símbolo (la K de 3 trazos en su silueta sólida, que es
    la obligatoria por debajo de 24 px) y el nombre al lado.
@@ -1803,9 +1803,11 @@ function borrarTurno() {
    ========================================================================== */
 
 function guardarAjustes() {
+  const w = datos.trabajo;
+  const antes = { nombre: w.nombre, tarifa: w.tarifaHora };
   // El nombre se guarda pase lo que pase: es el otro campo de la tarjeta y no
   // tiene la culpa de que la tarifa esté mal escrita.
-  datos.trabajo.nombre = val('a-nombre').trim() || t('miRestaurante');
+  w.nombre = val('a-nombre').trim() || t('miRestaurante');
 
   const leida = leerNumero(val('a-tarifa'));
   if (!leida.ok) {
@@ -1815,8 +1817,11 @@ function guardarAjustes() {
     return;
   }
 
-  datos.trabajo.tarifaHora = leida.valor;
-  guardar();
+  w.tarifaHora = leida.valor;
+  const cambios = [];
+  if (w.nombre !== antes.nombre) cambios.push(t('restaurante') + ': ' + w.nombre);
+  if (w.tarifaHora !== antes.tarifa) cambios.push(t('sueldoHora') + ': ' + $(w.tarifaHora));
+  confirmarAjuste(guardar(), cambios);
   pintar();
 }
 
@@ -1833,9 +1838,11 @@ function guardarNombreIncentivo() {
   /* Sin `.trim()`, un nombre de solo espacios pasaría y dejaría la etiqueta
      del campo en blanco. Vacío se guarda vacío y `nombreIncentivo()` pone el
      de fábrica: así el campo nunca se queda sin nombre. */
+  const antes = nombreIncentivo();
   datos.trabajo.incentivoNombre =
     document.getElementById('a-incentivo-nombre').value.trim();
-  guardar();
+  confirmarAjuste(guardar(),
+    nombreIncentivo() === antes ? [] : [t('incentivoNombre') + ': ' + nombreIncentivo()]);
   pintar();
 }
 
@@ -1960,6 +1967,7 @@ function terminarBienvenida() {
 function cambiarRol(id, campo, valor) {
   const rol = datos.roles.find(r => r.id === id);
   if (!rol) return;
+  const antes = { nombre: rol.nombre, porcentaje: rol.porcentaje };
 
   if (campo === 'porcentaje') {
     const leido = leerNumero(valor);
@@ -1991,7 +1999,9 @@ function cambiarRol(id, campo, valor) {
     });
   }
 
-  guardar();
+  const cambio = rol.nombre !== antes.nombre || rol.porcentaje !== antes.porcentaje;
+  confirmarAjuste(guardar(), cambio ? [rol.nombre + ': '
+    + (rol.porcentaje === null ? t('avisoSinPoner') : rellenar(t('avisoPct'), rol.porcentaje))] : []);
   pintar();
 }
 
@@ -2458,6 +2468,18 @@ function cerrarAvisoBreve() {
   clearTimeout(relojAvisoBreve);
   relojAvisoBreve = null;
   document.getElementById('aviso-breve').classList.remove('visible');
+}
+
+/* Los campos de texto de Ajustes se guardan al salir de ellos, sin botón, y
+   sin esto nada decía que se habían guardado ni cómo se entendió lo escrito.
+   Sale solo si algo cambió y `guardar()` lo consiguió (si no, ya avisó él).
+   Los selectores y las casillas no lo llevan: la píldora o el chulo ya lo
+   dicen en el mismo sitio, y un aviso por toque sería ruido (DECISIONES §19).
+   @param {boolean}  guardado lo que devolvió `guardar()`
+   @param {string[]} cambios  "Sueldo por hora: $6.05", uno por campo */
+function confirmarAjuste(guardado, cambios) {
+  if (!guardado || !cambios.length) return;
+  avisoBreve(t('avisoAjusteGuardado'), cambios.join(' · '));
 }
 
 
@@ -4459,7 +4481,7 @@ function chequeDeSemana(inicio) {
   const r = estimarCheque(Object.assign({}, entrada, {
     acumulado: acumulado.monto, anio: Number(pago.slice(0, 4)), perfil: perfilDelCheque()
   }));
-  return { r, entrada, pago };
+  return { r, entrada, pago, acumulado };
 }
 
 /** "jueves, 22 de oct" / "Thursday, Oct 22". */
@@ -4525,11 +4547,17 @@ function pintarChequeSemana() {
      de fábrica: se dice en la misma tarjeta, con el camino a Ajustes. Es un
      botón aparte y no parte del de arriba: un botón dentro de otro no se
      puede tocar por separado. */
-  if (!datos.trabajo.chequeRevisado) {
+  /* Revisados los ajustes, lo que todavía puede mover la cifra es el bruto
+     del año: si la app no tiene el año entero, no ve los topes (en NJ, la UI
+     que ya se pagó completa). Se pide hasta que esté, y solo a quien le falta:
+     quien anota desde enero no lo necesita (DECISIONES §27). */
+  const pide = !datos.trabajo.chequeRevisado ? 'chequeAviso'
+    : !ch.acumulado.completo ? 'chequeAvisoAcumulado' : null;
+  if (pide) {
     const aviso = document.createElement('button');
     aviso.className = 'cheque-aviso';
-    aviso.textContent = t('chequeAviso');
-    aviso.onclick = irAAjustesDelCheque;
+    aviso.textContent = t(pide);
+    aviso.onclick = pide === 'chequeAviso' ? irAAjustesDelCheque : irAlAcumulado;
     tarjeta.appendChild(aviso);
   }
   caja.appendChild(tarjeta);
@@ -4538,6 +4566,12 @@ function pintarChequeSemana() {
 function irAAjustesDelCheque() {
   irA('ajustes');
   document.getElementById('aj-cheque').scrollIntoView({ block: 'start' });
+}
+
+/* Directo al campo del bruto del año, que está a media sección. */
+function irAlAcumulado() {
+  irA('ajustes');
+  document.getElementById('a-cheque-acumulado-campo').scrollIntoView({ block: 'center' });
 }
 
 /* El desglose, en la hoja del día a día. Mismo orden que el papel: lo que
@@ -4604,8 +4638,12 @@ function pintarDesgloseCheque(fondo) {
     njFLI: 'lineaNjFLI',
     estatal: 'lineaEstatal'
   };
-  r.lineas.forEach(l => fila(t(nombres[l.clave]),
-    l.clave === 'njUI' && l.monto === 0 ? t('chequeTope') : '', menos(l.monto)));
+  /* La UI es la línea que el bruto del año decide: sin él, se avisa en la
+     misma fila que puede sobrar, que es donde se mira al comparar. */
+  const nota = l => l.clave !== 'njUI' ? ''
+    : l.monto === 0 ? t('chequeTope')
+    : !ch.acumulado.completo ? t('chequeTopeQuizas') : '';
+  r.lineas.forEach(l => fila(t(nombres[l.clave]), nota(l), menos(l.monto)));
   fila(t('chequeRetenciones'), '', menos(r.retenciones), 'detalle-total');
 
   if (e.declarado) fila(t('chequeMenosDeclarado'), t('chequeYaLoTienes'), menos(e.declarado), 'detalle-resta');
@@ -4663,23 +4701,31 @@ const CAMPOS_CHEQUE = {
 function guardarCheque() {
   const w = datos.trabajo;
   const ilegibles = [];
+  const cambios = [];
   Object.keys(CAMPOS_CHEQUE).forEach(id => {
     const [campo, nombre] = CAMPOS_CHEQUE[id];
     const leida = leerNumero(val(id));
     if (!leida.ok) { ilegibles.push(t(nombre)); return; }
+    const nuevo = campo === 'chequeAcumulado' && leida.vacio ? null : leida.valor;
+    if (nuevo === w[campo]) return;
+    w[campo] = nuevo;
+    let detalle = t(nombre) + ': ' + (nuevo === null ? t('avisoSinPoner')
+      : campo === 'chequeDeclaraPct' ? rellenar(t('avisoPct'), nuevo)
+      : campo === 'chequeExencionesNJ' ? String(nuevo) : $(nuevo));
     if (campo === 'chequeAcumulado') {
-      const nuevo = leida.vacio ? null : leida.valor;
-      if (nuevo !== w.chequeAcumulado) {
-        w.chequeAcumulado = nuevo;
-        w.chequeAcumuladoFecha = nuevo === null ? null : ultimoDiaDePago();
+      w.chequeAcumuladoFecha = nuevo === null ? null : ultimoDiaDePago();
+      // De qué cheque lo tomó la app, a la vista: si no es el que se tiene
+      // en la mano, se nota en el momento y no el día de pago.
+      if (nuevo !== null) {
+        detalle += ' · ' + rellenar(t('avisoDelCheque'), diaDePagoTexto(w.chequeAcumuladoFecha));
       }
-    } else {
-      w[campo] = leida.valor;
     }
+    cambios.push(detalle);
   });
   w.chequeRevisado = true;
-  guardar();
+  const guardado = guardar();
   if (ilegibles.length) avisarIlegible(ilegibles[0]);
+  else confirmarAjuste(guardado, cambios);
   pintar();
 }
 

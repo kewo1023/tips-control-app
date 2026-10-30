@@ -937,6 +937,22 @@ ok('casados retienen menos: el cheque sube', run('chequeDeSemana(semanaVista).r.
 run("irA('semana')");
 ok('y la tarjeta ya no avisa', !chequeTxt().includes('valores de ejemplo'));
 
+/* Revisados los ajustes, falta el bruto del año: los turnos de prueba no
+   llegan a la primera semana de enero, así que la app no tiene el año entero
+   y no puede ver los topes. Lo pide en la tarjeta y lo marca en la UI. */
+ok('la app sabe que no tiene el año entero',
+   run('chequeDeSemana(semanaVista).acumulado.completo') === false);
+ok('y la tarjeta pide el bruto del año', chequeTxt().includes('Falta tu bruto del año'));
+tarjetaCheque().children[0].click();
+ok('en el desglose, la UI dice que puede sobrar',
+   texto('detalle-lista').includes('Puede que ya no te la cobren'));
+run('cerrarDetalle()');
+tarjetaCheque().children[1].click();
+ok('el aviso lleva directo al campo del bruto del año',
+   !d.getElementById('p-ajustes')._classes.has('oculto')
+   && d.getElementById('a-cheque-acumulado-campo')._desplazadoA !== undefined);
+run("irA('semana')");
+
 // "Mis datos están bien" sin cambiar nada.
 run('datos.trabajo.chequeRevisado = false; marcarChequeRevisado()');
 ok('"Mis datos están bien" también lo da por revisado', D().trabajo.chequeRevisado === true);
@@ -945,10 +961,16 @@ ok('"Mis datos están bien" también lo da por revisado', D().trabajo.chequeRevi
 run("irA('ajustes')");
 set('a-cheque-pct', '12,5'); set('a-cheque-paso4c', 'diez');
 const avisosAntes = avisos.length;
+/* En este punto los relojes de las pruebas corren al instante y el aviso
+   breve se va en el acto: se mira lo que escribió, borrándolo antes. */
+const borrarAvisoBreve = () => run("document.getElementById('aviso-breve-titulo').textContent = ''");
+borrarAvisoBreve();
 run('guardarCheque()');
 ok('un porcentaje con coma se entiende', D().trabajo.chequeDeclaraPct === 12.5);
 ok('uno ilegible no se guarda', D().trabajo.chequePaso4c === 0);
 ok('y se avisa cuál', avisos.length === avisosAntes + 1 && avisos[avisos.length - 1].includes('Paso 4(c)'));
+ok('con un error, el aviso breve no sale: el error va en el diálogo',
+   texto('aviso-breve-titulo') === '');
 
 // El acumulado se ancla al último día de pago (el jueves 6, hoy) y solo
 // cuando cambia.
@@ -956,6 +978,25 @@ set('a-cheque-paso4c', ''); set('a-cheque-acumulado', '50000');
 run('guardarCheque()');
 ok('el bruto del año se guarda con el día de pago de ese cheque',
    D().trabajo.chequeAcumulado === 50000 && D().trabajo.chequeAcumuladoFecha === '2026-08-06');
+ok('y lo confirma el aviso breve', texto('aviso-breve-titulo') === 'Cambio guardado');
+ok('diciendo lo que entendió y de qué cheque lo tomó',
+   texto('aviso-breve-detalle') === 'Bruto del año en tu último cheque: $50,000.00 · del cheque del jueves, 6 de ago');
+borrarAvisoBreve();
+run('guardarCheque()');
+ok('guardar sin cambiar nada no avisa', texto('aviso-breve-titulo') === '');
+run("irA('semana')");
+ok('con el bruto del año, la tarjeta deja de pedirlo', !chequeTxt().includes('Falta tu bruto del año'));
+run("irA('ajustes')");
+
+/* El día de pago se copia el cheque que se tiene en la mano y se mira la
+   semana que paga: el ancla es del MISMO cheque. Su "year to date" ya trae
+   esa semana, así que se le resta (antes se ignoraba el ancla). */
+run("datos.trabajo.chequeAcumuladoFecha = '2026-08-20'");
+ok('un ancla del mismo cheque se usa, restándole esa semana',
+   run('chequeDeSemana(semanaVista).acumulado.fuente') === 'ancla'
+   && run('chequeDeSemana(semanaVista).acumulado.monto')
+      === run('centavos(50000 - chequeDeSemana(semanaVista).r.bruto)'));
+run("datos.trabajo.chequeAcumuladoFecha = '2026-08-06'");
 run("datos.trabajo.chequeAcumuladoFecha = '2026-07-30'");
 set('a-cheque-pct', '16'); run('guardarCheque()');
 ok('tocar otro campo no lo vuelve a anclar', D().trabajo.chequeAcumuladoFecha === '2026-07-30');
@@ -2923,6 +2964,43 @@ d.getElementById('aviso-breve-cerrar').onclick = d.getElementById('aviso-breve-c
 run('cerrarAvisoBreve()');
 ok('la X lo cierra antes de tiempo', !clases('aviso-breve').has('visible'));
 ok('y cancela su reloj', pendientes.size === 0);
+
+/* Los campos de texto de Ajustes se guardan al salir de ellos: el aviso
+   breve confirma qué se guardó y cómo se entendió. Solo si algo cambió. */
+run("irA('ajustes')");
+const tarifaAntes = D().trabajo.tarifaHora;
+set('a-tarifa', '7,25'); run('guardarAjustes()');
+ok('cambiar el sueldo lo confirma con la cifra entendida',
+   clases('aviso-breve').has('visible') && texto('aviso-breve-titulo') === 'Cambio guardado'
+   && texto('aviso-breve-detalle') === 'Sueldo por hora: $7.25');
+run('cerrarAvisoBreve()');
+set('a-tarifa', '7.25'); run('guardarAjustes()');
+ok('el mismo sueldo otra vez no avisa', !clases('aviso-breve').has('visible'));
+set('a-tarifa', 'siete'); run('guardarAjustes()');
+ok('un sueldo ilegible tampoco: va al diálogo', !clases('aviso-breve').has('visible'));
+set('a-nombre', 'La Esquina'); run('guardarAjustes()');
+ok('el nombre del restaurante también',
+   texto('aviso-breve-detalle') === 'Restaurante: La Esquina');
+run('cerrarAvisoBreve()');
+const rolId = run('datos.roles[0].id');
+run(`cambiarRol('${rolId}', 'porcentaje', '3.5')`);
+ok('el porcentaje de un ayudante, con su nombre',
+   texto('aviso-breve-detalle') === run('datos.roles[0].nombre') + ': 3.5 %');
+run('cerrarAvisoBreve()');
+run(`cambiarRol('${rolId}', 'porcentaje', '3.5')`);
+ok('el mismo porcentaje otra vez no avisa', !clases('aviso-breve').has('visible'));
+run(`cambiarRol('${rolId}', 'porcentaje', 'tres')`);
+ok('uno ilegible no avisa como guardado', !clases('aviso-breve').has('visible'));
+set('a-incentivo-nombre', 'Estrellas'); run('guardarNombreIncentivo()');
+ok('el nombre del incentivo', texto('aviso-breve-detalle') === 'Cómo se llama: Estrellas');
+run('cerrarAvisoBreve()');
+const guardarAj = ctx.localStorage.setItem;
+ctx.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+set('a-tarifa', '8'); run('guardarAjustes()');
+ok('si no se pudo guardar, no dice "Cambio guardado"', !clases('aviso-breve').has('visible'));
+ctx.localStorage.setItem = guardarAj;
+run(`datos.trabajo.tarifaHora = ${tarifaAntes};
+     datos.trabajo.incentivoNombre = ''; guardar(); pintar(); cerrarDialogo(false)`);
 ok('la X tiene nombre para el lector de pantalla',
    d.getElementById('aviso-breve-cerrar').getAttribute('aria-label') === 'Cerrar aviso');
 

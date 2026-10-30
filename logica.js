@@ -1323,31 +1323,52 @@ function chequeDeLaSemana(turnos, opciones) {
  * topes. Dos fuentes:
  *
  *   - **El ancla**: el "year to date" que la persona copió de un cheque suyo,
- *     con la fecha de pago de ese cheque. Lo que se pagó después se suma con
- *     lo anotado en la app. Es lo más fiable, porque la app no sabe lo que
- *     se ganó antes de empezar a usarla.
- *   - **La app**: sin ancla (o con una de otro año, o posterior a este
- *     cheque), la suma de los brutos de las semanas anotadas que se pagan
- *     este año antes de este cheque.
+ *     con la fecha de pago de ese cheque (y ese cheque ya va dentro). Para un
+ *     cheque posterior se le suma lo anotado de las semanas pagadas después;
+ *     para ese mismo cheque o uno anterior, se le resta lo de las semanas
+ *     pagadas desde el cheque que se calcula hasta el del ancla. Lo segundo
+ *     es lo que pasa siempre el día de pago: se copia el cheque que se tiene
+ *     en la mano y se mira la semana que paga. Es lo más fiable, porque la
+ *     app no sabe lo que se ganó antes de empezar a usarla.
+ *   - **La app**: sin ancla (o con una de otro año), la suma de los brutos de
+ *     las semanas anotadas que se pagan este año antes de este cheque.
+ *
+ * `completo` dice si el monto cubre todo el año. Con ancla, sí. Sin ella,
+ * solo si hay semanas anotadas pagadas hasta el 7 de enero: el primer día de
+ * pago del año siempre cae en esa semana, así que quien ya anotaba entonces
+ * tiene el año entero en la app. Quien empezó a usarla a mitad de año, no: la
+ * pantalla se lo pide, porque sin el acumulado no se ven los topes.
  *
  * @param {Array}  semanas   [{ fechaPago, bruto }] de todas las semanas anotadas
  * @param {string} fechaPago la de este cheque
  * @param {Object} ancla     { monto, fecha } o null
- * @returns {{ monto: number, fuente: 'ancla'|'app' }}
+ * @returns {{ monto: number, fuente: 'ancla'|'app', completo: boolean }}
  */
 function acumuladoDelAnio(semanas, fechaPago, ancla) {
   const anio = String(fechaPago).slice(0, 4);
   const lista = Array.isArray(semanas) ? semanas : [];
-  const suma = desde => centavos(lista
-    .filter(s => String(s.fechaPago).slice(0, 4) === anio
-              && s.fechaPago > desde && s.fechaPago < fechaPago)
+  const delAnio = lista.filter(s => String(s.fechaPago).slice(0, 4) === anio);
+  // Lo pagado con desde < fecha ≤ hasta (o < hasta, si `cerrado` es falso).
+  const suma = (desde, hasta, cerrado) => centavos(delAnio
+    .filter(s => s.fechaPago > desde && (cerrado ? s.fechaPago <= hasta : s.fechaPago < hasta))
     .reduce((t, s) => t + (Number(s.bruto) || 0), 0));
 
   const a = ancla || {};
   const anclaSirve = isFinite(Number(a.monto)) && a.monto !== null && a.monto !== ''
-    && typeof a.fecha === 'string' && a.fecha.slice(0, 4) === anio && a.fecha < fechaPago;
-  if (anclaSirve) return { monto: centavos(Number(a.monto) + suma(a.fecha)), fuente: 'ancla' };
-  return { monto: suma(''), fuente: 'app' };
+    && typeof a.fecha === 'string' && a.fecha.slice(0, 4) === anio;
+  if (anclaSirve) {
+    const monto = a.fecha < fechaPago
+      ? Number(a.monto) + suma(a.fecha, fechaPago, false)
+      // Desde el día ANTERIOR al de este cheque: este cheque también se resta.
+      : Number(a.monto) - suma(sumarDias(fechaPago, -1), a.fecha, true);
+    return { monto: centavos(Math.max(0, monto)), fuente: 'ancla', completo: true };
+  }
+  const primeraSemana = anio + '-01-07';
+  return {
+    monto: suma('', fechaPago, false),
+    fuente: 'app',
+    completo: fechaPago <= primeraSemana || lista.some(s => s.fechaPago <= primeraSemana)
+  };
 }
 
 const MINIMO_TURNOS_AVISO_RESPALDO = 5;
